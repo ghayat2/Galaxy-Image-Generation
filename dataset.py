@@ -5,7 +5,7 @@ import skimage
 import tensorflow as tf 
 import pandas as pd
 import pathlib
-
+from sklearn.model_selection import train_test_split
 
 
 class Dataset:
@@ -82,3 +82,57 @@ class Dataset:
         self.dataset_tf = self.dataset_tf.batch(self.batch_size)
 
         print("My Batches: {}".format(self.dataset_tf))
+
+class ImageGen():
+    """
+    Generator for image datasets that do not fit in memory
+    """
+
+    def __init__(self, all_paths, all_labels, img_loader=None):
+        if img_loader is None:
+            img_loader=ImageLoader()
+        self.img_loader = img_loader
+        self.all_paths = all_paths
+        self.all_labels = all_labels
+        self.curr = 0
+        self.len = len(all_labels)
+        print(self.len)
+
+    def __len__(self):
+        return self.len
+
+    def get_next(self):
+        while True:
+            self.curr += 1
+            #self.curr %= self.len
+            if self.curr%100==0:
+                print(self.curr)
+            if self.curr == self.len-1:
+                raise tf.errors.OutOfRangeError(None, None, "OutOfBounds")
+            yield (self.all_paths[self.curr], self.all_labels[self.curr])
+
+    def create_dataset(self, batch_size=16):
+        AUTOTUNE = tf.data.experimental.AUTOTUNE
+        path_ds = tf.data.Dataset.from_generator(self.get_next, (tf.string, tf.int32))
+        scored_ds = path_ds.map(self.img_loader.load_and_preprocess_image, num_parallel_calls=AUTOTUNE)
+        return scored_ds
+
+
+class ImageLoader:
+    def __init__(self):
+        pass
+
+    def preprocess_image(self, image):
+        image = tf.image.convert_image_dtype(tf.image.decode_png(image, channels=1), tf.float32)
+        image = (image - 0.5) / 0.5
+        return image
+
+
+    def load_and_preprocess_image(self, path, label):
+        image = tf.io.read_file(path)
+        return self.preprocess_image(image), label
+
+class VAELoader(ImageLoader):
+    def preprocess_image(self, image):
+        image = tf.image.convert_image_dtype(tf.image.decode_png(image, channels=1), tf.float32)
+        return image

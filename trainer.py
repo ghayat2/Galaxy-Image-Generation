@@ -21,18 +21,16 @@ class Trainer:
         ):
 
         self.model = model
-        self.sess = keras.backend.get_session()
+        #self.sess = keras.backend.get_session()
         
         # Separate member for the tf.data type
-        self.train_dataset = train_dataset
-        self.train_dataset_tf = self.train_dataset.dataset_tf
+        #self.train_dataset = train_dataset
+        self.train_dataset_tf = train_dataset
 
         self.fig_size = 20 # in inches
-
-        self.lines = 2
-        self.cols = 2
-
         self.num_examples = 16
+        self.lines = np.sqrt(self.num_examples)
+        self.cols = np.sqrt(self.num_examples)
 
         self.generate_every = 3
 
@@ -43,12 +41,12 @@ class Trainer:
         if not os.path.exists(out_path):
             os.makedirs(out_path)
 
-    def train_step(self, images):
-        noise = tf.random.normal([self.train_dataset.batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided 
+    def train_step(self, images, batch_size):
+        noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
                                                           # to discriminator (i,e batch_size)
 
 
-        images = tf.expand_dims(images, 3)
+        #images = tf.expand_dims(images, 3)
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             generated_images = self.model.generator(noise, training=True)
 
@@ -66,21 +64,26 @@ class Trainer:
         return gen_loss, disc_loss
 
 
-    def train(self, seed, epochs=1):
+    def train(self, batch_size, seed, epochs=1):
 
         step = 1
         for epoch in range(epochs):
             start = time.time()
             b = 0 # batch nb
-            for image_batch in self.train_dataset_tf:
-                gen_loss, disc_loss = self.train_step(image_batch)
-                print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
-                print("Epoch: {}, Batch: {}, Step: {}".format(epoch, b, step))
-                b += 1
-                if step % self.generate_every == 0:
+            iter = self.train_dataset_tf.make_one_shot_iterator()
+            while True:
+                try:
+                    image_batch = next(iter)
+                    gen_loss, disc_loss = self.train_step(image_batch, batch_size)
+                    print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                    print("Epoch: {}, Batch: {}, Step: {}".format(epoch, b, step))
+                    b += 1
+                    if step % self.generate_every == 0:
                     display.clear_output(wait=True)
                     self.generate_and_save_images(seed, "step", nb = step)
-                step +=1
+                    step +=1
+                except:
+                    break
 
             display.clear_output(wait=True)
             self.generate_and_save_images(seed, "epoch", nb = epoch)
@@ -96,14 +99,14 @@ class Trainer:
 
     def generate_and_save_images(self, test_input, str, nb):
         predictions = self.model.generator(test_input, training=False) # get generator output
+        print(predictions.shape)
 
         fig = plt.figure(figsize=(self.fig_size, self.fig_size)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
 
         print("My Predictions Are: {}".format(predictions))
 
         for i in range(predictions.shape[0]):
-            with tf.compat.v1.Session().as_default():
-                image = predictions[i, :, :, 0].eval() # take the i'th predicted image, remove the last dimension (result is 2D)
+            image = predictions[i, :, :, 0] # take the i'th predicted image, remove the last dimension (result is 2D)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
             plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
             plt.axis('off')
