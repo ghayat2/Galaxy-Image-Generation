@@ -25,7 +25,7 @@ class Model:
 
 class BaseModel(Model):
 
-    def __init__(self, data_shape, noise_dim):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix):
         #print("Data shape is: {}".format(data_shape))
         super(BaseModel, self).__init__(data_shape, noise_dim)
 
@@ -34,6 +34,21 @@ class BaseModel(Model):
         self.generator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-3)
         self.discriminator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-4)
         self.loss = tf.compat.v1.keras.losses.BinaryCrossentropy(from_logits=True)
+
+        self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
+                                 discriminator_optimizer=self.discriminator_optimizer,
+                                 generator=self.generator,
+                                 discriminator=self.discriminator)
+
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_prefix = checkpoint_prefix
+
+        # Restore from lastest available checkpoint
+        latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
+        checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
+
+        if checkpoint_found:
+            status = checkpoint.restore(latest_checkpoint)
 
     def make_generator_model(self):
         model = tf.keras.Sequential()
@@ -129,6 +144,31 @@ class BaseModel(Model):
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(0.3))
         
+        model.add(layers.Dense(1))
+
+        return model
+
+
+    ## Removes the final layer(s) of the discriminator and adds complexity
+    ## to try to predict scores on the learned representation from the
+    ## galaxy classification
+
+    def to_scoring(self):
+        self.scorer = self.make_scoring_model(tf.keras.models.clone_model(self.discriminator))
+        self.score_opt = tf.compat.v1.train.AdamOptimizer(1e-4)
+        self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
+        score_ckpt_file = self.checkpoint_dir + '/scoring-{epoch:02d}-{val_acc:.2f}.hdf5'
+        self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        self.score_callbacks = [self.score_checkpoint]
+
+    def make_scoring_model(self, model):
+        model.pop()
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
         model.add(layers.Dense(1))
 
         return model

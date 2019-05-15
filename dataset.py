@@ -78,7 +78,7 @@ class Dataset:
 
         self.dataset_tf = tf.data.Dataset.from_tensor_slices(self.data)
 
-        self.dataset_tf = self.dataset_tf.shuffle(3)
+        self.dataset_tf = self.dataset_tf.shuffle(20)
         self.dataset_tf = self.dataset_tf.batch(self.batch_size)
 
         print("My Batches: {}".format(self.dataset_tf))
