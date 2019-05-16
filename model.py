@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf 
 from tensorflow import keras 
 from tensorflow.keras import layers, models, regularizers, optimizers
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 
 class Model:
@@ -25,7 +26,7 @@ class Model:
 
 class BaseModel(Model):
 
-    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
         #print("Data shape is: {}".format(data_shape))
         super(BaseModel, self).__init__(data_shape, noise_dim)
 
@@ -44,11 +45,12 @@ class BaseModel(Model):
         self.checkpoint_prefix = checkpoint_prefix
 
         # Restore from lastest available checkpoint
-        latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
-        checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
+        if reload_ckpt:
+            latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
+            checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
 
-        if checkpoint_found:
-            status = checkpoint.restore(latest_checkpoint)
+            if checkpoint_found:
+                status = self.checkpoint.restore(latest_checkpoint)
 
     def make_generator_model(self):
         model = tf.keras.Sequential()
