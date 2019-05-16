@@ -65,7 +65,7 @@ def main():
     scored_gen = ImageGen(all_scored, all_scores)
 
     # Create the model
-    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix)
+    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -74,8 +74,11 @@ def main():
 
     seed = tf.random.normal([trainer.num_examples, model.noise_dim])
 
-    trainer.train(batch_size=batch_size, seed=seed, epochs=3)
+    trainer.train(batch_size=batch_size, seed=seed, epochs=1)
 
+    model.to_scoring()
+
+    trainer.score(batch_size=batch_size, epochs=1)
 
 
 if __name__ == '__main__':
