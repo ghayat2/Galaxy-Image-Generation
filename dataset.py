@@ -102,14 +102,14 @@ class ImageGen():
         return self.len
 
     def get_next(self):
-        while True:
+        for x, y in zip(self.all_paths, self.all_labels):
             self.curr += 1
             #self.curr %= self.len
             if self.curr%100==0:
                 print(self.curr)
-            if self.curr == self.len-1:
-                raise tf.errors.OutOfRangeError(None, None, "OutOfBounds")
-            yield (self.all_paths[self.curr], self.all_labels[self.curr])
+            if self.curr == self.len:
+                self.curr = 0
+            yield (x, self.curr)
 
     def create_dataset(self, batch_size=16):
         AUTOTUNE = tf.data.experimental.AUTOTUNE

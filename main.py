@@ -3,7 +3,6 @@ import glob
 import numpy as np 
 import os 
 from PIL import Image
-import skimage
 import tensorflow as tf
 from tensorflow import keras
 import pandas as pd
@@ -15,8 +14,6 @@ import pathlib
 
 
 def main():
-
-    tf.enable_eager_execution()
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     
     checkpoint_dir = './training_checkpoints'
@@ -72,12 +69,12 @@ def main():
 
     # Train the model
     trainer = Trainer(
-        model, labeled_gen.create_dataset().batch(batch_size), scored_gen.create_dataset().batch(batch_size), os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'Results/'))
+        model, labeled_gen.create_dataset(), scored_gen.create_dataset().batch(batch_size), os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'Results/'))
     )
 
     seed = tf.random.normal([trainer.num_examples, model.noise_dim])
 
-    trainer.train(batch_size=batch_size, seed=seed, epochs=50)
+    trainer.train(batch_size=batch_size, seed=seed, epochs=3)
 
 
 

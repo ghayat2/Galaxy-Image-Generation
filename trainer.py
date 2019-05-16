@@ -64,28 +64,22 @@ class Trainer:
 
 
     def train(self, batch_size, seed, epochs=1):
-
         step = 1
         gen_loss = -1
         disc_loss = -1
         for epoch in range(epochs):
-            print("Epoch: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, gen_loss, disc_loss))
+            print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
             start = time.time()
             b = 0 # batch nb
-            iter = self.train_dataset_labeled.make_one_shot_iterator()
-            while True:
-                try:
-                    image_batch = next(iter)
-                    gen_loss, disc_loss = self.train_step(image_batch, batch_size)
-                    #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
-                    b += 1
-                    #if step % self.generate_every == 0:
-                        #display.clear_output(wait=True)
-                        #self.generate_and_save_images(seed, "step", nb = step)
-                    step +=1
-                except:
-                    break
-
+            #iter = self.train_dataset_labeled.make_one_shot_iterator()
+            for batch in self.train_dataset_labeled.batch(batch_size):
+                gen_loss, disc_loss = self.train_step(batch, batch_size)
+                #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                b += 1
+                #if step % self.generate_every == 0:
+                    #display.clear_output(wait=True)
+                    #self.generate_and_save_images(seed, "step", nb = step)
+                step += 1
             display.clear_output(wait=True)
             self.generate_and_save_images(seed, "epoch", nb = epoch)
 
