@@ -1,9 +1,8 @@
 import numpy as np
 import tensorflow as tf 
 from tensorflow import keras 
-from tensorflow.keras import layers, models, regularizers, optimizers
+from tensorflow.keras import layers, models, regularizers, optimizers, losses
 from tensorflow.keras.callbacks import ModelCheckpoint
-
 
 class Model:
 
@@ -32,9 +31,9 @@ class BaseModel(Model):
 
         self.generator = self.make_generator_model()
         self.discriminator = self.make_discriminator_model()
-        self.generator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-3)
-        self.discriminator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-4)
-        self.loss = tf.compat.v1.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.generator_optimizer = optimizers.Adam(1e-3)
+        self.discriminator_optimizer = optimizers.Adam(1e-4)
+        self.loss = losses.BinaryCrossentropy(from_logits=True)
 
         self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
                                  discriminator_optimizer=self.discriminator_optimizer,
@@ -53,7 +52,7 @@ class BaseModel(Model):
                 status = self.checkpoint.restore(latest_checkpoint)
 
     def make_generator_model(self):
-        model = tf.keras.Sequential()
+        model = keras.Sequential()
 
         model.add(layers.Dense(5*5*256, use_bias=False, input_shape=(self.noise_dim,)))
         model.add(layers.BatchNormalization(momentum=0.8))
@@ -98,7 +97,7 @@ class BaseModel(Model):
         return model
 
     def make_discriminator_model(self):
-        model = tf.keras.Sequential()
+        model = keras.Sequential()
       
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
@@ -157,7 +156,7 @@ class BaseModel(Model):
 
     def to_scoring(self):
         self.scorer = self.make_scoring_model(tf.keras.models.clone_model(self.discriminator))
-        self.score_opt = tf.compat.v1.train.AdamOptimizer(1e-4)
+        self.score_opt = optimizers.Adam(1e-4)
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
         score_ckpt_file = self.checkpoint_dir + '/scoring-{epoch:02d}-{val_acc:.2f}.hdf5'
         self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='val_acc', verbose=1, save_best_only=True, mode='max')

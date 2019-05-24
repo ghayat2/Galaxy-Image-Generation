@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras 
 from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.backend import set_session
 from model import Model
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -17,11 +18,13 @@ from IPython import display
 class Trainer:
 
     def __init__(
-        self, model, train_dataset_labeled, train_dataset_scored,
+        self, model, sess, graph, train_dataset_labeled, train_dataset_scored,
         out_path='../Results'
         ):
 
         self.model = model
+        self.sess = sess
+        self.graph = graph
         
         # Separate member for the tf.data type
         self.train_dataset_labeled = train_dataset_labeled
@@ -63,25 +66,27 @@ class Trainer:
         return gen_loss, disc_loss
 
 
-    def train(self, batch_size, seed, epochs=1):
+    def train(self, batch_size, seed, epochs=1, steps_per_epoch=2):
         step = 1
         gen_loss = -1
         disc_loss = -1
         for epoch in range(epochs):
-            print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
+            #print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
             start = time.time()
             b = 0 # batch nb
             #iter = self.train_dataset_labeled.make_one_shot_iterator()
-            for batch in self.train_dataset_labeled.batch(batch_size):
+            for batch, labels in self.train_dataset_labeled:
                 gen_loss, disc_loss = self.train_step(batch, batch_size)
-                #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 b += 1
                 #if step % self.generate_every == 0:
                     #display.clear_output(wait=True)
                     #self.generate_and_save_images(seed, "step", nb = step)
                 step += 1
+                if(b >= steps_per_epoch):
+                    break
             display.clear_output(wait=True)
-            self.generate_and_save_images(seed, "epoch", nb = epoch)
+            #self.generate_and_save_images(seed, "epoch", nb = epoch)
 
             # Save the model every 15 epochs
             if (epoch + 1) % 15 == 0:
@@ -90,7 +95,7 @@ class Trainer:
             print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
         # Generate after the final epoch
         display.clear_output(wait=True)
-        self.generate_and_save_images(seed, "epoch", nb = epochs)
+        #self.generate_and_save_images(seed, "epoch", nb = epochs)
 
     def score(self, batch_size, epochs=1):
 
@@ -103,15 +108,17 @@ class Trainer:
         fig = plt.figure(figsize=(self.fig_size, self.fig_size)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
 
         #print("My Predictions Are: {}".format(predictions))
-
+        #with self.graph.as_default():
+        #    set_session(self.sess)
         for i in range(predictions.shape[0]):
             image = predictions[i, :, :, 0] # take the i'th predicted image, remove the last dimension (result is 2D)
+            print(image)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
-            plt.imshow(image.numpy(), cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
+            plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
             plt.axis('off')
-            maxval = image.numpy().max()
-            minval = image.numpy().min()
-        print('Max and min vals: {} {}'.format(maxval, minval))
+            maxval = image.max()
+            minval = image.min()
+            print('Max and min vals: {} {}'.format(maxval, minval))
     #    plt.show() # finished plotting all images in the figure so show default figure
 
         if not os.path.exists(self.out_path): # create images dir if not existant
