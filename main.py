@@ -62,8 +62,13 @@ def create_labeled_folders(data_path):
         print(os.path.join(data_path, "{}".format(int(label)), file))
         os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
 
+def base_preprocessing(image):
+    image = (image - 0.5) / 0.5
+    return image
 
 def main():
+    tf.enable_eager_execution()
+    print(tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     sess = tf.compat.v1.Session()
     graph = tf.get_default_graph()
@@ -84,15 +89,15 @@ def main():
 
     #labeled_gen = ImageGen(all_labeled, all_ones)
     #scored_gen = ImageGen(all_scored, all_scores)
-    labeled_datagen = ImageDataGenerator()
+    labeled_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
                                         target_size=(1000, 1000), 
                                         color_mode='grayscale')
-    print(next(labeled_generator))
+    #print(next(labeled_generator))
 
-    scored_datagen = ImageDataGenerator()
+    scored_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing)
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -110,29 +115,29 @@ def main():
 
     scored_generator = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size)
 
-    print(next(scored_generator))
+    #print(next(scored_generator))
 
     # # Create the model
 
     # test the VAE architecture
-    vae = CVAE(noise_dim)
-    epochs = 75
-    for epoch in range(1, epochs + 1):
-        start_time = time.time()
-        for train_x in labeled_gen.create_dataset(batch_size=1):
-            gradients, loss = vae.compute_gradients(train_x)
-            vae.apply_gradients(gradients)
-        end_time = time.time()
+    # vae = CVAE(noise_dim)
+    # epochs = 75
+    # for epoch in range(1, epochs + 1):
+    #     start_time = time.time()
+    #     for train_x in labeled_gen.create_dataset(batch_size=1):
+    #         gradients, loss = vae.compute_gradients(train_x)
+    #         vae.apply_gradients(gradients)
+    #     end_time = time.time()
 
-        if epoch % 5 == 0:
-            loss = tf.keras.metrics.Mean()
-            for test_x in labeled_gen.create_dataset():
-                loss(vae.compute_loss(test_x))
-            elbo = -loss.result()
-            print('Epoch: {}, Test set ELBO: {}, '
-                  'time elapse for current epoch {}'.format(epoch,
-                                                            elbo,
-                                                            end_time - start_time))
+    #     if epoch % 5 == 0:
+    #         loss = tf.keras.metrics.Mean()
+    #         for test_x in labeled_gen.create_dataset():
+    #             loss(vae.compute_loss(test_x))
+    #         elbo = -loss.result()
+    #         print('Epoch: {}, Test set ELBO: {}, '
+    #               'time elapse for current epoch {}'.format(epoch,
+    #                                                         elbo,
+    #                                                         end_time - start_time))
     # Create the model
     model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 

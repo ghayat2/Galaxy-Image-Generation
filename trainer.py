@@ -79,14 +79,14 @@ class Trainer:
                 gen_loss, disc_loss = self.train_step(batch, batch_size)
                 print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 b += 1
-                #if step % self.generate_every == 0:
-                    #display.clear_output(wait=True)
-                    #self.generate_and_save_images(seed, "step", nb = step)
+                if step % self.generate_every == 0:
+                    display.clear_output(wait=True)
+                    self.generate_and_save_images(seed, "step", nb = step)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
             display.clear_output(wait=True)
-            #self.generate_and_save_images(seed, "epoch", nb = epoch)
+            self.generate_and_save_images(seed, "epoch", nb = epoch)
 
             # Save the model every 15 epochs
             if (epoch + 1) % 15 == 0:
@@ -111,14 +111,13 @@ class Trainer:
         #with self.graph.as_default():
         #    set_session(self.sess)
         for i in range(predictions.shape[0]):
-            image = predictions[i, :, :, 0] # take the i'th predicted image, remove the last dimension (result is 2D)
-            print(image)
+            image = predictions[i, :, :, 0].numpy() # take the i'th predicted image, remove the last dimension (result is 2D)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
             plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
             plt.axis('off')
             maxval = image.max()
             minval = image.min()
-            print('Max and min vals: {} {}'.format(maxval, minval))
+        print('Max and min vals: {} {}'.format(maxval, minval))
     #    plt.show() # finished plotting all images in the figure so show default figure
 
         if not os.path.exists(self.out_path): # create images dir if not existant
