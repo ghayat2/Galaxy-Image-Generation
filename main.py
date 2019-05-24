@@ -9,10 +9,10 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.backend import set_session
 import pandas as pd
 
-from model import Model, BaseModel
+from model import Model, BaseModel, CVAE
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
-import pathlib
+import pathlib, time
 
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, **dflow_args):
@@ -113,6 +113,27 @@ def main():
     print(next(scored_generator))
 
     # # Create the model
+
+    # test the VAE architecture
+    vae = CVAE(noise_dim)
+    epochs = 75
+    for epoch in range(1, epochs + 1):
+        start_time = time.time()
+        for train_x in labeled_gen.create_dataset(batch_size=1):
+            gradients, loss = vae.compute_gradients(train_x)
+            vae.apply_gradients(gradients)
+        end_time = time.time()
+
+        if epoch % 5 == 0:
+            loss = tf.keras.metrics.Mean()
+            for test_x in labeled_gen.create_dataset():
+                loss(vae.compute_loss(test_x))
+            elbo = -loss.result()
+            print('Epoch: {}, Test set ELBO: {}, '
+                  'time elapse for current epoch {}'.format(epoch,
+                                                            elbo,
+                                                            end_time - start_time))
+    # Create the model
     model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
@@ -127,7 +148,6 @@ def main():
     model.to_scoring()
 
     trainer.score(batch_size=batch_size, epochs=1)
-
 
 if __name__ == '__main__':
     main()

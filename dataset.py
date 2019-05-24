@@ -115,7 +115,7 @@ class ImageGen():
         AUTOTUNE = tf.data.experimental.AUTOTUNE
         path_ds = tf.data.Dataset.from_generator(self.get_next, (tf.string, tf.int32))
         scored_ds = path_ds.map(self.img_loader.load_and_preprocess_image, num_parallel_calls=AUTOTUNE)
-        return scored_ds
+        return scored_ds.batch(batch_size)
 
 
 class ImageLoader:
