@@ -1,0 +1,7 @@
+TODO:
+
+-  Create similar GAN to base GAN with conditional input on the generator being the label of the image we want to compare it to
+
+- Implement Image Preprocessing further in the ImageDataGenerator parameters/preprocessing function
+
+- Work on checkpointing and get a clear checkpointing technique for both the generation and scoring parts
