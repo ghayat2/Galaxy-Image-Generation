@@ -8,6 +8,7 @@ from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.backend import set_session
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from model import Model, BaseModel, CVAE
 from trainer import Trainer 
@@ -15,13 +16,14 @@ from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
-def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, **dflow_args):
+def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset="training", **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
     print('## Ignore next message from keras, values are replaced anyways')
     df_gen = img_data_gen.flow_from_directory(base_dir, 
                                      class_mode = 'sparse',
                                      batch_size=batch_size,
                                      target_size=(1000, 1000),
+                                     subset=subset,
                                      color_mode='grayscale',
                                     **dflow_args)
     df_gen.filenames = in_df[path_col].values
@@ -63,17 +65,19 @@ def create_labeled_folders(data_path):
         os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
 
 def base_preprocessing(image):
+    image = image / 255.0
     image = (image - 0.5) / 0.5
     return image
 
 def main():
-    tf.enable_eager_execution()
+    tf.compat.v1.enable_eager_execution()
     print(tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     sess = tf.compat.v1.Session()
-    graph = tf.get_default_graph()
+    graph = tf.compat.v1.get_default_graph()
     set_session(sess)
-    tf.global_variables_initializer()
+    tf.compat.v1.global_variables_initializer()
+
     #Uncomment to create folders for labeled data
     #create_labeled_folders(data_path)
 
@@ -96,8 +100,11 @@ def main():
                                         target_size=(1000, 1000), 
                                         color_mode='grayscale')
     #print(next(labeled_generator))
+    
+    #Added Validation Split value here, but not sure if it is compatible
+    #with the custom flow_from_dataframe function above
 
-    scored_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing)
+    scored_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing, validation_split=0.1)
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -113,9 +120,29 @@ def main():
 
     scored_df = pd.DataFrame(all_pairs, columns=['Path', 'Value'])
 
-    scored_generator = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size)
+    scored_generator_train = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="training")
+    scored_generator_val = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="validation")    
 
-    #print(next(scored_generator))
+    #Validation Split Sanity Check Code
+
+    # -------------------- #
+
+    #print(next(scored_generator_train))
+    # image, score = next(scored_generator_train)
+    # single = image[0, :, :, 0]
+    # print(score)
+    # print(single.shape)
+    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
+    # plt.show()
+
+    # image, score = next(scored_generator_val)
+    # single = image[0, :, :, 0]
+    # print(score)
+    # print(single.shape)
+    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
+    # plt.show()
+
+    # -------------------- #
 
     # # Create the model
 
@@ -143,16 +170,19 @@ def main():
 
     # Train the model
     trainer = Trainer(
-        model, sess, graph, labeled_generator, scored_generator, os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'Results/'))
+        model, sess, graph, labeled_generator, scored_generator_train, scored_generator_val, os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'Results/'))
     )
 
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
-    trainer.train(batch_size=batch_size, seed=seed, epochs=1, steps_per_epoch=3)
+    #Specify epochs, steps_per_epoch, save_every
+    trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
 
+    #Specify reload_ckpt
     model.to_scoring()
 
-    trainer.score(batch_size=batch_size, epochs=1)
+    #Specify epochs, steps_per_epoch
+    trainer.score(batch_size=batch_size, epochs=10)
 
 if __name__ == '__main__':
     main()

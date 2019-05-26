@@ -18,7 +18,7 @@ from IPython import display
 class Trainer:
 
     def __init__(
-        self, model, sess, graph, train_dataset_labeled, train_dataset_scored,
+        self, model, sess, graph, train_dataset_labeled, train_dataset_scored, val_dataset_scored,
         out_path='../Results'
         ):
 
@@ -29,6 +29,7 @@ class Trainer:
         # Separate member for the tf.data type
         self.train_dataset_labeled = train_dataset_labeled
         self.train_dataset_scored = train_dataset_scored
+        self.val_dataset_scored = val_dataset_scored
 
         self.fig_size = 20 # in inches
         self.num_examples = 16
@@ -66,7 +67,7 @@ class Trainer:
         return gen_loss, disc_loss
 
 
-    def train(self, batch_size, seed, epochs=1, steps_per_epoch=2):
+    def train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15):
         step = 1
         gen_loss = -1
         disc_loss = -1
@@ -88,8 +89,10 @@ class Trainer:
             display.clear_output(wait=True)
             self.generate_and_save_images(seed, "epoch", nb = epoch)
 
-            # Save the model every 15 epochs
-            if (epoch + 1) % 15 == 0:
+            # Save the model every N epochs
+            # NOTE: each checkpoint can be 400+ MB
+            # If we checkpoint too much, it can cause serious trouble
+            if (epoch + 1) % save_every == 0:
                 self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
 
             print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
@@ -97,9 +100,11 @@ class Trainer:
         display.clear_output(wait=True)
         #self.generate_and_save_images(seed, "epoch", nb = epochs)
 
-    def score(self, batch_size, epochs=1):
-
-        self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks)
+    def score(self, batch_size, epochs=10, steps_per_epoch=3):
+        if(steps_per_epoch is not None):
+            self.model.scorer.fit_generator(self.train_dataset_scored, steps_per_epoch=steps_per_epoch, epochs=epochs, callbacks=self.model.score_callbacks)
+        else:
+            self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=6, use_multiprocessing=True)
 
     def generate_and_save_images(self, test_input, str, nb):
         predictions = self.model.generator(test_input, training=False) # get generator output

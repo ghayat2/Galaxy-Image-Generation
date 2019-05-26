@@ -1,8 +1,10 @@
 import numpy as np
+import os 
+from datetime import datetime
 import tensorflow as tf 
 from tensorflow import keras 
 from tensorflow.keras import layers, models, regularizers, optimizers, losses
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
 class Model:
 
@@ -154,13 +156,33 @@ class BaseModel(Model):
     ## to try to predict scores on the learned representation from the
     ## galaxy classification
 
-    def to_scoring(self):
+    def to_scoring(self, reload_ckpt=False):
+
+        score_ckpt_file = self.checkpoint_dir + '/weights.best.hdf5'
+        #Apparently there is an issue with the outputted loss/accuracy being better than the
+        #evaluated one when using fit_generator, so just save last one for now (save_best_only = False)
+        #https://github.com/keras-team/keras/issues/10014
+        self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='loss', verbose=1, save_best_only=False, mode='max')
+        self.score_callbacks = [self.score_checkpoint]
+
+        logdir = os.path.join(
+            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+
+        tensorboard_callback = TensorBoard(
+            log_dir=logdir, 
+            write_graph=True
+        )
+
+        self.score_callbacks.append(tensorboard_callback)
+
         self.scorer = self.make_scoring_model(tf.keras.models.clone_model(self.discriminator))
         self.score_opt = optimizers.Adam(1e-4)
+
+        if(reload_ckpt == True):
+            self.scorer.load_weights(score_ckpt_file)
+
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
-        score_ckpt_file = self.checkpoint_dir + '/scoring-{epoch:02d}-{val_acc:.2f}.hdf5'
-        self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        self.score_callbacks = [self.score_checkpoint]
 
     def make_scoring_model(self, model):
         model.pop()
