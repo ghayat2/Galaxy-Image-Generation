@@ -14,12 +14,11 @@ from tqdm import tqdm
 from IPython import display
 
 
-
 class Trainer:
 
     def __init__(
         self, model, sess, graph, train_dataset_labeled, train_dataset_scored, val_dataset_scored,
-        out_path='../Results'
+        out_path='../Results', verbose=True, debug=False
         ):
 
         self.model = model
@@ -36,9 +35,11 @@ class Trainer:
         self.lines = np.sqrt(self.num_examples)
         self.cols = np.sqrt(self.num_examples)
 
-        self.generate_every = 3
+        self.generate_every = 5
 
         self.callbacks = []
+        self.verbose = verbose
+        self.debug = debug
 
         # Output path
         self.out_path = out_path
@@ -149,4 +150,37 @@ class Trainer:
 
     ### -------------- ###
 
+    def vae_train(self, vae, epochs=75, steps_per_epochs=1000/32, show_sample=True):
+        print(f"Steps per epochs = {steps_per_epochs}")
+        for epoch in range(1, epochs + 1):
+            self.dprint(f"epoch: {epoch}")
+            start_time = time.time()
+            b = 0
+            for batch, labels in self.train_dataset_labeled:
+                gradients, loss = vae.compute_gradients(batch)
+                vae.apply_gradients(gradients)
+                b += 1
+                if b > steps_per_epochs:
+                    break
+            end_time = time.time()
 
+            if epoch % self.generate_every == 0:
+                loss = tf.keras.metrics.Mean()
+                for test_batch, labels in self.train_dataset_labeled:
+                    loss(vae.compute_loss(test_batch))
+                    break
+                elbo = -loss.result()
+                self.vprint('Epoch: {}, Test set ELBO: {}, '
+                      'time elapse for current epoch {}'.format(epoch,
+                                                                elbo,
+                                                               end_time - start_time))
+                if show_sample:
+                    vae.sample_and_show()
+        self.vprint(f"VAE trained for {epochs} epochs")
+
+    def vprint(self, msg):
+        if self.verbose:
+            print(msg)
+    def dprint(self, msg):
+        if self.debug:
+            print(msg)

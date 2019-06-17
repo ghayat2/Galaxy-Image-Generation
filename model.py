@@ -5,14 +5,13 @@ import tensorflow as tf
 from tensorflow import keras 
 from tensorflow.keras import layers, models, regularizers, optimizers, losses
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+import matplotlib.pyplot as plt
 
 class Model:
 
-    def __init__(self, data_shape, noise_dim):
+    def __init__(self):
         #print("Data shape is: {}".format(data_shape))
-        self.data_shape = data_shape 
-        self.noise_dim = noise_dim
-
+        pass
     def make_generator_model(self):
         raise NotImplementedError('subclasses must override make_generator_model()')
 
@@ -29,7 +28,9 @@ class BaseModel(Model):
 
     def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
         #print("Data shape is: {}".format(data_shape))
-        super(BaseModel, self).__init__(data_shape, noise_dim)
+        super(BaseModel, self).__init__()
+        self.data_shape = data_shape
+        self.noise_dim = noise_dim
 
         self.generator = self.make_generator_model()
         self.discriminator = self.make_discriminator_model()
@@ -51,7 +52,8 @@ class BaseModel(Model):
             checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
 
             if checkpoint_found:
-                status = self.checkpoint.restore(latest_checkpoint)
+                self.status = self.checkpoint.restore(latest_checkpoint)
+                print(self.status)
 
     def make_generator_model(self):
         model = keras.Sequential()
@@ -207,10 +209,10 @@ class BaseModel(Model):
 
 
 class CVAE(tf.keras.Model):
-    def __init__(self, latent_dim):
+    def __init__(self, latent_dim, learning_rate=1e-5):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
-        self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
 
         self.inference_net = tf.keras.Sequential(
             [
@@ -228,26 +230,26 @@ class CVAE(tf.keras.Model):
         self.generative_net = tf.keras.Sequential(
             [
                 tf.keras.layers.InputLayer(input_shape=(latent_dim,)),
-                tf.keras.layers.Dense(units=40*40*32, activation=tf.nn.relu),
+                tf.keras.layers.Dense(units=128, activation=tf.nn.relu),
                 tf.keras.layers.Dense(units=40*40*32, activation=tf.nn.relu),
                 tf.keras.layers.Reshape(target_shape=(40, 40, 32)),
                 tf.keras.layers.Conv2DTranspose(
                   filters=32,
                   kernel_size=10,
-                  strides=(4, 4),
+                  strides=(5, 5),
                   padding="SAME",
                   activation='relu'),
                 tf.keras.layers.Conv2DTranspose(
                   filters=1,
                   kernel_size=20,
-                  strides=(4, 4),
+                  strides=(5, 5),
                   padding="SAME") # no activation
             ]
         )
 
     def sample(self, eps=None):
         if eps is None:
-            eps = tf.random.normal(shape=(10, self.latent_dim))
+            eps = tf.random.normal(shape=(1, self.latent_dim))
         return self.decode(eps, apply_sigmoid=True)
 
     def encode(self, x):
@@ -289,3 +291,18 @@ class CVAE(tf.keras.Model):
 
     def apply_gradients(self, gradients):
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    def save_nets(self, dest_dir="./saved_models"):
+        self.generative_net.save(os.path.join(dest_dir, "generative_net"))
+        self.inference_net.save(os.path.join(dest_dir, "inference_net"))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self .generative_net.load_weights(os.path.join(dest_dir, "generative_net"))
+        self.inference_net.load_weights(os.path.join(dest_dir, "inference_net"))
+
+    def sample_and_show(self):
+        x_sample = self.sample()
+        pic = x_sample[0]
+        plt.figure(figsize=(10, 10))
+        plt.imshow(tf.squeeze(pic), cmap="gray")
+        plt.show()

@@ -8,6 +8,7 @@ from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.backend import set_session
 import pandas as pd
+import utils
 import matplotlib.pyplot as plt
 
 from model import Model, BaseModel, CVAE
@@ -38,9 +39,7 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
 def create_labeled_folders(data_path):
 
     #Create labeled dirs:
-
     name = "labeled"
-
     labels_path = os.path.join(data_path, name + ".csv")
     labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
     id_to_label = labels.to_dict(orient="index")
@@ -64,10 +63,6 @@ def create_labeled_folders(data_path):
         print(os.path.join(data_path, "{}".format(int(label)), file))
         os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
 
-def base_preprocessing(image):
-    image = image / 255.0
-    image = (image - 0.5) / 0.5
-    return image
 
 def main():
     tf.compat.v1.enable_eager_execution()
@@ -91,9 +86,9 @@ def main():
     data_shape = [1000, 1000, 1]
     noise_dim = 1000
 
-    #labeled_gen = ImageGen(all_labeled, all_ones)
-    #scored_gen = ImageGen(all_scored, all_scores)
-    labeled_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing)
+    # Create the labeled data generator
+    #create_labeled_folders("../cosmology_aux_data_170429")
+    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
@@ -104,7 +99,7 @@ def main():
     #Added Validation Split value here, but not sure if it is compatible
     #with the custom flow_from_dataframe function above
 
-    scored_datagen = ImageDataGenerator(preprocessing_function=base_preprocessing, validation_split=0.1)
+    scored_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.1)
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -121,7 +116,9 @@ def main():
     scored_df = pd.DataFrame(all_pairs, columns=['Path', 'Value'])
 
     scored_generator_train = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="training")
-    scored_generator_val = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="validation")    
+    scored_generator_val = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="validation")
+
+    print("Data generators have been created")
 
     #Validation Split Sanity Check Code
 
@@ -146,26 +143,16 @@ def main():
 
     # # Create the model
 
-    # test the VAE architecture
-    # vae = CVAE(noise_dim)
-    # epochs = 75
-    # for epoch in range(1, epochs + 1):
-    #     start_time = time.time()
-    #     for train_x in labeled_gen.create_dataset(batch_size=1):
-    #         gradients, loss = vae.compute_gradients(train_x)
-    #         vae.apply_gradients(gradients)
-    #     end_time = time.time()
+    #test the VAE architecture
+    vae = CVAE(100)
+    trainer = Trainer(
+        vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
+        './Results'
+    )
 
-    #     if epoch % 5 == 0:
-    #         loss = tf.keras.metrics.Mean()
-    #         for test_x in labeled_gen.create_dataset():
-    #             loss(vae.compute_loss(test_x))
-    #         elbo = -loss.result()
-    #         print('Epoch: {}, Test set ELBO: {}, '
-    #               'time elapse for current epoch {}'.format(epoch,
-    #                                                         elbo,
-    #                                                         end_time - start_time))
-    # Create the model
+    trainer.vae_train(vae)
+
+    # # Create the model
     model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
