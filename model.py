@@ -209,10 +209,11 @@ class BaseModel(Model):
 
 
 class CVAE(tf.keras.Model):
-    def __init__(self, latent_dim, learning_rate=1e-5):
+    def __init__(self, latent_dim, learning_rate=1e-3):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.scoring = None
 
         self.inference_net = tf.keras.Sequential(
             [
@@ -243,7 +244,8 @@ class CVAE(tf.keras.Model):
                   filters=1,
                   kernel_size=20,
                   strides=(5, 5),
-                  padding="SAME") # no activation
+                  padding="SAME",
+                  activation='linear') # no activation
             ]
         )
 
@@ -282,6 +284,21 @@ class CVAE(tf.keras.Model):
         logpx_z = -tf.reduce_mean(cross_ent, axis=[1, 2, 3])
         logpz = self.log_normal_pdf(z, 0., 0.)
         logqz_x = self.log_normal_pdf(z, mean, logvar)
+
+        def log_likelihood_loss(X_reconstruction, X_target):
+            loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=X_reconstruction, labels=X_target)
+
+            # Sum across channels and pixels, average across batch dimension
+            return tf.reduce_mean(tf.reduce_sum(loss, axis=[1, 2, 3]), axis=0)
+
+        def kld_loss(Z_mu, Z_logvar):
+            # Return the KL divergence between Z and a Gaussian prior N(0, I)
+            kld = -0.5 * tf.reduce_sum(1 + Z_logvar - Z_mu ** 2 - tf.exp(Z_logvar), axis=1)
+            # Average across batch dimension
+            return tf.reduce_mean(kld, axis=0)
+
+        loss = log_likelihood_loss(x_logit, x) + kld_loss(mean, logvar)
+        #print(f"ELBO: {-tf.reduce_mean(logpx_z + logpz - logqz_x)}, GAB_ELBO: {loss}")
         return -tf.reduce_mean(logpx_z + logpz - logqz_x)
 
     def compute_gradients(self, x):
@@ -304,5 +321,26 @@ class CVAE(tf.keras.Model):
         x_sample = self.sample()
         pic = x_sample[0]
         plt.figure(figsize=(10, 10))
-        plt.imshow(tf.squeeze(pic), cmap="gray")
+        plt.imshow(tf.squeeze(pic), cmap="gray", vmin=0, vmax=1.0)
         plt.show()
+
+    def compile_scoring(self, optimizer=None):
+        self.scoring = tf.keras.models.clone_model(self.inference_net)
+        self.make_scoring_model(self.scoring)
+        optim = optimizer if optimizer is not None else self.optimizer
+        self.scoring.compile(loss='mean_squared_error', optimizer=optim)
+
+    @staticmethod
+    def make_scoring_model(model):
+        model.pop()
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+

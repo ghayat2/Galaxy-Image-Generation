@@ -150,8 +150,8 @@ class Trainer:
 
     ### -------------- ###
 
-    def vae_train(self, vae, epochs=75, steps_per_epochs=1000/32, show_sample=True):
-        print(f"Steps per epochs = {steps_per_epochs}")
+    def vae_train(self, vae, epochs=75, steps_per_epoch=1000/32, show_sample=True):
+        print(f"Steps per epochs = {steps_per_epoch}")
         for epoch in range(1, epochs + 1):
             self.dprint(f"epoch: {epoch}")
             start_time = time.time()
@@ -160,20 +160,23 @@ class Trainer:
                 gradients, loss = vae.compute_gradients(batch)
                 vae.apply_gradients(gradients)
                 b += 1
-                if b > steps_per_epochs:
+                if b > steps_per_epoch:
                     break
             end_time = time.time()
 
             if epoch % self.generate_every == 0:
                 loss = tf.keras.metrics.Mean()
+                c = 0
                 for test_batch, labels in self.train_dataset_labeled:
                     loss(vae.compute_loss(test_batch))
-                    break
+                    if c > steps_per_epoch:
+                        break
+                    c += 1
                 elbo = -loss.result()
-                self.vprint('Epoch: {}, Test set ELBO: {}, '
+                self.vprint('Epoch: {}, Test set ELBO: {}'
                       'time elapse for current epoch {}'.format(epoch,
                                                                 elbo,
-                                                               end_time - start_time))
+                                                                end_time - start_time))
                 if show_sample:
                     vae.sample_and_show()
         self.vprint(f"VAE trained for {epochs} epochs")
