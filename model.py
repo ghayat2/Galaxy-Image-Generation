@@ -219,32 +219,33 @@ class CVAE(tf.keras.Model):
             [
               tf.keras.layers.InputLayer(input_shape=(1000, 1000, 1)),
               tf.keras.layers.Conv2D(
-                  filters=32, kernel_size=20, strides=(5, 5), activation='relu'),
+                  filters=32, kernel_size=20, strides=(5, 5), activation='relu', padding="same"),
               tf.keras.layers.Conv2D(
-                  filters=32, kernel_size=10, strides=(5, 5), activation='relu'),
+                  filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same"),
               tf.keras.layers.Flatten(),
               # No activation
-              tf.keras.layers.Dense(latent_dim + latent_dim),
+              tf.keras.layers.Dense(units=128, activation='relu'),
+              tf.keras.layers.Dense(latent_dim + latent_dim)
             ]
         )
 
         self.generative_net = tf.keras.Sequential(
             [
                 tf.keras.layers.InputLayer(input_shape=(latent_dim,)),
-                tf.keras.layers.Dense(units=128, activation=tf.nn.relu),
-                tf.keras.layers.Dense(units=40*40*32, activation=tf.nn.relu),
+                tf.keras.layers.Dense(units=128, activation='relu'),
+                tf.keras.layers.Dense(units=40*40*32, activation='relu'),
                 tf.keras.layers.Reshape(target_shape=(40, 40, 32)),
                 tf.keras.layers.Conv2DTranspose(
                   filters=32,
                   kernel_size=10,
                   strides=(5, 5),
-                  padding="SAME",
+                  padding="same",
                   activation='relu'),
                 tf.keras.layers.Conv2DTranspose(
                   filters=1,
                   kernel_size=20,
                   strides=(5, 5),
-                  padding="SAME",
+                  padding="same",
                   activation='linear') # no activation
             ]
         )
@@ -299,7 +300,8 @@ class CVAE(tf.keras.Model):
 
         loss = log_likelihood_loss(x_logit, x) + kld_loss(mean, logvar)
         #print(f"ELBO: {-tf.reduce_mean(logpx_z + logpz - logqz_x)}, GAB_ELBO: {loss}")
-        return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+        #print(f"log_like: {log_likelihood_loss(x_logit, x)}, kdl: {kld_loss(mean, logvar)}")
+        return loss
 
     def compute_gradients(self, x):
         with tf.GradientTape() as tape:
@@ -321,7 +323,16 @@ class CVAE(tf.keras.Model):
         x_sample = self.sample()
         pic = x_sample[0]
         plt.figure(figsize=(10, 10))
-        plt.imshow(tf.squeeze(pic), cmap="gray", vmin=0, vmax=1.0)
+        plt.imshow(tf.squeeze(pic), cmap="gray")
+        plt.show()
+
+    def random_recon_and_show(self, X):
+        i = tf.expand_dims(X[np.random.choice(X.shape[0])], axis=0)
+        mean, logvar = self.encode(i)
+        z = self.reparameterize(mean, logvar)
+        i = self.decode(z, apply_sigmoid=True)
+        plt.figure(figsize=(10, 10))
+        plt.imshow(tf.squeeze(i), cmap="gray")
         plt.show()
 
     def compile_scoring(self, optimizer=None):
