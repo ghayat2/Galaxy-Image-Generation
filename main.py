@@ -28,6 +28,7 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
                                      color_mode='grayscale',
                                     **dflow_args)
     df_gen.filenames = in_df[path_col].values
+    df_gen._filepaths = df_gen.filenames
     df_gen.classes = np.stack(in_df[y_col].values)
     df_gen.samples = in_df.shape[0]
     df_gen.n = in_df.shape[0]
@@ -144,16 +145,16 @@ def main():
     # # Create the model
 
     #test the VAE architecture
-    vae = CVAE(100)
-    trainer = Trainer(
-        vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
-        './Results'
-    )
+    # vae = CVAE(100)
+    # trainer = Trainer(
+    #     vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
+    #     './Results'
+    # )
 
-    trainer.vae_train(vae)
+    # trainer.vae_train(vae)
 
     # # Create the model
-    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
+    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=True)
 
     # Train the model
     trainer = Trainer(
@@ -163,13 +164,13 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
+    #trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
 
     #Specify reload_ckpt
     model.to_scoring()
 
     #Specify epochs, steps_per_epoch
-    trainer.score(batch_size=batch_size, epochs=10)
+    trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
 
 if __name__ == '__main__':
     main()
