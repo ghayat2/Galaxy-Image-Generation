@@ -119,6 +119,24 @@ def main():
     scored_generator_train = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="training")
     scored_generator_val = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="validation")
 
+    query_images_path = os.path.join(os.path.join(data_path, "query"), "subdirectory")
+    query_images_path = pathlib.Path(query_images_path)
+    only_files = [f for f in os.listdir(query_images_path) if (os.path.isfile(os.path.join(query_images_path, f)) and (f != None))]
+    all_indexes = [int(item.split('.')[0]) for item in only_files]
+    sorted_queries = np.sort(all_indexes)
+
+    print(np.reshape(sorted_queries, (-1, 1)))
+
+    query_datagen = ImageDataGenerator()
+    query_generator = query_datagen.flow_from_directory(os.path.join(data_path, "query"),
+                                                        class_mode=None,
+                                                        batch_size=1,
+                                                        shuffle=False,
+                                                        target_size=(1000,1000),
+                                                        color_mode='grayscale')
+
+    #print(next(query_generator))
+
     print("Data generators have been created")
 
     #Validation Split Sanity Check Code
@@ -167,10 +185,12 @@ def main():
     #trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
 
     #Specify reload_ckpt
-    model.to_scoring()
+    model.to_scoring(reload_ckpt=True)
 
     #Specify epochs, steps_per_epoch
-    trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
+    #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
+
+    trainer.predict(query_generator, sorted_queries)
 
 if __name__ == '__main__':
     main()

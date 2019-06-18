@@ -103,9 +103,17 @@ class Trainer:
 
     def score(self, batch_size, epochs=10, steps_per_epoch=3):
         if(steps_per_epoch is not None):
-            self.model.scorer.fit_generator(self.train_dataset_scored, steps_per_epoch=steps_per_epoch, epochs=epochs, callbacks=self.model.score_callbacks, verbose=1)
+            self.model.scorer.fit_generator(self.train_dataset_scored, steps_per_epoch=steps_per_epoch, epochs=epochs, validation_data=self.val_dataset_scored, validation_steps=100, callbacks=self.model.score_callbacks, use_multiprocessing=True, verbose=1)
         else:
             self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=800, use_multiprocessing=True, verbose=1)
+
+    def predict(self, query_generator, query_numbers):
+        predictions = self.model.scorer.predict_generator(query_generator, verbose=1)
+        predictions = np.clip(predictions, a_min=0, a_max=8)
+        indexed_predictions = np.concatenate([np.reshape(query_numbers, (-1, 1)), predictions], axis=1)
+        print(indexed_predictions)
+        np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
+
 
     def generate_and_save_images(self, test_input, str, nb):
         predictions = self.model.generator(test_input, training=False) # get generator output
