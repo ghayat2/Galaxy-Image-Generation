@@ -11,13 +11,16 @@ import pandas as pd
 import utils
 import matplotlib.pyplot as plt
 
+import sklearn
+from sklearn.model_selection import train_test_split
+
 from model import Model, BaseModel, CVAE
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
-def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset="training", **dflow_args):
+def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
     print('## Ignore next message from keras, values are replaced anyways')
     df_gen = img_data_gen.flow_from_directory(base_dir, 
@@ -32,8 +35,8 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
     df_gen.classes = np.stack(in_df[y_col].values)
     df_gen.samples = in_df.shape[0]
     df_gen.n = in_df.shape[0]
-    df_gen._set_index_array()
     df_gen.directory = '' # since we have the full path
+    df_gen._set_index_array()           
     print('Reinserting dataframe: {} images'.format(in_df.shape[0]))
     return df_gen
 
@@ -86,6 +89,7 @@ def main():
     batch_size = 16
     data_shape = [1000, 1000, 1]
     noise_dim = 1000
+    val_ratio = 0.1
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
@@ -100,7 +104,8 @@ def main():
     #Added Validation Split value here, but not sure if it is compatible
     #with the custom flow_from_dataframe function above
 
-    scored_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.1)
+    scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
+    scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -114,10 +119,13 @@ def main():
     all_indexes = filter(None, all_indexes)
     all_pairs = [[os.path.join(scored_images_path, item) + '.png', id_to_score[int(item)]] for item in all_indexes]
 
-    scored_df = pd.DataFrame(all_pairs, columns=['Path', 'Value'])
+    all_pairs_train, all_pairs_val = train_test_split(all_pairs, test_size=val_ratio)
 
-    scored_generator_train = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="training")
-    scored_generator_val = flow_from_dataframe(scored_datagen, scored_df, 'Path', 'Value', batch_size=batch_size, subset="validation")
+    scored_df_train = pd.DataFrame(all_pairs_train, columns=['Path', 'Value'])
+    scored_df_val = pd.DataFrame(all_pairs_val, columns=['Path', 'Value'])
+
+    scored_generator_train = flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
+    scored_generator_val = flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
 
     query_images_path = os.path.join(os.path.join(data_path, "query"), "subdirectory")
     query_images_path = pathlib.Path(query_images_path)
