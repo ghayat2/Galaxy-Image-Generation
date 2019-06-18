@@ -143,7 +143,7 @@ def main():
 
     # -------------------- #
 
-    #print(next(scored_generator_train))
+    print(next(scored_generator_train))
     # image, score = next(scored_generator_train)
     # single = image[0, :, :, 0]
     # print(score)

@@ -186,6 +186,9 @@ class Trainer:
                                                                 elbo,
                                                                 end_time - start_time))
                 if show_sample:
+                    for test_batch, labels in self.train_dataset_labeled:
+                        vae.random_recon_and_show(test_batch)
+                        break
                     vae.sample_and_show()
         self.vprint(f"VAE trained for {epochs} epochs")
 
