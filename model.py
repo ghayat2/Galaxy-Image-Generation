@@ -209,11 +209,12 @@ class BaseModel(Model):
 
 
 class CVAE(tf.keras.Model):
-    def __init__(self, latent_dim, learning_rate=1e-3):
+    def __init__(self, latent_dim, learning_rate=1e-3, name="default_vae_name"):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.scoring = None
+        self.__name__ = name
 
         self.inference_net = tf.keras.Sequential(
             [
@@ -249,6 +250,11 @@ class CVAE(tf.keras.Model):
                   activation='linear') # no activation
             ]
         )
+    def set_untrainable(self):
+        for layer in self.generative_net.layers:
+            layer.trainable = False
+        for layer in self.inference_net.layers:
+            layer.trainable = False
 
     def sample(self, eps=None):
         if eps is None:
@@ -312,12 +318,16 @@ class CVAE(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
     def save_nets(self, dest_dir="./saved_models"):
-        self.generative_net.save(os.path.join(dest_dir, "generative_net"))
-        self.inference_net.save(os.path.join(dest_dir, "inference_net"))
+        self.generative_net.save(os.path.join(dest_dir, "generative_net_" + self.__name__))
+        self.inference_net.save(os.path.join(dest_dir, "inference_net_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.save(os.path.join(dest_dir, "scoring_net_" + self.__name__))
 
     def load_nets(self, dest_dir="./saved_models"):
-        self .generative_net.load_weights(os.path.join(dest_dir, "generative_net"))
-        self.inference_net.load_weights(os.path.join(dest_dir, "inference_net"))
+        self .generative_net.load_weights(os.path.join(dest_dir, "generative_net_" + self.__name__))
+        self.inference_net.load_weights(os.path.join(dest_dir, "inference_net_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.load_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
 
     def sample_and_show(self):
         x_sample = self.sample()
@@ -339,7 +349,7 @@ class CVAE(tf.keras.Model):
         self.scoring = tf.keras.models.clone_model(self.inference_net)
         self.make_scoring_model(self.scoring)
         optim = optimizer if optimizer is not None else self.optimizer
-        self.scoring.compile(loss='mean_squared_error', optimizer=optim)
+        self.scoring.compile(loss='mean_squared_error', optimizer=optim, metrics=["mse"])
 
     @staticmethod
     def make_scoring_model(model):
@@ -354,4 +364,5 @@ class CVAE(tf.keras.Model):
 
         return model
 
-
+    def set_name(self, name):
+        self.__name__ = name
