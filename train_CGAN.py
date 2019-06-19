@@ -238,9 +238,10 @@ with tf.Session(config=config) as sess:
                 plt.close()
                 
                 writer.add_summary(summary, global_step_val)
+    print("Training Done. Saving model ...")
     global_step_val = sess.run(gen_global_step) # get the global step value
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
-                
+    print("Done with global_step_val: {}".format(global_step_val))
     
     
     
