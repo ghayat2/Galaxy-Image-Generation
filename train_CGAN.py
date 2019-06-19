@@ -97,10 +97,11 @@ with tf.Session(config=config) as sess:
     
     # losses
     print("Losses ...")
-    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32)) # other possibility is y_pl instead of ones
+    y_pl_flat = tf.cast(tf.reshape(y_pl, [-1]), tf.int32)
+    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=y_pl_flat)
     discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, 
-                                      fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
-                                      real_labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32)) # other possibility is y_pl instead of ones and zeros
+                                      fake_labels=y_pl_flat, 
+                                      real_labels=y_pl_flat)
 
     # define trainer
     print("Train_op ...")
