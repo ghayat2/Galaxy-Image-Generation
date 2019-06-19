@@ -250,6 +250,7 @@ class CVAE(tf.keras.Model):
                   activation='linear') # no activation
             ]
         )
+
     def set_untrainable(self):
         for layer in self.generative_net.layers:
             layer.trainable = False
@@ -318,6 +319,8 @@ class CVAE(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
     def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
         self.generative_net.save(os.path.join(dest_dir, "generative_net_" + self.__name__))
         self.inference_net.save(os.path.join(dest_dir, "inference_net_" + self.__name__))
         if self.scoring is not None:
@@ -366,3 +369,24 @@ class CVAE(tf.keras.Model):
 
     def set_name(self, name):
         self.__name__ = name
+
+
+class VAEGAN(BaseModel):
+    def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None, reload_ckpt=False):
+        if noise_dim is None:
+            noise_dim = vae.inferense_net.output_shape
+        if data_shape is None:
+            data_shape = vae.inferense_net.output_shape
+        super(VAEGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=reload_ckpt)
+        self.vae = vae
+
+    def make_generator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(2*self.noise_dim, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+
+
+        return model
