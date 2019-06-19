@@ -235,6 +235,7 @@ with tf.Session(config=config) as sess:
                     plt.axis('off')
                     plt.title("label {}".format(y_test[j]))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
+                plt.close()
                 
                 writer.add_summary(summary, global_step_val)
     global_step_val = sess.run(gen_global_step) # get the global step value
