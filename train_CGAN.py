@@ -5,6 +5,7 @@ from data import create_dataloader_train
 from CGAN import CGAN
 from tqdm import trange
 from PIL import Image
+import datetime, time
 from argparse import ArgumentParser
 
 global_seed=5
