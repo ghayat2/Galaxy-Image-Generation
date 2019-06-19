@@ -78,44 +78,48 @@ with tf.Session(config=config) as sess:
     real_im, label = train_ds # unzip
     
     # define noise and test data
-    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise")
+    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
+    y_G = tf.random.uniform( shape=[BATCH_SIZE, 1], minval=0, maxval=2, dtype=tf.int32, seed=global_seed) # labels fed to generator
+    
     noise_test = np.random.normal(0, 1, [BATCH_SIZE, NOISE_DIM]).astype("float32") # constant noise to see its evolution over time
     y_test = np.random.randint(2, size=[BATCH_SIZE, 1]) # constant list of labels for testing
     
     # define placeholders
-    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W])
-    noise_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, NOISE_DIM])
-    y_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1])
+    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W]) # placeholder for real images fed to discriminator
+    noise_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, NOISE_DIM]) # placeholder for noise fed to generator
+    
+    y_pl_G = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1]) # placeholder for label fed to generator
+    y_pl_D = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1]) # placeholder for label fed to discriminator
+    
     training_pl = tf.placeholder(dtype=tf.bool, shape=[])
     
     #model
     print("Building model ...")
     model= CGAN()
-    fake_im, _ = model.generator_model(noise=noise_pl, y=y_pl, training=training_pl) # get fake images from generator
-    fake_out_D, _ = model.discriminator_model(inp=fake_im, y=y_pl, training=training_pl) # get discriminator output on fake images
-    real_out_D, _ = model.discriminator_model(inp=im_pl, y=y_pl, training=training_pl, reuse=True) # get discriminator output on real images
+    fake_im, _ = model.generator_model(noise=noise_pl, y=y_pl_G, training=training_pl) # get fake images from generator
+    fake_out_D, _ = model.discriminator_model(inp=fake_im, y=y_pl_G, training=training_pl) # get discriminator output on fake images
+    real_out_D, _ = model.discriminator_model(inp=im_pl, y=y_pl_D, training=training_pl, reuse=True) # get discriminator output on real images
     
     # losses
     print("Losses ...")
-    y_pl_flat = tf.cast(tf.reshape(y_pl, [-1]), tf.int32)
-    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=y_pl_flat)
+    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
     discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, 
-                                      fake_labels=y_pl_flat, 
-                                      real_labels=y_pl_flat)
+                                      fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
+                                      real_labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
 
     # define trainer
     print("Train_op ...")
     gen_vars = model.generator_vars()
-    gen_train_op, gen_global_step = model.train_op(gen_loss, G_LR, gen_vars)
+    gen_train_op, gen_global_step = model.train_op(gen_loss, G_LR, gen_vars, scope="generator")
     discr_vars = model.discriminator_vars()
-    discr_train_op, discr_global_step = model.train_op(discr_loss, D_LR, discr_vars)
+    discr_train_op, discr_global_step = model.train_op(discr_loss, D_LR, discr_vars, scope="discriminator")
     
 #    sys.exit(0)
     
     # define summaries
     gen_loss_summary = tf.summary.scalar("gen_loss", gen_loss)
     discr_loss_summary = tf.summary.scalar("discr_loss", discr_loss)
-    train_summary = tf.summary.merge([gen_loss_summary, discr_loss_summary])
+#    train_summary = tf.summary.merge([gen_loss_summary, discr_loss_summary])
 	
     fake_im_channels_last = (tf.transpose(fake_im, perm=[0, 2, 3, 1])+1)*128.0 # put in channels last and unnormalize and cast to int
     test_summary = tf.summary.image("Test Image", fake_im_channels_last, max_outputs=BATCH_SIZE)
@@ -145,18 +149,25 @@ with tf.Session(config=config) as sess:
             
             
             if (i+1) % LOG_ITER_FREQ == 0:
-                im_val, noise_val, label_val = sess.run([real_im, noise, label]) # read data values from disk
-                feed_dict_train={training_pl:True, noise_pl: noise_val, y_pl:label_val, im_pl: im_val} # feed dict for training
+                im_val, y_val_D, noise_val, y_val_G = sess.run([real_im, label, noise, y_G]) # read data values from disk
+                feed_dict_train={training_pl:True, im_pl: im_val, y_pl_D: y_val_D, noise_pl: noise_val, y_pl_G: y_val_G} # feed dict for training
                 
-                _, _, summary = sess.run([gen_train_op, discr_train_op, train_summary], feed_dict_train) # train D and G and get train_summary as well
-                global_step_val = sess.run(gen_global_step) # can also use discr_global_step since the same
+                _, summary = sess.run([discr_train_op, discr_loss_summary], feed_dict_train) # train D and get loss_summary as well
+                global_step_val = sess.run(discr_global_step)
+                writer.add_summary(summary, global_step_val)
+                
+                _, summary = sess.run([gen_train_op, gen_loss_summary], feed_dict_train) # train G and get loss_summary as well
+                global_step_val = sess.run(gen_global_step)
                 writer.add_summary(summary, global_step_val)
                 
             else:
-                im_val, noise_val, label_val = sess.run([real_im, noise, label]) # read data values from disk
-                feed_dict_train={training_pl:True, noise_pl: noise_val, y_pl:label_val, im_pl: im_val} # feed dict for training
+                im_val, y_val_D, noise_val, y_val_G = sess.run([real_im, label, noise, y_G]) # read data values from disk
+                feed_dict_train={training_pl:True, im_pl: im_val, y_pl_D: y_val_D, noise_pl: noise_val, y_pl_G: y_val_G} # feed dict for training
                 
-                sess.run([gen_train_op, discr_train_op], feed_dict_train) # train D and G only
+                sess.run(discr_train_op, feed_dict_train) # train D only (no summaries)
+                
+                sess.run(gen_train_op, feed_dict_train) # train G only (no summaries)
+
             
             # save model
             if (i+1) % SAVE_ITER_FREQ == 0:
@@ -165,7 +176,7 @@ with tf.Session(config=config) as sess:
                 gc.collect() # free-up memory once model saved
                 
             if (i+1) % SAMPLE_ITER_FREQ == 0:
-                feed_dict_test={training_pl:False, noise_pl: noise_test, y_pl:y_test} # feed dict for testing
+                feed_dict_test={training_pl:False, noise_pl: noise_test, y_pl_G:y_test} # feed dict for testing
                  
                 images, summary, global_step_val = sess.run([fake_im, test_summary, gen_global_step], feed_dict_test)
                  
