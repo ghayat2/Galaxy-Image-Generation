@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import sys, os, glob, gc
+import matplotlib as mpl
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 from data import create_dataloader_train
 from CGAN import CGAN
@@ -26,13 +28,15 @@ parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 200, hel
 parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help = 'number of iterations between saving model checkpoints')
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
-#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
+parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
 
 def timestamp():
     return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-    
+
+CURR_TIMESTAMP=timestamp()
+
 NUM_EPOCHS=args.num_epochs
 BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
@@ -45,15 +49,17 @@ SAMPLE_ITER_FREQ = args.sample_iter_freq
 C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
 FIG_SIZE = 20 # in inches
+RUNNING_ON_COLAB = args.colab
 
 # paths
 DATA_ROOT="./data"
 CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
-LOG_DIR=os.path.join(".", "LOG_CGAN", timestamp())
+LOG_DIR=os.path.join(".", "LOG_CGAN", CURR_TIMESTAMP)
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
+COLAB_SAMPLES_DIR=os.path.join("./gdrive/'My Drive'/LOG_CGAN", CURR_TIMESTAMP, "test_samples")
 
 # printing parameters
 print("\n")
@@ -69,6 +75,8 @@ print("    SAVE_ITER_FREQ: {}".format(SAVE_ITER_FREQ))
 print("    SAMPLE_ITER_FREQ: {}".format(SAMPLE_ITER_FREQ))
 print("    DATA_ROOT: {}".format(DATA_ROOT))
 print("    LOG_DIR: {}".format(LOG_DIR))
+print("    RUNNING_ON_COLAB: {}".format(RUNNING_ON_COLAB))
+print("    COLAB_SAMPLES_DIR: {}".format(COLAB_SAMPLES_DIR))
 print("\n")
 sys.stdout.flush()
 
@@ -201,7 +209,7 @@ with tf.Session(config=config) as sess:
                     os.makedirs(SAMPLES_DIR)
                     
                 fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
-                lines = cols =int(np.sqrt(BATCH_SIZE))
+                lines = cols =int(np.ceil(np.sqrt(BATCH_SIZE)))
                 
                 for j, image in enumerate(images):
                     image = ((image+1)*128.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
@@ -210,6 +218,9 @@ with tf.Session(config=config) as sess:
                     plt.axis('off')
                     plt.title("label {}".format(y_test[j]))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
+                
+                if RUNNING_ON_COLAB:
+                    fig.savefig(os.path.join(COLAB_SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
                 
                 writer.add_summary(summary, global_step_val)
            
