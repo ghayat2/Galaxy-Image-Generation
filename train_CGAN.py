@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys, os, glob, gc
+import matplotlib.pyplot as plt
 from data import create_dataloader_train
 from CGAN import CGAN
 from tqdm import trange
@@ -43,9 +44,13 @@ SAMPLE_ITER_FREQ = args.sample_iter_freq
 
 C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
+FIG_SIZE = 20 # in inches
 
 # paths
 DATA_ROOT="./data"
+CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
+if os.path.exists(CLUSTER_DATA_ROOT):
+    DATA_ROOT=CLUSTER_DATA_ROOT
 LOG_DIR=os.path.join(".", "LOG_CGAN", timestamp())
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
@@ -194,17 +199,18 @@ with tf.Session(config=config) as sess:
                  
                 if not os.path.exists(SAMPLES_DIR):
                     os.makedirs(SAMPLES_DIR)
+                    
+                fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
+                lines = cols =int(np.sqrt(BATCH_SIZE))
                 
                 for j, image in enumerate(images):
-                    image = ((image+1)*128.0).transpose(1,2,0).astype("uint8") # unnormalize image and put channels_last
-                    image = Image.fromarray(image[:,:,0], mode='L') # remove the channels dimension
-                    IMAGE_DIR = os.path.join(SAMPLES_DIR, "img_{}_label_{}".format(j, y_test[j]))
-                    
-                    if not os.path.exists(IMAGE_DIR):
-                        os.makedirs(IMAGE_DIR)
-                    IMG_PATH = os.path.join(IMAGE_DIR, "step_{}.png".format(global_step_val))
-                    image.save(IMG_PATH)
-                    
+                    image = ((image+1)*128.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
+                    plt.subplot(lines, cols, j+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
+                    plt.imshow(image, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
+                    plt.axis('off')
+                    plt.title("label {}".format(y_test[j]))
+                fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
+                
                 writer.add_summary(summary, global_step_val)
            
                 
