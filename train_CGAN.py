@@ -28,7 +28,8 @@ parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 200, hel
 parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help = 'number of iterations between saving model checkpoints')
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
-parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
+parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
+#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
 
@@ -45,11 +46,12 @@ D_LR = args.disc_learning_rate # learning rate for discriminator
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
 SAMPLE_ITER_FREQ = args.sample_iter_freq
+CONTINUE_TRAINING = args.continue_training
 
 C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
 FIG_SIZE = 20 # in inches
-RUNNING_ON_COLAB = args.colab
+#RUNNING_ON_COLAB = args.colab
 
 # paths
 DATA_ROOT="./data"
@@ -57,9 +59,11 @@ CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
 LOG_DIR=os.path.join(".", "LOG_CGAN", CURR_TIMESTAMP)
+if CONTINUE_TRAINING: # continue training from last training experiment
+    list_of_files = glob.glob(os.path.join(".", "LOG_CGAN", "*"))
+    LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
-COLAB_SAMPLES_DIR=os.path.join("./gdrive/'My Drive'/LOG_CGAN", CURR_TIMESTAMP, "test_samples")
 
 # printing parameters
 print("\n")
@@ -75,8 +79,7 @@ print("    SAVE_ITER_FREQ: {}".format(SAVE_ITER_FREQ))
 print("    SAMPLE_ITER_FREQ: {}".format(SAMPLE_ITER_FREQ))
 print("    DATA_ROOT: {}".format(DATA_ROOT))
 print("    LOG_DIR: {}".format(LOG_DIR))
-print("    RUNNING_ON_COLAB: {}".format(RUNNING_ON_COLAB))
-print("    COLAB_SAMPLES_DIR: {}".format(COLAB_SAMPLES_DIR))
+print("    CONTINUE_TRAINING: {}".format(CONTINUE_TRAINING))
 print("\n")
 sys.stdout.flush()
 
@@ -144,19 +147,33 @@ with tf.Session(config=config) as sess:
 	
     fake_im_channels_last = (tf.transpose(fake_im, perm=[0, 2, 3, 1])+1)*128.0 # put in channels last and unnormalize and cast to int
     test_summary = tf.summary.image("Test Image", fake_im_channels_last, max_outputs=BATCH_SIZE)
+    
     # summaries and graph writer
     print("Initializing summaries writer ...")
     sys.stdout.flush()
-    writer = tf.summary.FileWriter(CHECKPOINTS_PATH, sess.graph)
-    print("Done.")
+    if CONTINUE_TRAINING: # if continuing training, no need to write the graph again to the events file
+        writer = tf.summary.FileWriter(CHECKPOINTS_PATH)
+    else:
+        writer = tf.summary.FileWriter(CHECKPOINTS_PATH, sess.graph)
     
     print("Initializing saver ...")
     sys.stdout.flush()
     saver = tf.train.Saver(tf.global_variables())
-    
-    print("Initializing variables ...")
-    sys.stdout.flush()
-    tf.global_variables_initializer().run()
+    if CONTINUE_TRAINING: # restore variables from saved model
+        print("\nRestoring Model ...")
+        saver.restore(sess, tf.train.latest_checkpoint(CHECKPOINTS_PATH)) # restore model from last checkpoint
+        global_step_val = sess.run(gen_global_step)
+        for filename in glob.glob(os.path.join(CHECKPOINTS_PATH, "model*")): # remove all previously saved checkpoints (for limited disk space)
+            os.remove(filename)
+        saver.save(sess,os.path.join(CHECKPOINTS_PATH,"model"),global_step=global_step_val) # save the restored model (i,e keep the last checkpoint in this new run)
+        print("Model restored from ", CHECKPOINTS_PATH)
+        print("Continuing training for {} epochs ... ".format(NUM_EPOCHS))
+        print("Global_step: {}\n".format(global_step_val))
+        sys.stdout.flush()
+    else: # initialize using initializers
+        print("\nInitializing Variables")
+        sys.stdout.flush()
+        tf.global_variables_initializer().run()
     
     
     print("Train start ...")
@@ -219,11 +236,9 @@ with tf.Session(config=config) as sess:
                     plt.title("label {}".format(y_test[j]))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
                 
-                if RUNNING_ON_COLAB:
-                    fig.savefig(os.path.join(COLAB_SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
-                
                 writer.add_summary(summary, global_step_val)
-           
+    global_step_val = sess.run(gen_global_step) # get the global step value
+    saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
                 
     
     
