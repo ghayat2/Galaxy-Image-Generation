@@ -59,6 +59,9 @@ print("    LEARNING_RATE_D: {}".format(D_LR))
 print("    LEARNING_RATE_G: {}".format(G_LR))
 print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
+print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
+print("    SAVE_ITER_FREQ: {}".format(SAVE_ITER_FREQ))
+print("    SAMPLE_ITER_FREQ: {}".format(SAMPLE_ITER_FREQ))
 print("    DATA_ROOT: {}".format(DATA_ROOT))
 print("    LOG_DIR: {}".format(LOG_DIR))
 print("\n")
@@ -95,6 +98,7 @@ with tf.Session(config=config) as sess:
     
     #model
     print("Building model ...")
+    sys.stdout.flush()
     model= CGAN()
     fake_im, _ = model.generator_model(noise=noise_pl, y=y_pl_G, training=training_pl) # get fake images from generator
     fake_out_D, _ = model.discriminator_model(inp=fake_im, y=y_pl_G, training=training_pl) # get discriminator output on fake images
@@ -102,6 +106,7 @@ with tf.Session(config=config) as sess:
     
     # losses
     print("Losses ...")
+    sys.stdout.flush()
     gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
     discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, 
                                       fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
@@ -109,6 +114,7 @@ with tf.Session(config=config) as sess:
 
     # define trainer
     print("Train_op ...")
+    sys.stdout.flush()
     gen_vars = model.generator_vars()
     gen_train_op, gen_global_step = model.train_op(gen_loss, G_LR, gen_vars, scope="generator")
     discr_vars = model.discriminator_vars()
@@ -117,6 +123,8 @@ with tf.Session(config=config) as sess:
 #    sys.exit(0)
     
     # define summaries
+    print("Summaries ...")
+    sys.stdout.flush()
     gen_loss_summary = tf.summary.scalar("gen_loss", gen_loss)
     discr_loss_summary = tf.summary.scalar("discr_loss", discr_loss)
 #    train_summary = tf.summary.merge([gen_loss_summary, discr_loss_summary])
@@ -125,19 +133,23 @@ with tf.Session(config=config) as sess:
     test_summary = tf.summary.image("Test Image", fake_im_channels_last, max_outputs=BATCH_SIZE)
     # summaries and graph writer
     print("Initializing summaries writer ...")
+    sys.stdout.flush()
     writer = tf.summary.FileWriter(CHECKPOINTS_PATH, sess.graph)
     print("Done.")
     
     print("Initializing saver ...")
+    sys.stdout.flush()
     saver = tf.train.Saver(tf.global_variables())
     
     print("Initializing variables ...")
+    sys.stdout.flush()
     tf.global_variables_initializer().run()
     
     
     print("Train start ...")
     NUM_SAMPLES = nb_images
     print("y_test: {}".format(y_test.reshape([-1])) )
+    sys.stdout.flush()
     with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
         for i in t: # for each step
         
@@ -186,7 +198,7 @@ with tf.Session(config=config) as sess:
                 for j, image in enumerate(images):
                     image = ((image+1)*128.0).transpose(1,2,0).astype("uint8") # unnormalize image and put channels_last
                     image = Image.fromarray(image[:,:,0], mode='L') # remove the channels dimension
-                    IMAGE_DIR = os.path.join(SAMPLES_DIR, "img_{}".format(j))
+                    IMAGE_DIR = os.path.join(SAMPLES_DIR, "img_{}_label_{}".format(j, y_test[j]))
                     
                     if not os.path.exists(IMAGE_DIR):
                         os.makedirs(IMAGE_DIR)
