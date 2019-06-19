@@ -1,4 +1,5 @@
-import datetime, time
+import random
+import numpy as np
 
 def gan_preprocessing(image):
     image = image / 255.0
@@ -7,8 +8,8 @@ def gan_preprocessing(image):
 
 
 def vae_preprocessing(image):
+    rint = random.randint(1, 4)
+    image = np.rot90(image, rint)
     image = image / 255.0
     return image
-    
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
+

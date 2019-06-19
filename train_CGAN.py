@@ -3,7 +3,6 @@ import numpy as np
 import sys, os, glob, gc
 from data import create_dataloader_train
 from CGAN import CGAN
-import utils
 from tqdm import trange
 from PIL import Image
 from argparse import ArgumentParser
@@ -29,6 +28,9 @@ parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, hel
 
 args = parser.parse_args()
 
+def timestamp():
+    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
+    
 NUM_EPOCHS=args.num_epochs
 BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
@@ -43,7 +45,7 @@ NOISE_DIM=args.noise_dim
 
 # paths
 DATA_ROOT="./data"
-LOG_DIR=os.path.join(".", "LOG_CGAN", utils.timestamp())
+LOG_DIR=os.path.join(".", "LOG_CGAN", timestamp())
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
 
