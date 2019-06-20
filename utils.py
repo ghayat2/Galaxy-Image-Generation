@@ -41,7 +41,7 @@ def train_random_forest_regressor(vae , epochs, scored_generator_train,\
         
       if i % 50 == 0:
         print("progression: epoch, ", epoch, ", iteration: ", i, "time since start: ", \
-              t.time() - start_time ," s, " , i/min(iteration_limit, len(scored_generator_train)), "%")
+              t.time() - start_time ," s, " , i/min(iteration_limit, len(scored_generator_train))*10, "%")
         
   return regr
               
@@ -63,11 +63,16 @@ def predict_with_random_forest_regressor(vae, regr, query_generator, query_numbe
 def make_predictions(vae, regr, query_generator):
     predictions = []
     start_time = t.time()
-    for i, query in enumerate(query_generator):
+    i = 0
+    for query in query_generator:
         mean, logvar = vae.encode(query)
         z = vae.reparameterize(mean, logvar)  
         predictions.append(regr.predict(z))
-        print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ", i/len(query_generator), "%")
+        if i %50 == 0:
+          print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ", i/len(query_generator)*100, "%")
+        if i >= len(query_generator)-1:
+          return predictions
+        i = i + 1
 
         
     return predictions
