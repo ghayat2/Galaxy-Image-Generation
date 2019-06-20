@@ -95,11 +95,11 @@ class CGAN:
             total_loss = tf.reduce_mean(fake_loss + real_loss)
         return total_loss  
 
-    def train_op(self, loss, learning_rate, var_list):
+    def train_op(self, loss, learning_rate, var_list, scope):
         with tf.name_scope("train_op"):
             global_step = tf.Variable(0, name='global_step',trainable=False)
             
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=scope)
             with tf.control_dependencies(update_ops): # for batch_norm
                 train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step, var_list)
         
