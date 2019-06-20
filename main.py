@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
 
-from model import Model, BaseModel, CVAE
+from model import Model, BaseModel, CVAE, VAEGAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -90,17 +90,25 @@ def main():
     batch_size = 16
     data_shape = [1000, 1000, 1]
     noise_dim = 1000
+    latent_dim = 100
     val_ratio = 0.1
+
+    vae = CVAE(latent_dim)
+    inf_vae = tf.keras.models.clone_model(vae.inference_net)
+    print(inf_vae.summary())
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
-    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing)
+    def vae_latent(im):
+        return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
+
+    labeled_datagen = ImageDataGenerator(preprocessing_function=None)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
-                                        target_size=(1000, 1000), 
+                                        target_size=(1000, 1000),
                                         color_mode='grayscale')
-    #print(next(labeled_generator))
+
     
     #Added Validation Split value here, but not sure if it is compatible
     #with the custom flow_from_dataframe function above
@@ -128,7 +136,7 @@ def main():
     scored_generator_train = flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
     scored_generator_val = flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
 
-    query_images_path = os.path.join(os.path.join(data_path, "query"), "subdirectory")
+    query_images_path = os.path.join(data_path, "query")
     query_images_path = pathlib.Path(query_images_path)
     only_files = [f for f in os.listdir(query_images_path) if (os.path.isfile(os.path.join(query_images_path, f)) and (f != None))]
     all_indexes = [int(item.split('.')[0]) for item in only_files]
@@ -172,7 +180,6 @@ def main():
     # # Create the model
 
     #test the VAE architecture
-    # vae = CVAE(100)
     # trainer = Trainer(
     #     vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
     #     './Results'
@@ -181,28 +188,7 @@ def main():
     # trainer.vae_train(vae)
 
     # # Create the model
-    
-    if RANDOM_FOREST:
-        
-        vae = CVAE(100, learning_rate=1e-5, name="vae_basic")
-        trainer = Trainer(
-        vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
-        './Results'
-        )
-        
-        trainer.generate_every = 5
-        vae.load_nets()
-        
-        print("Training regressor...")
-        regr = utils.train_random_forest_regressor(vae, 1, scored_generator_train, batch_size=batch_size)
-        print("Creating prediction.csv file...")
-        utils.predict_with_random_forest_regressor(vae, regr, query_generator, sorted_queries)
-        
-        return
-        
-        
-        
-    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=True)
+    model = VAEGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -212,15 +198,18 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    #trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
+    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=10,
+                  steps_per_epoch=3,
+                  batch_processing_fct=vae_latent,
+                  gen_imgs=True)
 
     #Specify reload_ckpt
-    model.to_scoring(reload_ckpt=True)
+    #model.to_scoring(reload_ckpt=True)
 
     #Specify epochs, steps_per_epoch
     #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
 
-    trainer.predict(query_generator, sorted_queries)
+    #trainer.predict(query_generator, sorted_queries)
 
 if __name__ == '__main__':
     main()

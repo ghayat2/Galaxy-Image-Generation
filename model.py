@@ -38,16 +38,19 @@ class BaseModel(Model):
         self.discriminator_optimizer = optimizers.Adam(1e-4)
         self.loss = losses.BinaryCrossentropy(from_logits=True)
 
-        self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
-                                 discriminator_optimizer=self.discriminator_optimizer,
-                                 generator=self.generator,
-                                 discriminator=self.discriminator)
-
-        self.checkpoint_dir = checkpoint_dir
-        self.checkpoint_prefix = checkpoint_prefix
+        self.checkpoint = None
+        self.checkpoint_dir = None
+        self.checkpoint_prefix = None
 
         # Restore from lastest available checkpoint
         if reload_ckpt:
+            self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
+                                                  discriminator_optimizer=self.discriminator_optimizer,
+                                                  generator=self.generator,
+                                                  discriminator=self.discriminator)
+
+            self.checkpoint_dir = checkpoint_dir
+            self.checkpoint_prefix = checkpoint_prefix
             latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
             checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
 
@@ -377,16 +380,41 @@ class VAEGAN(BaseModel):
             noise_dim = vae.inferense_net.output_shape
         if data_shape is None:
             data_shape = vae.inferense_net.output_shape
-        super(VAEGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=reload_ckpt)
         self.vae = vae
+        self.vae.set_untrainable()
+        super(VAEGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=reload_ckpt)
+
+
 
     def make_generator_model(self):
+        #model = tf.keras.models.clone_model(self.vae.inference_net)
         model = keras.Sequential()
 
         model.add(layers.Dense(2*self.noise_dim, use_bias=False, input_shape=(self.noise_dim,)))
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
 
+        model.add(layers.Dense(2 * self.noise_dim, use_bias=False))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
 
+        model.add(layers.Dense(self.noise_dim, use_bias=False))
+
+        return model
+
+    def make_discriminator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(self.noise_dim, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(self.noise_dim, use_bias=False))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1, use_bias=False))
 
         return model
