@@ -105,6 +105,20 @@ def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuff
 #        image.save("fake_images/img_{}.png".format(i))
 
 #batch_size = 1
+#real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
+
+#print("\n\nnb_reals:", nb_reals,"\n\n")
+#with tf.Session() as sess:
+#    for i in range(nb_reals):
+#        im_vals = sess.run(real_im)
+#        
+#        image = ((im_vals[0]+1)*128.0).transpose(1,2,0).astype("uint8")
+#        image = Image.fromarray(image[:,:,0], mode='L') # remove the channels dimension
+#        if not os.path.exists("real_images"):
+#            os.makedirs("real_images")
+#        image.save("real_images/img_{}.png".format(i))
+
+#batch_size = 1
 #train_ds, nb_images = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=True)
 #im, label = train_ds # unzip
 
