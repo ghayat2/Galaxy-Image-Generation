@@ -228,12 +228,22 @@ with tf.Session(config=config) as sess:
                 fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
                 lines = cols =int(np.ceil(np.sqrt(BATCH_SIZE)))
                 
+                index_0 = 1
+                index_1 = lines*cols
                 for j, image in enumerate(images):
+                    if y_test[j][0] == 0:
+                        pos = index_0
+                        index_0 +=1
+                    if y_test[j][0] == 1:
+                        pos = index_1
+                        index_1 -=1
                     image = ((image+1)*128.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
-                    plt.subplot(lines, cols, j+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
+                    plt.subplot(lines, cols, pos) # consider the default figure as lines x cols grid and select the (i+1)th cell
+                    min_val = image.min()
+                    max_val = image.max()
                     plt.imshow(image, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
                     plt.axis('off')
-                    plt.title("label {}".format(y_test[j]))
+                    plt.title("label {}, min: {}, max: {}".format(y_test[j], min_val, max_val))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
                 plt.close()
                 
