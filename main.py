@@ -19,7 +19,15 @@ from trainer import Trainer
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
-RANDOM_FOREST = False
+"""
+    The REGRESSOR_TYPE Flag specifies the type of regressor that will be
+        trained on the VAE latent space and will be used to make predictions
+        Options: None (default): our own
+                 Random Forest
+                 Ridge
+"""
+REGRESSOR_TYPE = None 
+
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
@@ -70,6 +78,7 @@ def create_labeled_folders(data_path):
 
 
 def main():
+    RANDOM_FOREST = False
     tf.compat.v1.enable_eager_execution()
     print(tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
@@ -94,6 +103,7 @@ def main():
     val_ratio = 0.1
 
     vae = CVAE(latent_dim)
+    vae.load_nets()
     inf_vae = tf.keras.models.clone_model(vae.inference_net)
     print(inf_vae.summary())
 
@@ -152,40 +162,15 @@ def main():
                                                         target_size=(1000,1000),
                                                         color_mode='grayscale')
 
-    #print(next(query_generator))
 
     print("Data generators have been created")
 
-    #Validation Split Sanity Check Code
 
     # -------------------- #
 
-    print(next(scored_generator_train))
-    # image, score = next(scored_generator_train)
-    # single = image[0, :, :, 0]
-    # print(score)
-    # print(single.shape)
-    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
-    # plt.show()
-
-    # image, score = next(scored_generator_val)
-    # single = image[0, :, :, 0]
-    # print(score)
-    # print(single.shape)
-    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
-    # plt.show()
-
-    # -------------------- #
-
-    # # Create the model
-
-    #test the VAE architecture
-    # trainer = Trainer(
-    #     vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
-    #     './Results'
-    # )
-
-    # trainer.vae_train(vae)
+    if REGRESSOR_TYPE:
+        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=100)
+        return
 
     # # Create the model
     model = VAEGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
@@ -203,52 +188,8 @@ def main():
                   batch_processing_fct=vae_latent,
                   gen_imgs=True)
 
-    #Specify reload_ckpt
-    #model.to_scoring(reload_ckpt=True)
-
-    #Specify epochs, steps_per_epoch
-    #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
-
-    #trainer.predict(query_generator, sorted_queries)
 
 if __name__ == '__main__':
     main()
 
-### Generate Labeled Data ###
-    # name = "labeled"
 
-    # labels_path = os.path.join(data_path, name + ".csv")
-    # labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
-    # id_to_label = labels.to_dict(orient="index")
-    # id_to_label = {k: v[1] for k, v in id_to_label.items()}
-
-    # labeled_images_path = os.path.join(data_path, name)
-    # labeled_images_path = pathlib.Path(labeled_images_path)
-    # all_labeled = list(labeled_images_path.glob('*'))
-    # all_labeled = [str(p) for p in all_labeled]
-    # all_labels = [id_to_label[int(item.name.split('.')[0])] for item in labeled_images_path.glob('*')]
-    
-    # ##Only get the 1 Labels###
-
-    # all_labeled = [e for e, l in zip(all_labeled, all_labels) if l == 1]
-    # all_ones = [1 for _ in all_labeled]
-
-    # print(all_labeled)
-
-    # ## ------------------- ###
-
-    # ## Generate Scored Data ###
-    # name = "scored"
-
-    # scores_path = os.path.join(data_path, name + ".csv")
-    # scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
-    # id_to_score = scores.to_dict(orient="index")
-    # #id_to_score = {k: v[1] for k, v in id_to_label.items()}
-
-    # scored_images_path = os.path.join(data_path, name)
-    # scored_images_path = pathlib.Path(scored_images_path)
-    # all_scored = list(labeled_images_path.glob('*'))
-    # all_scored = [str(p) for p in all_scored]
-    # all_scores = [id_to_score[int(item.name.split('.')[0])] for item in scored_images_path.glob('*')]
-
-    

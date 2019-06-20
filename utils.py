@@ -1,6 +1,7 @@
 import random
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn import linear_model
 import tensorflow as tf
 import time as t
 
@@ -17,35 +18,40 @@ def vae_preprocessing(image):
     image = image / 255.0
     return image
 
-def train_random_forest_regressor(vae , epochs, scored_generator_train,\
+def train_regressor(regr, vae , epochs, scored_generator_train,\
                                   latent_dim=100, batch_size=16, max_depth=2, \
                                   random_state=0, nb_trees=100, iteration_limit=None): 
   
-  
-  regr = RandomForestRegressor(max_depth=max_depth, random_state=random_state)
   start_time = t.time()
+  
   for epoch in range(epochs):
-    for i, scored_image in enumerate(scored_generator_train):
+    i = 0
+    for scored_image in scored_generator_train:
       X_batch = scored_image[0]
       score_batch = scored_image[1]
     
       mean, logvar = vae.encode(X_batch)
-      z = vae.reparameterize(mean, logvar)
-      ##Clipping the values..
-      z = np.reshape(np.clip(np.reshape(z, (-1)),tf.float32.min, tf.float32.max), (batch_size, latent_dim))
-        
+      z = vae.reparameterize(mean, logvar)      
+      z = np.reshape(np.clip(np.reshape(z, (-1)),-1e15, 1e15), (batch_size, latent_dim))
       regr.fit(z, score_batch)  
         
-      if iteration_limit != None and i >= iteration_limit:
+      if iteration_limit and i >= iteration_limit:
         return regr
         
       if i % 50 == 0:
+        if not iteration_limit:
+          iteration_limit = len(scored_generator_train)
         print("progression: epoch, ", epoch, ", iteration: ", i, "time since start: ", \
-              t.time() - start_time ," s, " , i/min(iteration_limit, len(scored_generator_train))*10, "%")
+              t.time() - start_time ," s, " , i/min(iteration_limit, len(scored_generator_train))*100, "%")
+        
+      i = i + 1
+      
+      if i >= len(scored_generator_train):
+        break
         
   return regr
               
-def predict_with_random_forest_regressor(vae, regr, query_generator, query_numbers):
+def predict(vae, regr, query_generator, query_numbers):
     
         predictions = make_predictions(vae, regr, query_generator)
         predictions = np.clip(predictions, a_min=0, a_max=8)
@@ -60,7 +66,7 @@ def predict_with_random_forest_regressor(vae, regr, query_generator, query_numbe
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
         
         
-def make_predictions(vae, regr, query_generator):
+def make_predictions(regr, vae, query_generator):
     predictions = []
     start_time = t.time()
     i = 0
@@ -73,6 +79,23 @@ def make_predictions(vae, regr, query_generator):
         if i >= len(query_generator)-1:
           return predictions
         i = i + 1
-
         
     return predictions
+  
+def predict_with_regressor(vae, regr_type, scored_generator_train, query_generator,
+                           sorted_queries, alpha=0.5, epochs=10, 
+                           batch_size=16, max_depth=2, random_state=0):
+    
+    if regr_type == "Random Forest":      
+      regr = RandomForestRegressor(max_depth=max_depth, random_state=random_state)
+    elif regr_type == "Ridge":
+      regr = linear_model.Ridge(alpha=alpha)
+    else :
+      raise NameError("Unknown regressor type !")
+
+    print("Training regressor...")
+    regr = train_regressor(regr, vae, epochs, scored_generator_train,
+                                         batch_size=batch_size)
+    
+    print("Creating prediction.csv file...")
+    predict(regr, vae, query_generator, sorted_queries)
