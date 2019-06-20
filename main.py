@@ -19,6 +19,7 @@ from trainer import Trainer
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
+RANDOM_FOREST = False
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
@@ -180,6 +181,27 @@ def main():
     # trainer.vae_train(vae)
 
     # # Create the model
+    
+    if RANDOM_FOREST:
+        
+        vae = CVAE(100, learning_rate=1e-5, name="vae_basic")
+        trainer = Trainer(
+        vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
+        './Results'
+        )
+        
+        trainer.generate_every = 5
+        vae.load_nets()
+        
+        print("Training regressor...")
+        regr = utils.train_random_forest_regressor(vae, 1, scored_generator_train, batch_size=batch_size)
+        print("Creating prediction.csv file...")
+        utils.predict_with_random_forest_regressor(vae, regr, query_generator, sorted_queries)
+        
+        return
+        
+        
+        
     model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=True)
 
     # Train the model
