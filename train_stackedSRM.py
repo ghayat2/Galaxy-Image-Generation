@@ -83,8 +83,8 @@ sys.stdout.flush()
 
 #sys.exit(0)
 # remove warning messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
-tf.logging.set_verbosity(tf.logging.ERROR)
+#os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+#tf.logging.set_verbosity(tf.logging.ERROR)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
