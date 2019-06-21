@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
 
-from model import Model, BaseModel, CVAE, VAEGAN
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -111,7 +111,7 @@ def main():
     def vae_latent(im):
         return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
 
-    labeled_datagen = ImageDataGenerator(preprocessing_function=None)
+    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
@@ -172,7 +172,7 @@ def main():
         return
 
     # # Create the model
-    model = VAEGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
+    model = TwoStepsVEAGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -182,10 +182,16 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=10,
+    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
                   steps_per_epoch=3,
                   batch_processing_fct=vae_latent,
                   gen_imgs=True)
+    print("Generator trained")
+
+    trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
+                         steps_per_epoch=3,
+                         batch_processing_fct=None,
+                         gen_imgs=True)
 
 
 if __name__ == '__main__':
