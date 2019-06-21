@@ -22,11 +22,11 @@ import pathlib, time
 """
     The REGRESSOR_TYPE Flag specifies the type of regressor that will be
         trained on the VAE latent space and will be used to make predictions
-        Options: None (default): our own
-                 Random Forest
-                 Ridge
+        on the scored image dataset
+        Options: None (default: Use different model to output prediction), 
+                 Random Forest, Ridge, MLP
 """
-REGRESSOR_TYPE = None 
+REGRESSOR_TYPE = None  #Random Forest, Ridge, MLP
 
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
@@ -78,8 +78,7 @@ def create_labeled_folders(data_path):
 
 
 def main():
-    RANDOM_FOREST = False
-    tf.compat.v1.enable_eager_execution()
+        
     print(tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     sess = tf.compat.v1.Session()
