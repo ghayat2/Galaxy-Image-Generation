@@ -1,9 +1,14 @@
 import random
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-from sklearn import linear_model
+from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
+from keras.optimizers import Adam
+from keras.models import Sequential
+from keras.layers.core import Dense
+
+
 
 
 def gan_preprocessing(image):
@@ -23,17 +28,15 @@ def train_regressor(regr, vae , epochs, scored_generator_train,\
                                   random_state=0, nb_trees=100, iteration_limit=None): 
   
   start_time = t.time()
-  
   for epoch in range(epochs):
     i = 0
-    for scored_image in scored_generator_train:
-      X_batch = scored_image[0]
-      score_batch = scored_image[1]
+    
+    for X_batch, score_batch in scored_generator_train:
     
       mean, logvar = vae.encode(X_batch)
-      z = vae.reparameterize(mean, logvar)      
+      z = vae.reparameterize(mean, logvar)  
       z = np.reshape(np.clip(np.reshape(z, (-1)),-1e15, 1e15), (batch_size, latent_dim))
-      regr.fit(z, score_batch)  
+      regr.partial_fit(z, score_batch) if regr == "MLP" else regr.fit(z, score_batch)
         
       if iteration_limit and i >= iteration_limit:
         return regr
@@ -87,11 +90,13 @@ def predict_with_regressor(vae, regr_type, scored_generator_train, query_generat
                            batch_size=16, max_depth=2, random_state=0):
     
     if regr_type == "Random Forest":      
-      regr = RandomForestRegressor(max_depth=max_depth, random_state=random_state)
+        regr = RandomForestRegressor(max_depth=max_depth, random_state=random_state)
     elif regr_type == "Ridge":
-      regr = linear_model.Ridge(alpha=alpha)
+        regr = linear_model.Ridge(alpha=alpha)
+    elif regr_type == "MLP":
+        regr = neural_network.MLPRegressor(batch_size=batch_size)
     else :
-      raise NameError("Unknown regressor type !")
+        raise NameError("Unknown regressor type !")
 
     print("Training regressor...")
     regr = train_regressor(regr, vae, epochs, scored_generator_train,
@@ -99,3 +104,4 @@ def predict_with_regressor(vae, regr_type, scored_generator_train, query_generat
     
     print("Creating prediction.csv file...")
     predict(regr, vae, query_generator, sorted_queries)
+    
