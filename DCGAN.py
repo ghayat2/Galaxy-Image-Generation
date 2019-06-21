@@ -35,10 +35,12 @@ class DCGAN:
         with tf.variable_scope("discriminator", reuse=reuse): # define variable scope to easily retrieve vars of the discriminator
             
             if resize:
-                inp_scaled = layers.nearest_neighbor_down_sampling_layer(inp, new_size=[64, 64]) # shape=(batch_size, 1, 64, 64)
-            else:
-                inp_scaled = inp
-            conv1 = layers.conv_block_dcgan(inp_scaled, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 128, 32, 32)
+                inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2), padding=(12,12))
+                inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
+                inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
+                inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
+
+            conv1 = layers.conv_block_dcgan(inp, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 128, 32, 32)
             conv2 = layers.conv_block_dcgan(conv1, training, out_channels=256, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 256, 16, 16)
             conv3 = layers.conv_block_dcgan(conv2, training, out_channels=512, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 512, 8, 8)
             conv4 = layers.conv_block_dcgan(conv3, training, out_channels=1024, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 1024, 4, 4)
@@ -47,7 +49,7 @@ class DCGAN:
             
             out = logits
         print("Built Discriminator model in {} s".format(time.time()-a))
-        list_ops = [inp_scaled, conv1, conv2, conv3, conv4, flat, logits, out]
+        list_ops = [inp, conv1, conv2, conv3, conv4, flat, logits, out]
         
         return out, list_ops
         

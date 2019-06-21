@@ -1,8 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-import os
+import os, sys
+import matplotlib.pyplot as plt
 from PIL import Image
+import layers
 
 global_seed=5 # for reproducibilty
 
@@ -107,16 +109,30 @@ def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuff
 #batch_size = 1
 #real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
 
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2), padding=(12,12))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+
+#SAVE_DIR = "./images/real_images_MAX_POOL_1"
 #print("\n\nnb_reals:", nb_reals,"\n\n")
 #with tf.Session() as sess:
 #    for i in range(nb_reals):
 #        im_vals = sess.run(real_im)
+#        fig = plt.figure(figsize=(10, 10))
+
+#        image = ((im_vals[0]+1)*128.0).transpose(1,2,0).astype("uint8")[:,:,0]
+#        plt.subplot(1, 1, 1)
+#        min_val = image.min()
+#        max_val = image.max()
+#        plt.imshow(image, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
+#        plt.axis('off')
+#        plt.title("min: {}, max: {}".format(min_val, max_val))
 #        
-#        image = ((im_vals[0]+1)*128.0).transpose(1,2,0).astype("uint8")
-#        image = Image.fromarray(image[:,:,0], mode='L') # remove the channels dimension
-#        if not os.path.exists("real_images"):
-#            os.makedirs("real_images")
-#        image.save("real_images/img_{}.png".format(i))
+#        if not os.path.exists(SAVE_DIR):
+#            os.makedirs(SAVE_DIR)
+#        fig.savefig(os.path.join(SAVE_DIR, "img_{}.png".format(i))) # save image to dir
+#        plt.close()
 
 #batch_size = 1
 #train_ds, nb_images = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=True)
