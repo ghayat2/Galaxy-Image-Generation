@@ -31,6 +31,9 @@ class BaseModel(Model):
         super(BaseModel, self).__init__()
         self.data_shape = data_shape
         self.noise_dim = noise_dim
+        self.disc_dropout = 0.5
+        self.gen_dropout = 0.2
+        self.scoring_l2_regularisation = 1e-3
 
         self.generator = self.make_generator_model()
         self.discriminator = self.make_discriminator_model()
@@ -61,6 +64,7 @@ class BaseModel(Model):
         model.add(layers.Dense(5*5*256, use_bias=False, input_shape=(self.noise_dim,)))
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
 
         model.add(layers.Reshape((5, 5, 256)))
         assert model.output_shape == (None, 5, 5, 256) # Note: None is the batch size
@@ -69,12 +73,14 @@ class BaseModel(Model):
         assert model.output_shape == (None, 5, 5, 128)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
-        
+        model.add(layers.Dropout(self.gen_dropout))
+
         model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
         assert model.output_shape == (None, 25, 25, 64)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
-        
+        model.add(layers.Dropout(self.gen_dropout))
+
         model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
         assert model.output_shape == (None, 25, 25, 32)
         model.add(layers.BatchNormalization(momentum=0.8))
@@ -107,47 +113,47 @@ class BaseModel(Model):
                                          input_shape=self.data_shape))
         assert model.output_shape == (None, 500, 500, 4)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
         assert model.output_shape == (None, 250, 250, 8)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
 
         model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
         assert model.output_shape == (None, 125, 125, 16)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
 
         model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
         assert model.output_shape == (None, 25, 25, 32)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
         assert model.output_shape == (None, 25, 25, 64)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
         assert model.output_shape == (None, 5, 5, 128)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
         assert model.output_shape == (None, 5, 5, 256)
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Flatten())
         
         model.add(layers.Dense(4000))
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Dense(500))
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Dense(1))
 
@@ -199,13 +205,393 @@ class BaseModel(Model):
         return model
 
     def discriminator_loss(self, real_output, fake_output):
-        real_loss = self.loss(tf.ones_like(real_output), real_output)
-        fake_loss = self.loss(tf.zeros_like(fake_output), fake_output)
+        #real_loss = self.loss(tf.ones_like(real_output), real_output)
+        #fake_loss = self.loss(tf.zeros_like(fake_output), fake_output)
+        real_loss = tf.reduce_mean(tf.math.squared_difference(real_output, 1.0))
+        fake_loss = tf.reduce_mean(tf.square(fake_output))
         total_loss = real_loss + fake_loss
         return total_loss
 
     def generator_loss(self, fake_output):
-        return self.loss(tf.ones_like(fake_output), fake_output)
+        #return self.loss(tf.ones_like(fake_output), fake_output)
+        return tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0))
+
+class ImageRegressor(BaseModel):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(ImageRegressor, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+
+    def to_scoring(self, reload_ckpt=False):
+
+        score_ckpt_file = self.checkpoint_dir + '/weights.best.hdf5'
+        #Apparently there is an issue with the outputted loss/accuracy being better than the
+        #evaluated one when using fit_generator, so just save last one for now (save_best_only = False)
+        #https://github.com/keras-team/keras/issues/10014
+        self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='val_loss', verbose=1, save_best_only=False, mode='max')
+        self.score_callbacks = [self.score_checkpoint]
+
+        logdir = os.path.join(
+            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+
+        tensorboard_callback = TensorBoard(
+            log_dir=logdir, 
+            write_graph=True
+        )
+
+        self.score_callbacks.append(tensorboard_callback)
+
+        self.scorer = self.make_scoring_model(keras.Sequential())
+        self.score_opt = optimizers.Adam(1e-4)
+
+        if(reload_ckpt == True):
+            self.scorer.load_weights(score_ckpt_file)
+
+        self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
+
+    def make_scoring_model(self, model):
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                         input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(4096))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Dense(1024))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+class BetterD2GAN():
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(BetterD2GAN, self).__init__()
+        self.data_shape = data_shape
+        self.noise_dim = noise_dim
+        self.disc_1_dropout = 0.2
+        self.disc_2_dropout = 0.5
+        self.gen_dropout = 0.2
+        self.scoring_l2_regularisation = 1e-3
+
+        self.generator = self.make_generator_model()
+        self.discriminator_1 = self.make_discriminator_1_model()
+        self.discriminator_2 = self.make_discriminator_2_model()
+        self.generator_optimizer = optimizers.Adam(1e-3)
+        self.discriminator_1_optimizer = optimizers.Adam(1e-4)
+        self.discriminator_2_optimizer = optimizers.Adam(1e-4)
+        self.loss = losses.BinaryCrossentropy(from_logits=True)
+
+        self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
+                                 discriminator_1_optimizer=self.discriminator_1_optimizer,
+                                 discriminator_2_optimizer=self.discriminator_2_optimizer,
+                                 generator=self.generator,
+                                 discriminator_1=self.discriminator_1,
+                                 discriminator_2=self.discriminator_2)
+
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_prefix = checkpoint_prefix
+
+        # Restore from lastest available checkpoint
+        if reload_ckpt:
+            latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
+            checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
+
+            if checkpoint_found:
+                self.status = self.checkpoint.restore(latest_checkpoint)
+                print(self.status)
+
+    def make_generator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(5*5*256, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
+
+        model.add(layers.Reshape((5, 5, 256)))
+        assert model.output_shape == (None, 5, 5, 256) # Note: None is the batch size
+        
+        model.add(layers.Conv2DTranspose(128, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
+
+        model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
+
+        model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Conv2DTranspose(8, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Conv2DTranspose(4, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Conv2DTranspose(1, (3, 3), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+        assert model.output_shape == (None, 1000, 1000, 1)
+
+        return model
+
+    def make_discriminator_1_model(self):
+        model = keras.Sequential()
+      
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                         input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(4000, activation='selu'))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Dense(500, activation='selu'))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Dense(2, activation='softmax'))
+
+        return model
+
+    def make_discriminator_2_model(self):
+        model = keras.Sequential()
+      
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                         input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(4000))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Dense(500))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_2_dropout))
+        
+        model.add(layers.Dense(2, activation='softmax'))
+
+        return model    
+
+
+    ## Removes the final layer(s) of the discriminator and adds complexity
+    ## to try to predict scores on the learned representation from the
+    ## galaxy classification
+
+    def to_scoring(self, reload_ckpt=False):
+
+        score_ckpt_file = self.checkpoint_dir + '/weights.best.hdf5'
+        #Apparently there is an issue with the outputted loss/accuracy being better than the
+        #evaluated one when using fit_generator, so just save last one for now (save_best_only = False)
+        #https://github.com/keras-team/keras/issues/10014
+        self.score_checkpoint = ModelCheckpoint(score_ckpt_file, monitor='loss', verbose=1, save_best_only=False, mode='max')
+        self.score_callbacks = [self.score_checkpoint]
+
+        logdir = os.path.join(
+            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+
+        tensorboard_callback = TensorBoard(
+            log_dir=logdir, 
+            write_graph=True
+        )
+
+        self.score_callbacks.append(tensorboard_callback)
+
+        self.scorer = self.make_scoring_model(tf.keras.models.clone_model(self.discriminator_1))
+        self.score_opt = optimizers.Adam(1e-4)
+
+        if(reload_ckpt == True):
+            self.scorer.load_weights(score_ckpt_file)
+
+        self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
+
+    def make_scoring_model(self, model):
+        model.pop()
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+    def discriminator_1_loss(self, real_output_1, fake_output_1):
+        # real_loss = self.loss(tf.ones_like(real_output_1), real_output_1)
+        # fake_loss = self.loss(tf.zeros_like(fake_output_1), fake_output_1)
+
+        # 0 Fake, 1 Real
+
+        ro1 = real_output_1[:, 0]
+        fo1 = fake_output_1[:, 0]
+
+        # print("ro1 shape: {}".format(ro1.shape))
+
+        real_loss = 0.2 * -tf.math.reduce_sum(tf.math.log(real_output_1[:, 1]))
+        fake_loss = tf.math.reduce_sum(fake_output_1[:, 1])
+
+        # print("Real and fake 1: {} {}".format(real_loss, fake_loss))
+
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+    def discriminator_2_loss(self, real_output_2, fake_output_2):
+        # real_loss = self.loss(tf.ones_like(real_output_2), real_output_2)
+        # fake_loss = self.loss(tf.zeros_like(fake_output_2), fake_output_2)
+        
+        # 0 Real, 1 Fake    
+
+        ro2 = real_output_2[:, 0]
+        fo2 = fake_output_2[:, 0]
+
+        # print("ro2: {}".format(real_output_2))      
+        # print("fo2: {}".format(fake_output_2))      
+
+        real_loss = tf.math.reduce_sum(real_output_2[:, 1])
+        fake_loss = 0.1 * -tf.math.reduce_sum(tf.math.log(fake_output_2[:, 1]))
+
+        # print("Real and fake 2: {} {}".format(real_loss, fake_loss))
+
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+    def generator_loss(self, fake_output_1, fake_output_2):
+        fo1 = fake_output_1[:, 0]
+        fo2 = fake_output_2[:, 0]
+
+        fake_loss_1 = tf.math.reduce_sum(fake_output_1[:, 0])
+        fake_loss_2 = -0.1*tf.math.reduce_sum(tf.math.log(fake_output_2[:, 0]))
+
+        # print("Fake Gen: {} {}".format(fake_loss_1, fake_loss_2))
+
+        total_loss = fake_loss_1 + fake_loss_2
+        return total_loss
 
 
 class CVAE(tf.keras.Model):

@@ -35,7 +35,7 @@ class Trainer:
         self.lines = np.sqrt(self.num_examples)
         self.cols = np.sqrt(self.num_examples)
 
-        self.generate_every = 5
+        self.generate_every = 1000
 
         self.callbacks = []
         self.verbose = verbose
@@ -67,6 +67,31 @@ class Trainer:
         self.model.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.model.discriminator.trainable_variables))
         return gen_loss, disc_loss
 
+    def d2gan_train_step(self, images, batch_size):
+        noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
+                                                          # to discriminator (i,e batch_size)
+        #images = tf.expand_dims(images, 3)
+        with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_1_tape, tf.GradientTape() as disc_2_tape:
+            generated_images = self.model.generator(noise, training=True)
+
+            real_output_1 = self.model.discriminator_1(images, training=True)
+            fake_output_1 = self.model.discriminator_1(generated_images, training=True)
+
+            real_output_2 = self.model.discriminator_2(images, training=True)
+            fake_output_2 = self.model.discriminator_2(generated_images, training=True)
+
+            gen_loss = self.model.generator_loss(fake_output_1, fake_output_2)
+            disc_1_loss = self.model.discriminator_1_loss(real_output_1, fake_output_1)
+            disc_2_loss = self.model.discriminator_2_loss(real_output_2, fake_output_2)
+
+        gradients_of_generator = gen_tape.gradient(gen_loss, self.model.generator.trainable_variables)
+        gradients_of_discriminator_1 = disc_1_tape.gradient(disc_1_loss, self.model.discriminator_1.trainable_variables)
+        gradients_of_discriminator_2 = disc_2_tape.gradient(disc_2_loss, self.model.discriminator_2.trainable_variables)
+
+        self.model.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.model.generator.trainable_variables))
+        self.model.discriminator_1_optimizer.apply_gradients(zip(gradients_of_discriminator_1, self.model.discriminator_1.trainable_variables))
+        self.model.discriminator_2_optimizer.apply_gradients(zip(gradients_of_discriminator_2, self.model.discriminator_2.trainable_variables))
+        return gen_loss, disc_1_loss, disc_2_loss
 
     def train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15):
         step = 1
@@ -78,18 +103,19 @@ class Trainer:
             b = 0 # batch nb
             #iter = self.train_dataset_labeled.make_one_shot_iterator()
             for batch, labels in self.train_dataset_labeled:
-                gen_loss, disc_loss = self.train_step(batch, batch_size)
-                print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                #gen_loss, disc_loss = self.train_step(batch, batch_size)
+                gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
+                #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 b += 1
                 if step % self.generate_every == 0:
                     display.clear_output(wait=True)
-                    self.generate_and_save_images(seed, "step", nb = step)
+                    #self.generate_and_save_images(seed, "step", nb = step)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
             display.clear_output(wait=True)
             self.generate_and_save_images(seed, "epoch", nb = epoch)
-
+            print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_1_loss: {}, Disc_2_loss: {}".format(epoch, b, step, gen_loss, disc_1_loss, disc_2_loss))
             # Save the model every N epochs
             # NOTE: each checkpoint can be 400+ MB
             # If we checkpoint too much, it can cause serious trouble
@@ -105,7 +131,7 @@ class Trainer:
         if(steps_per_epoch is not None):
             self.model.scorer.fit_generator(self.train_dataset_scored, steps_per_epoch=steps_per_epoch, epochs=epochs, validation_data=self.val_dataset_scored, validation_steps=100, callbacks=self.model.score_callbacks, use_multiprocessing=True, verbose=1)
         else:
-            self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=800, use_multiprocessing=True, verbose=1)
+            self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=100, use_multiprocessing=True, verbose=1)
 
     def predict(self, query_generator, query_numbers):
         predictions = self.model.scorer.predict_generator(query_generator, verbose=1)
@@ -132,7 +158,7 @@ class Trainer:
             maxval = image.max()
             minval = image.min()
         print('Max and min vals: {} {}'.format(maxval, minval))
-    #    plt.show() # finished plotting all images in the figure so show default figure
+        plt.show() # finished plotting all images in the figure so show default figure
 
         if not os.path.exists(self.out_path): # create images dir if not existant
             os.mkdir(self.out_path)
@@ -140,23 +166,6 @@ class Trainer:
         print(save_file)
         plt.savefig(save_file) # save image to dir
         return predictions
-    
-    #### Kept from project for now ###
-    def create_callbacks(self):
-        """ Saves a  tensorboard with evolution of the loss """
-
-        logdir = os.path.join(
-            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
-        )
-
-        tensorboard_callback = keras.callbacks.TensorBoard(
-            log_dir=logdir, 
-            write_graph=True
-        )
-
-        self.callbacks.append(tensorboard_callback)
-
-    ### -------------- ###
 
     def vae_train(self, vae, epochs=75, steps_per_epoch=1000/32, show_sample=True):
         print(f"Steps per epochs = {steps_per_epoch}")

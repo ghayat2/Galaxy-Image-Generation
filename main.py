@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
 
-from model import Model, BaseModel, CVAE
+from model import Model, BaseModel, CVAE, ImageRegressor, BetterD2GAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -80,7 +80,7 @@ def main():
     #Uncomment to create folders for labeled data
     #create_labeled_folders(data_path)
 
-    checkpoint_dir = './training_checkpoints'
+    checkpoint_dir = os.path.join(os.path.dirname( __file__ ), os.pardir, 'runs/Base_LSGAN/')
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
     ### ------------------- ###
@@ -93,19 +93,15 @@ def main():
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
-    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing)
+    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
                                         target_size=(1000, 1000), 
                                         color_mode='grayscale')
-    #print(next(labeled_generator))
-    
-    #Added Validation Split value here, but not sure if it is compatible
-    #with the custom flow_from_dataframe function above
 
-    scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
-    scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
+    scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing, validation_split=0.5)
+    scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing, validation_split=0.5)
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -133,8 +129,6 @@ def main():
     all_indexes = [int(item.split('.')[0]) for item in only_files]
     sorted_queries = np.sort(all_indexes)
 
-    print(np.reshape(sorted_queries, (-1, 1)))
-
     query_datagen = ImageDataGenerator()
     query_generator = query_datagen.flow_from_directory(os.path.join(data_path, "query"),
                                                         class_mode=None,
@@ -143,19 +137,18 @@ def main():
                                                         target_size=(1000,1000),
                                                         color_mode='grayscale')
 
-    #print(next(query_generator))
-
     print("Data generators have been created")
 
     #Validation Split Sanity Check Code
 
     # -------------------- #
 
-    print(next(scored_generator_train))
+    # print(next(scored_generator_train))
     # image, score = next(scored_generator_train)
     # single = image[0, :, :, 0]
     # print(score)
     # print(single.shape)
+    # print("max and min: {} {}".format(image.max(), image.min()))
     # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
     # plt.show()
 
@@ -180,7 +173,7 @@ def main():
     # trainer.vae_train(vae)
 
     # # Create the model
-    model = BaseModel(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=True)
+    model = BetterD2GAN(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -190,13 +183,13 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    #trainer.train(batch_size=batch_size, seed=seed, epochs=3, steps_per_epoch=3)
+    trainer.train(batch_size=batch_size, seed=seed, epochs=100, steps_per_epoch=1000)
 
     #Specify reload_ckpt
     model.to_scoring(reload_ckpt=True)
 
     #Specify epochs, steps_per_epoch
-    #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=100)
+    #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=1000)
 
     trainer.predict(query_generator, sorted_queries)
 
