@@ -252,7 +252,7 @@ class ImageRegressor(BaseModel):
 
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
 
-    def make_scoring_model(self, model):
+    def make_scoring_model(self):
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
         assert model.output_shape == (None, 500, 500, 4)
@@ -932,3 +932,65 @@ class TwoStepsVEAGAN(VAEGAN):
         super(TwoStepsVEAGAN, self).load_nets(dest_dir)
         self.generator_prime.load_weights(os.path.join(dest_dir, "generator_prime_" + self.__name__))
         self.discriminator_prime.load_weights(os.path.join(dest_dir, "discriminator_prime_" + self.__name__))
+
+class LabelClassifier():
+    def __init__(self, data_shape, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(ImageRegressor, self).__init__(data_shape, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+        self.labeler = self.make_labeling_model()
+
+    def make_labeling_model(self):
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                         input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(4096))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+        
+        model.add(layers.Dense(1024))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.disc_dropout))
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model

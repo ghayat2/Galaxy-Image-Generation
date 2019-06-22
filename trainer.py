@@ -125,7 +125,7 @@ class Trainer:
             b = 0 # batch nb
             #iter = self.train_dataset_labeled.make_one_shot_iterator()
             for batch, labels in self.train_dataset_labeled:
-                 if batch_processing_fct is not None:
+                if batch_processing_fct is not None:
                     batch = tf.squeeze(batch_processing_fct(batch))
                 #gen_loss, disc_loss = self.train_step(batch, batch_size)
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
@@ -231,6 +231,8 @@ class Trainer:
         # Generate after the final epoch
         #display.clear_output(wait=True)
         self.generate_and_save_images(seed, "epoch", nb = epochs, vae=None, show=False, training_id="2steps", prime=True)
+
+
 
     def score(self, batch_size, epochs=10, steps_per_epoch=3):
         if(steps_per_epoch is not None):
