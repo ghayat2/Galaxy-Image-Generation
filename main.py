@@ -14,10 +14,20 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
 
-from model import Model, BaseModel, CVAE, ImageRegressor, BetterD2GAN
+
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
+
+"""
+    The REGRESSOR_TYPE Flag specifies the type of regressor that will be
+        trained on the VAE latent space and will be used to make predictions
+        on the scored image dataset
+        Options: None (default: Use different model to output prediction), 
+                 Random Forest, Ridge, MLP
+"""
+REGRESSOR_TYPE = None  #Random Forest, Ridge, MLP
 
 #Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
@@ -69,7 +79,7 @@ def create_labeled_folders(data_path):
 
 
 def main():
-    tf.compat.v1.enable_eager_execution()
+        
     print(tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     sess = tf.compat.v1.Session()
@@ -89,15 +99,23 @@ def main():
     batch_size = 16
     data_shape = [1000, 1000, 1]
     noise_dim = 1000
+    latent_dim = 100
     val_ratio = 0.1
+
+    vae = CVAE(latent_dim)
+    vae.load_nets()
+    inf_vae = tf.keras.models.clone_model(vae.inference_net)
+    print(inf_vae.summary())
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
     labeled_datagen = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
+    def vae_latent(im):
+        return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary', 
                                         batch_size=batch_size, 
-                                        target_size=(1000, 1000), 
+                                        target_size=(1000, 1000),
                                         color_mode='grayscale')
 
     scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing, validation_split=0.5)
@@ -123,7 +141,7 @@ def main():
     scored_generator_train = flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
     scored_generator_val = flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
 
-    query_images_path = os.path.join(os.path.join(data_path, "query"), "subdirectory")
+    query_images_path = os.path.join(data_path, "query")
     query_images_path = pathlib.Path(query_images_path)
     only_files = [f for f in os.listdir(query_images_path) if (os.path.isfile(os.path.join(query_images_path, f)) and (f != None))]
     all_indexes = [int(item.split('.')[0]) for item in only_files]
@@ -139,41 +157,14 @@ def main():
 
     print("Data generators have been created")
 
-    #Validation Split Sanity Check Code
-
-    # -------------------- #
-
-    # print(next(scored_generator_train))
-    # image, score = next(scored_generator_train)
-    # single = image[0, :, :, 0]
-    # print(score)
-    # print(single.shape)
-    # print("max and min: {} {}".format(image.max(), image.min()))
-    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
-    # plt.show()
-
-    # image, score = next(scored_generator_val)
-    # single = image[0, :, :, 0]
-    # print(score)
-    # print(single.shape)
-    # plt.imshow(single, cmap='gray', vmin=-1.0, vmax=1.0)
-    # plt.show()
-
-    # -------------------- #
-
-    # # Create the model
-
-    #test the VAE architecture
-    # vae = CVAE(100)
-    # trainer = Trainer(
-    #     vae, sess, graph, labeled_generator, scored_generator_train, scored_generator_val,
-    #     './Results'
-    # )
-
-    # trainer.vae_train(vae)
-
     # # Create the model
     model = BetterD2GAN(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
+    #if REGRESSOR_TYPE:
+    #    utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=100)
+    #    return
+
+    # # Create the model
+    #model = TwoStepsVEAGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -190,47 +181,19 @@ def main():
 
     #Specify epochs, steps_per_epoch
     #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=1000)
+    # trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
+    #               steps_per_epoch=3,
+    #               batch_processing_fct=vae_latent,
+    #               gen_imgs=True)
+    # print("Generator trained")
 
-    trainer.predict(query_generator, sorted_queries)
+    # trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
+    #                      steps_per_epoch=3,
+    #                      batch_processing_fct=None,
+    #                      gen_imgs=True)
+
 
 if __name__ == '__main__':
     main()
 
-### Generate Labeled Data ###
-    # name = "labeled"
 
-    # labels_path = os.path.join(data_path, name + ".csv")
-    # labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
-    # id_to_label = labels.to_dict(orient="index")
-    # id_to_label = {k: v[1] for k, v in id_to_label.items()}
-
-    # labeled_images_path = os.path.join(data_path, name)
-    # labeled_images_path = pathlib.Path(labeled_images_path)
-    # all_labeled = list(labeled_images_path.glob('*'))
-    # all_labeled = [str(p) for p in all_labeled]
-    # all_labels = [id_to_label[int(item.name.split('.')[0])] for item in labeled_images_path.glob('*')]
-    
-    # ##Only get the 1 Labels###
-
-    # all_labeled = [e for e, l in zip(all_labeled, all_labels) if l == 1]
-    # all_ones = [1 for _ in all_labeled]
-
-    # print(all_labeled)
-
-    # ## ------------------- ###
-
-    # ## Generate Scored Data ###
-    # name = "scored"
-
-    # scores_path = os.path.join(data_path, name + ".csv")
-    # scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
-    # id_to_score = scores.to_dict(orient="index")
-    # #id_to_score = {k: v[1] for k, v in id_to_label.items()}
-
-    # scored_images_path = os.path.join(data_path, name)
-    # scored_images_path = pathlib.Path(scored_images_path)
-    # all_scored = list(labeled_images_path.glob('*'))
-    # all_scored = [str(p) for p in all_scored]
-    # all_scores = [id_to_score[int(item.name.split('.')[0])] for item in scored_images_path.glob('*')]
-
-    

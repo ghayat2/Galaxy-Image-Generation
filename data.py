@@ -1,8 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-import os
+import os, sys
+import matplotlib.pyplot as plt
 from PIL import Image
+import layers
 
 global_seed=5 # for reproducibilty
 
@@ -22,6 +24,12 @@ def load_and_preprocess_image_label(path, label):
     image = preprocess_image(image)
     label = tf.cast(label, tf.float32)
     return image, label
+    
+def load_and_preprocess_image_score(path, score):
+    image = tf.read_file(path)
+    image = preprocess_image(image)
+    score = tf.cast(score, tf.float32)
+    return image, score
 
 def read_labels2paths(data_root):
     data = pd.read_csv(os.path.join(data_root, "labeled.csv"), delimiter=',', header=0)
@@ -36,7 +44,7 @@ def read_labels2paths(data_root):
         
     return label2paths
 
-def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuffle=True, all_data=True):
+def create_dataloader_train_labeled(data_root, batch_size, batches_to_prefetch=20, shuffle=True, all_data=True):
     print("Reading images paths ...")
     labels2paths = read_labels2paths(data_root)
     fake_images = labels2paths[0.0] # paths to non-galaxies
@@ -89,9 +97,58 @@ def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuff
         train_ds = train_ds.make_one_shot_iterator().get_next() # convert to iterator
         
         return train_ds, len(images)
+
+def create_dataloader_train_scored(data_root, batch_size, batches_to_prefetch=20, shuffle=True, valid_percent=0.1):
+    data = pd.read_csv(os.path.join(data_root, "scored.csv"), delimiter=',', header=0)
+    data_values = data.values
+    paths = [os.path.join(data_root, "scored", "{}.png".format(int(row[0]))) for row in data_values]
+    scores = [row[1] for row in data_values]
+    scores = np.array(scores).reshape([-1, 1])
     
+    print("Creating Dataset ...")
+    full_ds = tf.data.Dataset.from_tensor_slices((paths, scores))
+    
+    if shuffle:
+        print("Shuffling data ...")
+        full_ds = full_ds.shuffle(buffer_size=len(paths), seed=global_seed)
+            
+    print("Mapping Data...")
+    full_ds = full_ds.map(load_and_preprocess_image_score)
+    
+    if valid_percent > 0:
+        print("Creating train/validation split ...")
+        nb_valid = int(valid_percent*len(paths))
+        print("Validation set size: {}".format(nb_valid))
+        valid_ds = full_ds.take(nb_valid)
+        train_ds = full_ds.skip(nb_valid)
+    else:
+        nb_valid = 0
+        train_ds = full_ds
+        
+    nb_train = len(paths) - nb_valid
+    print("Train set size: {}".format(nb_train))
+    
+    print("Batching Data...")
+    train_ds = train_ds.repeat() # repeat dataset indefinitely
+    train_ds = train_ds.batch(batch_size, drop_remainder=True).prefetch(batches_to_prefetch) # batch data (dropping remainder) and prefetch batches
+    train_ds = train_ds.make_one_shot_iterator().get_next() # convert to iterator
+    
+    if valid_percent > 0:
+        valid_ds = valid_ds.repeat() # repeat dataset indefinitely
+        valid_ds = valid_ds.batch(batch_size, drop_remainder=True).prefetch(batches_to_prefetch) # batch data (dropping remainder) and prefetch batches
+        valid_ds = valid_ds.make_one_shot_iterator().get_next() # convert to iterator
+        
+    to_return = [train_ds, nb_train] # elements to return
+    if valid_percent > 0:
+        to_return = to_return + [valid_ds, nb_valid]
+    
+    print("Done.")
+    return to_return
+        
+        
+        
 #batch_size = 1
-#real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
+#real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train_labeled("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
 
 #print("\n\nnb_fakes:", nb_fakes,"\n\n")
 #with tf.Session() as sess:
@@ -105,7 +162,35 @@ def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuff
 #        image.save("fake_images/img_{}.png".format(i))
 
 #batch_size = 1
-#train_ds, nb_images = create_dataloader_train("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=True)
+#real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train_labeled("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
+
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2), padding=(12,12))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+#real_im = layers.max_pool_layer(real_im, pool_size=(2,2), strides=(2,2))
+
+#SAVE_DIR = "./images/real_images_MAX_POOL_1"
+#print("\n\nnb_reals:", nb_reals,"\n\n")
+#with tf.Session() as sess:
+#    for i in range(nb_reals):
+#        im_vals = sess.run(real_im)
+#        fig = plt.figure(figsize=(10, 10))
+
+#        image = ((im_vals[0]+1)*128.0).transpose(1,2,0).astype("uint8")[:,:,0]
+#        plt.subplot(1, 1, 1)
+#        min_val = image.min()
+#        max_val = image.max()
+#        plt.imshow(image, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
+#        plt.axis('off')
+#        plt.title("min: {}, max: {}".format(min_val, max_val))
+#        
+#        if not os.path.exists(SAVE_DIR):
+#            os.makedirs(SAVE_DIR)
+#        fig.savefig(os.path.join(SAVE_DIR, "img_{}.png".format(i))) # save image to dir
+#        plt.close()
+
+#batch_size = 1
+#train_ds, nb_images = create_dataloader_train_labeled("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=True)
 #im, label = train_ds # unzip
 
 #print("\n\nnb_images:", nb_images, "\n\n")
@@ -120,8 +205,13 @@ def create_dataloader_train(data_root, batch_size, batches_to_prefetch=20, shuff
 #            os.makedirs("images")
 #        image.save("images/img_{}_label_{}.png".format(i, lab))
 
+#batch_size = 16
+#train_ds, nb_train, valid_ds, nb_valid = create_dataloader_train_scored("./data", batch_size=batch_size, batches_to_prefetch=1, valid_percent=0.1)
+#im_train, score_train = train_ds # unzip
+#im_valid, score_valid = valid_ds # unzip
 
-
+#print(im_train.shape)
+#print(score_train.shape)
 
 
 

@@ -41,16 +41,19 @@ class BaseModel(Model):
         self.discriminator_optimizer = optimizers.Adam(1e-4)
         self.loss = losses.BinaryCrossentropy(from_logits=True)
 
-        self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
-                                 discriminator_optimizer=self.discriminator_optimizer,
-                                 generator=self.generator,
-                                 discriminator=self.discriminator)
-
-        self.checkpoint_dir = checkpoint_dir
-        self.checkpoint_prefix = checkpoint_prefix
+        self.checkpoint = None
+        self.checkpoint_dir = None
+        self.checkpoint_prefix = None
 
         # Restore from lastest available checkpoint
         if reload_ckpt:
+            self.checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
+                                                  discriminator_optimizer=self.discriminator_optimizer,
+                                                  generator=self.generator,
+                                                  discriminator=self.discriminator)
+
+            self.checkpoint_dir = checkpoint_dir
+            self.checkpoint_prefix = checkpoint_prefix
             latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir) # returns None if no checkpoint found
             checkpoint_found = (latest_checkpoint is not None) # model can be restored if a checkpoint found
 
@@ -636,6 +639,7 @@ class CVAE(tf.keras.Model):
                   activation='linear') # no activation
             ]
         )
+
     def set_untrainable(self):
         for layer in self.generative_net.layers:
             layer.trainable = False
@@ -704,6 +708,8 @@ class CVAE(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
     def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
         self.generative_net.save(os.path.join(dest_dir, "generative_net_" + self.__name__))
         self.inference_net.save(os.path.join(dest_dir, "inference_net_" + self.__name__))
         if self.scoring is not None:
@@ -752,3 +758,177 @@ class CVAE(tf.keras.Model):
 
     def set_name(self, name):
         self.__name__ = name
+
+
+class VAEGAN(BaseModel):
+    def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,
+                 reload_ckpt=False, name="VEAGAN_default"):
+        if noise_dim is None:
+            noise_dim = vae.inferense_net.output_shape
+        if data_shape is None:
+            data_shape = vae.inferense_net.output_shape
+        self.vae = vae
+        self.vae.set_untrainable()
+        self.__name__ = name
+        super(VAEGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=reload_ckpt)
+
+
+    def make_generator_model(self):
+        #model = tf.keras.models.clone_model(self.vae.inference_net)
+        model = keras.Sequential()
+
+        model.add(layers.Dense(2*self.noise_dim, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Dense(2 * self.noise_dim, use_bias=False))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Dense(self.noise_dim, use_bias=False))
+
+        return model
+
+    def make_discriminator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(self.noise_dim, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(self.noise_dim, use_bias=False))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1, use_bias=False))
+
+        return model
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.generator.save(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.save(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
+
+class TwoStepsVEAGAN(VAEGAN):
+    def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,
+                 reload_ckpt=False, name="TwoStepsVEAGAN_default"):
+        super(TwoStepsVEAGAN, self).__init__(vae, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix,
+                 reload_ckpt, name)
+        self.generator_prime = self.make_generator_prime()
+        self.discriminator_prime = self.make_discriminator_prime()
+
+    def make_generator_prime(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(5 * 5 * 256, use_bias=False, input_shape=(self.noise_dim/2,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Reshape((5, 5, 256)))
+        assert model.output_shape == (None, 5, 5, 256)  # Note: None is the batch size
+
+        model.add(layers.Conv2DTranspose(128, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(8, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(4, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(1, (3, 3), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+        assert model.output_shape == (None, 1000, 1000, 1)
+
+        return model
+
+    def make_discriminator_prime(self):
+        model = keras.Sequential()
+
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Flatten())
+
+        model.add(layers.Dense(4000))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(500))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+    def save_nets(self, dest_dir="./saved_models"):
+        super(TwoStepsVEAGAN, self).save_nets(dest_dir)
+        self.generator_prime.save(os.path.join(dest_dir, "generator_prime_" + self.__name__))
+        self.discriminator_prime.save(os.path.join(dest_dir, "discriminator_prime_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        super(TwoStepsVEAGAN, self).load_nets(dest_dir)
+        self.generator_prime.load_weights(os.path.join(dest_dir, "generator_prime_" + self.__name__))
+        self.discriminator_prime.load_weights(os.path.join(dest_dir, "discriminator_prime_" + self.__name__))

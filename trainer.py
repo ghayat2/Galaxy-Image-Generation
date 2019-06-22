@@ -35,7 +35,7 @@ class Trainer:
         self.lines = np.sqrt(self.num_examples)
         self.cols = np.sqrt(self.num_examples)
 
-        self.generate_every = 1000
+        self.generate_every = 10000
 
         self.callbacks = []
         self.verbose = verbose
@@ -53,7 +53,6 @@ class Trainer:
         #images = tf.expand_dims(images, 3)
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             generated_images = self.model.generator(noise, training=True)
-
             real_output = self.model.discriminator(images, training=True)
             fake_output = self.model.discriminator(generated_images, training=True)
 
@@ -93,7 +92,30 @@ class Trainer:
         self.model.discriminator_2_optimizer.apply_gradients(zip(gradients_of_discriminator_2, self.model.discriminator_2.trainable_variables))
         return gen_loss, disc_1_loss, disc_2_loss
 
-    def train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15):
+    def train_step_prime(self, images, batch_size):
+        noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
+                                                          # to discriminator (i,e batch_size)
+        #images = tf.expand_dims(images, 3)
+        with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+            mean, logvar = tf.split(self.model.generator(noise), num_or_size_splits=2, axis=1)
+            z = self.model.vae.reparameterize(mean, logvar)
+
+            generated_images = self.model.generator_prime(z, training=True)
+            real_output = self.model.discriminator_prime(images, training=True)
+            fake_output = self.model.discriminator_prime(generated_images, training=True)
+
+            gen_loss = self.model.generator_loss(fake_output)
+            disc_loss = self.model.discriminator_loss(real_output, fake_output)
+
+        gradients_of_generator = gen_tape.gradient(gen_loss, self.model.generator_prime.trainable_variables)
+        gradients_of_discriminator = disc_tape.gradient(disc_loss, self.model.discriminator_prime.trainable_variables)
+
+        self.model.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.model.generator_prime.trainable_variables))
+        self.model.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.model.discriminator_prime.trainable_variables))
+        return gen_loss, disc_loss
+
+
+    def train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None, gen_imgs=True):
         step = 1
         gen_loss = -1
         disc_loss = -1
@@ -103,19 +125,22 @@ class Trainer:
             b = 0 # batch nb
             #iter = self.train_dataset_labeled.make_one_shot_iterator()
             for batch, labels in self.train_dataset_labeled:
+                 if batch_processing_fct is not None:
+                    batch = tf.squeeze(batch_processing_fct(batch))
                 #gen_loss, disc_loss = self.train_step(batch, batch_size)
-                gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
                 b += 1
                 if step % self.generate_every == 0:
                     display.clear_output(wait=True)
-                    #self.generate_and_save_images(seed, "step", nb = step)
+                    if gen_imgs:
+                        self.generate_and_save_images(seed, "step", nb = step)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
-            display.clear_output(wait=True)
-            self.generate_and_save_images(seed, "epoch", nb = epoch)
-            print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_1_loss: {}, Disc_2_loss: {}".format(epoch, b, step, gen_loss, disc_1_loss, disc_2_loss))
+            if gen_imgs:
+                self.generate_and_save_images(seed, "epoch", nb = epoch)
+
             # Save the model every N epochs
             # NOTE: each checkpoint can be 400+ MB
             # If we checkpoint too much, it can cause serious trouble
@@ -125,7 +150,87 @@ class Trainer:
             print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
         # Generate after the final epoch
         display.clear_output(wait=True)
-        #self.generate_and_save_images(seed, "epoch", nb = epochs)
+        self.generate_and_save_images(seed, "epoch", nb = epochs)
+
+    def vaegan_train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None,
+                     gen_imgs=True, save_ckpt=False):
+        step = 1
+        gen_loss = -1
+        disc_loss = -1
+        for epoch in range(epochs):
+            #print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
+            start = time.time()
+            b = 0 # batch nb
+            #iter = self.train_dataset_labeled.make_one_shot_iterator()
+            for batch, labels in self.train_dataset_labeled:
+                if batch_processing_fct is not None:
+                    batch = tf.squeeze(batch_processing_fct(batch))
+                gen_loss, disc_loss = self.train_step(batch, batch_size)
+                #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                b += 1
+                if step % self.generate_every == 0:
+                    #display.clear_output(wait=True)
+                    if gen_imgs:
+                        self.generate_and_save_images(seed, "step", nb = step, vae=True, training_id="veagan")
+                step += 1
+                if(b >= steps_per_epoch):
+                    break
+            #display.clear_output(wait=True)
+            if gen_imgs:
+                self.generate_and_save_images(seed, "epoch", nb = epoch, vae=True, show=True, training_id="veagan")
+
+            # Save the model every N epochs
+            # NOTE: each checkpoint can be 400+ MB
+            # If we checkpoint too much, it can cause serious trouble
+            if save_ckpt and (epoch + 1) % save_every == 0:
+                self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
+
+            print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
+            print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+
+        # Generate after the final epoch
+        #display.clear_output(wait=True)
+        self.generate_and_save_images(seed, "epoch", nb = epochs, vae=True, show=True, training_id="veagan")
+
+    def two_steps_vaegan_train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None,
+                     gen_imgs=True, save_ckpt=False):
+        step = 1
+        gen_loss = -1
+        disc_loss = -1
+        for epoch in range(epochs):
+            #print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
+            start = time.time()
+            b = 0 # batch nb
+            #iter = self.train_dataset_labeled.make_one_shot_iterator()
+            for batch, labels in self.train_dataset_labeled:
+                if batch_processing_fct is not None:
+                    batch = tf.squeeze(batch_processing_fct(batch))
+                gen_loss, disc_loss = self.train_step_prime(batch, batch_size)
+                #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                b += 1
+                if step % self.generate_every == 0:
+                    #display.clear_output(wait=True)
+                    if gen_imgs:
+                        self.generate_and_save_images(seed, "step", nb = step, vae=None, training_id="2steps", prime=True)
+                step += 1
+                if(b >= steps_per_epoch):
+                    break
+            #display.clear_output(wait=True)
+            if gen_imgs:
+                self.generate_and_save_images(seed, "epoch", nb = epoch, vae=None, show=False, training_id="2steps", prime=True)
+
+            # Save the model every N epochs
+            # NOTE: each checkpoint can be 400+ MB
+            # If we checkpoint too much, it can cause serious trouble
+            if save_ckpt and (epoch + 1) % save_every == 0:
+                self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
+
+            print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
+            print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+
+        # Generate after the final epoch
+        #display.clear_output(wait=True)
+        self.generate_and_save_images(seed, "epoch", nb = epochs, vae=None, show=False, training_id="2steps", prime=True)
 
     def score(self, batch_size, epochs=10, steps_per_epoch=3):
         if(steps_per_epoch is not None):
@@ -141,10 +246,18 @@ class Trainer:
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
 
 
-    def generate_and_save_images(self, test_input, str, nb):
-        predictions = self.model.generator(test_input, training=False) # get generator output
+    def generate_and_save_images(self, test_input, str, nb, vae=None, show=False, training_id="default", prime=False):
+        if prime:
+            mean, logvar = tf.split(self.model.generator(test_input), num_or_size_splits=2, axis=1)
+            z = self.model.vae.reparameterize(mean, logvar)
+            predictions = self.model.generator_prime(z, training=False)  # get generator output
+        else:
+            predictions = self.model.generator(test_input, training=False)  # get generator output
         #print(predictions.shape)
-
+        if vae is not None:
+            mean, logvar = tf.split(predictions, num_or_size_splits=2, axis=1)
+            predictions = self.model.vae.reparameterize(mean, logvar)
+            predictions = self.model.vae.decode(predictions, apply_sigmoid=True)
         fig = plt.figure(figsize=(self.fig_size, self.fig_size)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
 
         #print("My Predictions Are: {}".format(predictions))
@@ -153,16 +266,17 @@ class Trainer:
         for i in range(predictions.shape[0]):
             image = predictions[i, :, :, 0].numpy() # take the i'th predicted image, remove the last dimension (result is 2D)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
-            plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
+            plt.imshow(image, cmap='gray') # plot the image on the selected cell
             plt.axis('off')
             maxval = image.max()
             minval = image.min()
         print('Max and min vals: {} {}'.format(maxval, minval))
-        plt.show() # finished plotting all images in the figure so show default figure
+        if show:
+            fig.show() # finished plotting all images in the figure so show default figure
 
         if not os.path.exists(self.out_path): # create images dir if not existant
             os.mkdir(self.out_path)
-        save_file = self.out_path + "/image_after_{}_{}.png".format(str, nb)
+        save_file = self.out_path + "/image_after_{}_{}_{}.png".format(str, nb, training_id)
         print(save_file)
         plt.savefig(save_file) # save image to dir
         return predictions
