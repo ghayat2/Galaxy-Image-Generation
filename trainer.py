@@ -2,11 +2,7 @@ from datetime import datetime
 import time
 import numpy as np
 import os
-import tensorflow as tf 
-from tensorflow import keras 
-from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.backend import set_session
+import tensorflow as tf
 from model import Model
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -35,7 +31,7 @@ class Trainer:
         self.lines = np.sqrt(self.num_examples)
         self.cols = np.sqrt(self.num_examples)
 
-        self.generate_every = 10000
+        self.generate_every = 1
 
         self.callbacks = []
         self.verbose = verbose

@@ -695,7 +695,7 @@ class CVAE(tf.keras.Model):
             return tf.reduce_mean(kld, axis=0)
 
         loss = log_likelihood_loss(x_logit, x) + kld_loss(mean, logvar)
-        #print(f"ELBO: {-tf.reduce_mean(logpx_z + logpz - logqz_x)}, GAB_ELBO: {loss}")
+        #print(f"ELBO: {}, GAB_ELBO: {loss}")
         #print(f"log_like: {log_likelihood_loss(x_logit, x)}, kdl: {kld_loss(mean, logvar)}")
         return loss
 
@@ -759,6 +759,112 @@ class CVAE(tf.keras.Model):
     def set_name(self, name):
         self.__name__ = name
 
+class POWERCVAE(CVAE):
+    def __init__(self, latent_dim, data_shape=(1000, 1000, 1),learning_rate=1e-3, name="default_vae_name"):
+        super(CVAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.scoring = None
+        self.__name__ = name
+        self.data_shape = data_shape
+
+        self.inference_net = self.make_encoder()
+        self.generative_net = self.make_decoder()
+
+    def make_decoder(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(5 * 5 * 256, use_bias=False, input_shape=(self.latent_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Reshape((5, 5, 256)))
+        assert model.output_shape == (None, 5, 5, 256)  # Note: None is the batch size
+
+        model.add(layers.Conv2DTranspose(128, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(8, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(4, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(1, (3, 3), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+        assert model.output_shape == (None, 1000, 1000, 1)
+
+        return model
+
+    def make_encoder(self):
+        dropout_rate = 0.0
+        model = keras.Sequential()
+
+        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+                                input_shape=self.data_shape))
+        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 25, 25, 64)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
+        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Flatten())
+
+        model.add(layers.Dense(4000))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(dropout_rate))
+
+        model.add(layers.Dense(self.latent_dim*2))
+
+        return model
 
 class VAEGAN(BaseModel):
     def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,
