@@ -114,7 +114,7 @@ def main():
         return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary',
-                                        classes=['1'] 
+                                        classes=['1'], 
                                         batch_size=batch_size, 
                                         target_size=(1000, 1000),
                                         color_mode='grayscale')
