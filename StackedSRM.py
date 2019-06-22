@@ -17,12 +17,12 @@ class StackedSRM:
             outputs = []
             for i in range(self.nb_stacks):
                 with tf.name_scope("stack"):
-                    conv = layers.conv_layer(inter, out_channels=32, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), pad_values=0, use_bias=False)
-                    res_module = layers.residual_module_srm(conv, training, out_channels=32, nb_blocks=6, pad_values=0, use_bias=False)
+                    conv = layers.conv_layer(inter, out_channels=64, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), pad_values=0, use_bias=False)
+                    res_module = layers.residual_module_srm(conv, training, out_channels=64, nb_blocks=6, pad_values=0, use_bias=False)
                     
                     h, w = tf.shape(res_module)[2], tf.shape(res_module)[3]
                     up_sample1 = layers.resize_layer(res_module, new_size=[2*h, 2*w], resize_method=tf.image.ResizeMethod.NEAREST_NEIGHBOR) # nearest neighbor up sampling
-                    conv1 = layers.conv_layer(up_sample1, out_channels=32, filter_size=(3, 3), strides=(1, 1), padding=(1, 1), pad_values=0, use_bias=False)
+                    conv1 = layers.conv_layer(up_sample1, out_channels=128, filter_size=(3, 3), strides=(1, 1), padding=(1, 1), pad_values=0, use_bias=False)
                     
                     h, w = tf.shape(conv1)[2], tf.shape(conv1)[3]
                     up_sample2 = layers.resize_layer(conv1, new_size=[2*h, 2*w], resize_method=tf.image.ResizeMethod.NEAREST_NEIGHBOR) # nearest neighbor up sampling
