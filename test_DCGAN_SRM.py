@@ -4,7 +4,6 @@ import sys, os, glob, gc
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from data import create_dataloader_train
 from DCGAN import DCGAN
 from StackedSRM import StackedSRM
 from tqdm import trange

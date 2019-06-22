@@ -4,7 +4,7 @@ import sys, os, glob, gc
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from data import create_dataloader_train
+from data import create_dataloader_train_labeled
 from DCGAN import DCGAN
 from tqdm import trange
 from PIL import Image
@@ -93,7 +93,7 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    real_im, _, nb_reals, _ = create_dataloader_train(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=False)
+    real_im, _, nb_reals, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=False)
     
     # define noise and test data
     noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator

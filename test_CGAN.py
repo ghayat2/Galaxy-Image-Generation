@@ -4,7 +4,6 @@ import sys, os, glob, gc
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from data import create_dataloader_train
 from CGAN import CGAN
 from tqdm import trange
 from PIL import Image
