@@ -8,14 +8,36 @@ from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
 
+from sklearn.datasets import load_sample_image
+from sklearn.feature_extraction import image
+from skimage.feature import blob_doh, blob_log
+from skimage.exposure import histogram
+from skimage.feature import shape_index
+from skimage.measure import shannon_entropy
 
 
+def get_hand_crafted(one_image):
+    hist = histogram(one_image, nbins=20, normalize=True)
+    features = hist[0]
+    blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=30, threshold=0.05)
+    shape_ind = shape_index(one_image)
+    shape_hist = np.histogram(shape_ind, range=(-1, 1), bins=9)
+    shan_ent = shannon_entropy(one_image)
+    max_val = one_image.max()
+    min_val = one_image.min()
+    variance_val = np.var(one_image)
+    features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val]])
+    return features
 
 def gan_preprocessing(image):
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
     image = image / 255.0
     image = (image - 0.5)/0.5
+    return image
+
+def vanilla_preprocessing(image):
+    image = image / 255.0
     return image
 
 
