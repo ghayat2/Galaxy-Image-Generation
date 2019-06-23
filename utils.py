@@ -4,17 +4,13 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
-from keras.optimizers import Adam
-from keras.models import Sequential
-from keras.layers.core import Dense
-
-
 
 
 def gan_preprocessing(image):
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
     image = image / 255.0
+    image = (image - 0.5) / 0.5
     return image
 
 
