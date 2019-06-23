@@ -119,8 +119,21 @@ def main():
                                         target_size=(1000, 1000),
                                         color_mode='grayscale')
 
-    scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing, validation_split=0.5)
-    scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing, validation_split=0.5)
+
+    labeled_datagen_gan = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
+    labeled_generator_gan = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
+                                                            class_mode='binary',
+                                                            batch_size=batch_size,
+                                                            target_size=(1000, 1000),
+                                                            color_mode='grayscale')
+
+    
+    #Added Validation Split value here, but not sure if it is compatible
+    #with the custom flow_from_dataframe function above
+
+    scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
+    scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
+
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -175,24 +188,17 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    trainer.train(batch_size=batch_size, seed=seed, epochs=100, steps_per_epoch=1000)
 
-    #Specify reload_ckpt
-    model.to_scoring(reload_ckpt=True)
+    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=70,
+                  steps_per_epoch=1000/batch_size,
+                  batch_processing_fct=vae_latent,
+                  gen_imgs=True)
+    print("Generator trained")
 
-    #Specify epochs, steps_per_epoch
-    #trainer.score(batch_size=batch_size, epochs=100, steps_per_epoch=1000)
-    # trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
-    #               steps_per_epoch=3,
-    #               batch_processing_fct=vae_latent,
-    #               gen_imgs=True)
-    # print("Generator trained")
-
-    # trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
-    #                      steps_per_epoch=3,
-    #                      batch_processing_fct=None,
-    #                      gen_imgs=True)
-
+    trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=200,
+                         steps_per_epoch=1000/batch_size,
+                         batch_processing_fct=None,
+                         gen_imgs=True)
 
 if __name__ == '__main__':
     main()
