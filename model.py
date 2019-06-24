@@ -110,6 +110,7 @@ class BaseModel(Model):
         return model
 
     def make_discriminator_model(self):
+
         model = keras.Sequential()
       
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
@@ -218,6 +219,51 @@ class BaseModel(Model):
     def generator_loss(self, fake_output):
         #return self.loss(tf.ones_like(fake_output), fake_output)
         return tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0))
+
+class BaseFusedModel(Model):
+
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(BaseFusedModel, self).__init__()
+        self.labeler = self.make_labeling_model()
+        self.labeler.load_weights(os.path.join(dest_dir, "labeler" + self.__name__))
+
+        self.discriminator = self.fuse_models()
+
+    def make_labeling_model(self):
+        model = keras.Sequential()
+        
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, )), trainable=False)
+        model.add(layers.BatchNormalization(momentum=0.8), trainable=False)
+        model.add(layers.Dropout(self.dropout), trainable=False)
+        
+        model.add(layers.Dense(10, activation='relu'), trainable=False)
+        model.add(layers.BatchNormalization(momentum=0.8), trainable=False)
+        model.add(layers.Dropout(self.dropout), trainable=False)
+
+        model.add(layers.Dense(1), trainable=False)
+
+        return model
+
+    def fuse_models(self):
+        combined = layers.concatenate([self.discrimiator.output, self.labeler.output])
+        z = layers.Dense(1)(combined)
+
+        return Model(inputs=[self.discrimiator.input, self.labeler.input], outputs=z)
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.generator.save(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.save(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
+
+
+
 
 class ImageRegressor(BaseModel):
     def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
@@ -349,97 +395,97 @@ class BetterD2GAN():
     def make_generator_model(self):
         model = keras.Sequential()
 
-        model.add(layers.Dense(5*5*256, use_bias=False, input_shape=(self.noise_dim,)))
+        model.add(layers.Dense(2*2*512, use_bias=False, input_shape=(self.noise_dim,)))
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.gen_dropout))
 
-        model.add(layers.Reshape((5, 5, 256)))
-        assert model.output_shape == (None, 5, 5, 256) # Note: None is the batch size
+        model.add(layers.Reshape((2, 2, 512)))
+        assert model.output_shape == (None, 2, 2, 512) # Note: None is the batch size
         
-        model.add(layers.Conv2DTranspose(128, (3, 3), strides=(1, 1), padding='same', use_bias=False))
-        assert model.output_shape == (None, 5, 5, 128)
+        model.add(layers.Conv2DTranspose(256, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 4, 4, 256)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.gen_dropout))
 
-        model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
-        assert model.output_shape == (None, 25, 25, 64)
-        model.add(layers.BatchNormalization(momentum=0.8))
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.gen_dropout))
+        # model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        # assert model.output_shape == (None, 25, 25, 64)
+        # model.add(layers.BatchNormalization(momentum=0.8))
+        # model.add(layers.LeakyReLU())
+        # model.add(layers.Dropout(self.gen_dropout))
 
-        model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
-        assert model.output_shape == (None, 25, 25, 32)
+        model.add(layers.Conv2DTranspose(128, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 8, 8, 128)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
         
-        model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
-        assert model.output_shape == (None, 125, 125, 16)
+        # model.add(layers.Conv2DTranspose(16, (5, 5), strides=(5, 5), padding='same', use_bias=False))
+        # assert model.output_shape == (None, 125, 125, 16)
+        # model.add(layers.BatchNormalization(momentum=0.8))
+        # model.add(layers.LeakyReLU())
+        
+        model.add(layers.Conv2DTranspose(64, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 16, 16, 64)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
         
-        model.add(layers.Conv2DTranspose(8, (3, 3), strides=(2, 2), padding='same', use_bias=False))
-        assert model.output_shape == (None, 250, 250, 8)
-        model.add(layers.BatchNormalization(momentum=0.8))
-        model.add(layers.LeakyReLU())
-        
-        model.add(layers.Conv2DTranspose(4, (3, 3), strides=(2, 2), padding='same', use_bias=False))
-        assert model.output_shape == (None, 500, 500, 4)
+        model.add(layers.Conv2DTranspose(32, (3, 3), strides=(2, 2), padding='same', use_bias=False))
+        assert model.output_shape == (None, 32, 32, 32)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
         
         model.add(layers.Conv2DTranspose(1, (3, 3), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
-        assert model.output_shape == (None, 1000, 1000, 1)
+        assert model.output_shape == (None, 64, 64, 1)
 
         return model
 
     def make_discriminator_1_model(self):
         model = keras.Sequential()
       
-        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+        model.add(layers.Conv2D(32, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
-        assert model.output_shape == (None, 500, 500, 4)
+        assert model.output_shape == (None, 32, 32, 32)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
         
-        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.Conv2D(64, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 16, 16, 64)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
 
-        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.Conv2D(128, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 8, 8, 128)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
 
-        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 25, 25, 32)
+        # model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        # assert model.output_shape == (None, 25, 25, 32)
+        # model.add(layers.LeakyReLU())
+        # model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 4, 4, 256)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
         
-        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 25, 25, 64)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_1_dropout))
+        # model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        # assert model.output_shape == (None, 5, 5, 128)
+        # model.add(layers.LeakyReLU())
+        # model.add(layers.Dropout(self.disc_1_dropout))
         
-        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 5, 5, 128)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_1_dropout))
-        
-        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.Conv2D(512, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 2, 2, 512)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
         
         model.add(layers.Flatten())
         
-        model.add(layers.Dense(4000, activation='selu'))
+        model.add(layers.Dense(1024))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
         
-        model.add(layers.Dense(500, activation='selu'))
+        model.add(layers.Dense(256))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_1_dropout))
         
@@ -450,49 +496,49 @@ class BetterD2GAN():
     def make_discriminator_2_model(self):
         model = keras.Sequential()
       
-        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
+        model.add(layers.Conv2D(32, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
-        assert model.output_shape == (None, 500, 500, 4)
+        assert model.output_shape == (None, 32, 32, 32)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
         
-        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 250, 250, 8)
+        model.add(layers.Conv2D(64, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 16, 16, 64)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
 
-        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 125, 125, 16)
+        model.add(layers.Conv2D(128, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 8, 8, 128)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
 
-        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 25, 25, 32)
+        # model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
+        # assert model.output_shape == (None, 25, 25, 32)
+        # model.add(layers.LeakyReLU())
+        # model.add(layers.Dropout(self.disc_1_dropout))
+        
+        model.add(layers.Conv2D(256, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 4, 4, 256)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
         
-        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 25, 25, 64)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_2_dropout))
+        # model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
+        # assert model.output_shape == (None, 5, 5, 128)
+        # model.add(layers.LeakyReLU())
+        # model.add(layers.Dropout(self.disc_1_dropout))
         
-        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 5, 5, 128)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_2_dropout))
-        
-        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 5, 5, 256)
+        model.add(layers.Conv2D(512, (3, 3), strides=(2, 2), padding='same'))
+        assert model.output_shape == (None, 2, 2, 512)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
         
         model.add(layers.Flatten())
         
-        model.add(layers.Dense(4000))
+        model.add(layers.Dense(1024))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
         
-        model.add(layers.Dense(500))
+        model.add(layers.Dense(256))
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_2_dropout))
         
@@ -1040,63 +1086,79 @@ class TwoStepsVEAGAN(VAEGAN):
         self.discriminator_prime.load_weights(os.path.join(dest_dir, "discriminator_prime_" + self.__name__))
 
 class LabelClassifier():
-    def __init__(self, data_shape, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
-        #print("Data shape is: {}".format(data_shape))
-        super(ImageRegressor, self).__init__(data_shape, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+    def __init__(self, feat_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        super(LabelClassifier, self).__init__()
+        self.dropout=0.5
+        self.__name__ = "default_label_classifier"
+
+        self.feat_dim = feat_dim
+
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_prefix = checkpoint_prefix
+
         self.labeler = self.make_labeling_model()
+        self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        self.loss = losses.BinaryCrossentropy(from_logits=True)
+
+        label_ckpt_file = self.checkpoint_dir + '/labeling_weights.best.hdf5'
+        #Apparently there is an issue with the outputted loss/accuracy being better than the
+        #evaluated one when using fit_generator, so just save last one for now (save_best_only = False)
+        #https://github.com/keras-team/keras/issues/10014
+        self.label_checkpoint = ModelCheckpoint(label_ckpt_file, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        self.label_callbacks = [self.label_checkpoint]
+
+        logdir = os.path.join(
+            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+
+        self.label_opt = optimizers.Adam(1e-4)
+
+        if(reload_ckpt == True):
+            self.labeler.load_weights(label_ckpt_file)
+
+        self.labeler.compile(loss='binary_crossentropy', optimizer=self.label_opt, metrics=['accuracy'])
+    
+    def set_name(self, name):
+        self.__name__ = name
 
     def make_labeling_model(self):
-        model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
-                                         input_shape=self.data_shape))
-        assert model.output_shape == (None, 500, 500, 4)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
+        model = keras.Sequential()
         
-        model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 250, 250, 8)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-
-        model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 125, 125, 16)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-
-        model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 25, 25, 32)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-        
-        model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 25, 25, 64)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-        
-        model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 5, 5, 128)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-        
-        model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 5, 5, 256)
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-        
-        model.add(layers.Flatten())
-        
-        model.add(layers.Dense(4096))
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-        
-        model.add(layers.Dense(1024))
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.disc_dropout))
-
-        model.add(layers.Dense(100))
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, )))
         model.add(layers.BatchNormalization(momentum=0.8))
-        model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(0.3))
+        model.add(layers.Dropout(self.dropout))
+        
+        model.add(layers.Dense(10, activation='relu'))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
 
         model.add(layers.Dense(1))
 
         return model
+
+    def apply_gradients(self, gradients):
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    def compute_loss(self, x, y):
+        batch_size = x.shape[0]
+        predicted = self.labeler(tf.convert_to_tensor(x, dtype=tf.float32))
+        labels = tf.expand_dims(y, axis=1)
+        loss = self.loss(labels, predicted)
+        #print("y: {}".format(labels))
+        #print("predicted: {}".format(tf.round(tf.nn.sigmoid(predicted))))
+        num_correct = batch_size - np.sum(np.absolute(labels - tf.round(tf.nn.sigmoid(predicted))))
+        #print("Num correct: {}".format(num_correct))
+        return loss, num_correct
+
+    def compute_gradients(self, x, y):
+        with tf.GradientTape() as tape:
+            loss, num_correct = self.compute_loss(x, y)
+        return tape.gradient(loss, self.trainable_variables), loss, num_correct
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.labeler.save(os.path.join(dest_dir, "labeler" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self.labeler.load_weights(os.path.join(dest_dir, "labeler" + self.__name__))

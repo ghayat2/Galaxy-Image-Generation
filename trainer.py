@@ -9,6 +9,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython import display
 
+from sklearn.datasets import load_sample_image
+from sklearn.feature_extraction import image
+from skimage.feature import blob_doh, blob_log
+from skimage.exposure import histogram
+from skimage.feature import shape_index
+from skimage.measure import shannon_entropy
+
 
 class Trainer:
 
@@ -116,36 +123,37 @@ class Trainer:
         gen_loss = -1
         disc_loss = -1
         for epoch in range(epochs):
-            #print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
+            print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
             start = time.time()
             b = 0 # batch nb
             #iter = self.train_dataset_labeled.make_one_shot_iterator()
             for batch, labels in self.train_dataset_labeled:
                 if batch_processing_fct is not None:
                     batch = tf.squeeze(batch_processing_fct(batch))
-                #gen_loss, disc_loss = self.train_step(batch, batch_size)
+                gen_loss, disc_loss = self.train_step(batch, batch_size)
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
-                gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
+                # gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
                 b += 1
                 if step % self.generate_every == 0:
-                    display.clear_output(wait=True)
+                    display.clear_output(wait=False)
                     if gen_imgs:
-                        self.generate_and_save_images(seed, "step", nb = step)
+                        self.generate_and_save_images(seed, "step", nb = step, show=True)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
             if gen_imgs:
-                self.generate_and_save_images(seed, "epoch", nb = epoch)
+                self.generate_and_save_images(seed, "epoch", nb = epoch, show=True)
 
             # Save the model every N epochs
             # NOTE: each checkpoint can be 400+ MB
             # If we checkpoint too much, it can cause serious trouble
             if (epoch + 1) % save_every == 0:
-                self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
+                # self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
+                self.model.save_nets()
 
             print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
         # Generate after the final epoch
-        display.clear_output(wait=True)
+        display.clear_output(wait=False)
         self.generate_and_save_images(seed, "epoch", nb = epochs)
 
     def vaegan_train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None,
@@ -173,6 +181,7 @@ class Trainer:
                     break
             #display.clear_output(wait=True)
             if gen_imgs:
+                display.clear_output(wait=True)
                 self.generate_and_save_images(seed, "epoch", nb = epoch, vae=True, show=True, training_id="veagan")
 
             # Save the model every N epochs
@@ -181,6 +190,7 @@ class Trainer:
             if save_ckpt and (epoch + 1) % save_every == 0:
                 self.model.checkpoint.save(file_prefix = self.model.checkpoint_prefix)
 
+            display.clear_output(wait=True)
             print ('Time for epoch {} is {} sec'.format(epoch, time.time()-start))
             print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
 
@@ -204,10 +214,10 @@ class Trainer:
                 gen_loss, disc_loss = self.train_step_prime(batch, batch_size)
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 b += 1
-                if step % self.generate_every == 0:
-                    #display.clear_output(wait=True)
-                    if gen_imgs:
-                        self.generate_and_save_images(seed, "step", nb = step, vae=None, training_id="2steps", prime=True)
+                # if step % self.generate_every == 0:
+                #     #display.clear_output(wait=True)
+                #     if gen_imgs:
+                #         self.generate_and_save_images(seed, "step", nb = step, vae=None, training_id="2steps", prime=True)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
@@ -236,13 +246,16 @@ class Trainer:
         else:
             self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=100, use_multiprocessing=True, verbose=1)
 
+    def labeling(self, labeler, X_train, y_train, X_val, y_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
+        
+        labeler.labeler.fit(x=X_train, y=y_train, batch_size=batch_size, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=(X_val, y_val), validation_steps=val_steps)
+
     def predict(self, query_generator, query_numbers):
         predictions = self.model.scorer.predict_generator(query_generator, verbose=1)
         predictions = np.clip(predictions, a_min=0, a_max=8)
         indexed_predictions = np.concatenate([np.reshape(query_numbers, (-1, 1)), predictions], axis=1)
         print(indexed_predictions)
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
-
 
     def generate_and_save_images(self, test_input, str, nb, vae=None, show=False, training_id="default", prime=False):
         if prime:
@@ -264,13 +277,13 @@ class Trainer:
         for i in range(predictions.shape[0]):
             image = predictions[i, :, :, 0].numpy() # take the i'th predicted image, remove the last dimension (result is 2D)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
-            plt.imshow(image, cmap='gray') # plot the image on the selected cell
+            plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
             plt.axis('off')
             maxval = image.max()
             minval = image.min()
         print('Max and min vals: {} {}'.format(maxval, minval))
         if show:
-            fig.show() # finished plotting all images in the figure so show default figure
+            plt.show() # finished plotting all images in the figure so show default figure
 
         if not os.path.exists(self.out_path): # create images dir if not existant
             os.mkdir(self.out_path)
