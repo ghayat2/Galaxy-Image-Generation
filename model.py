@@ -222,7 +222,7 @@ class BaseModel(Model):
 
 class BaseFusedModel(Model):
 
-    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False, dest_dir=None):
         #print("Data shape is: {}".format(data_shape))
         super(BaseFusedModel, self).__init__()
         self.labeler = self.make_labeling_model()
@@ -299,6 +299,7 @@ class ImageRegressor(BaseModel):
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
 
     def make_scoring_model(self):
+        model = keras.Sequential()
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
         assert model.output_shape == (None, 500, 500, 4)
@@ -354,7 +355,100 @@ class ImageRegressor(BaseModel):
 
         return model
 
-class BetterD2GAN():
+class CGAN(Model):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir=None, checkpoint_prefix=None, reload_ckpt=False,
+                 p_galaxy=0.8):
+        #print("Data shape is: {}".format(data_shape))
+        super(CGAN, self).__init__()
+        self.data_shape = data_shape
+        self.noise_dim = noise_dim
+        self.disc_dropout = 0.5
+        self.gen_dropout = 0.2
+        self.scoring_l2_regularisation = 1e-3
+
+        self.generator = self.make_generator_model()
+        self.discriminator = self.make_discriminator_model()
+        self.generator_optimizer = optimizers.Adam(1e-3)
+        self.discriminator_optimizer = optimizers.Adam(1e-4)
+        self.loss = losses.BinaryCrossentropy(from_logits=True)
+
+        self.checkpoint = None
+        self.checkpoint_dir = None
+        self.checkpoint_prefix = None
+        self.p_galaxy = p_galaxy
+        self.is_galaxy = False
+
+    def make_generator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(4 * 4 * 1024, use_bias=False, input_shape=(self.noise_dim+1,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
+
+        model.add(layers.Reshape((4, 4, 1024)))
+
+        model.add(layers.Conv2DTranspose(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(self.gen_dropout))
+
+        model.add(layers.Conv2DTranspose(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2DTranspose(1, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Activation("tanh"))
+
+        return model
+
+    def make_discriminator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Flatten())
+
+        model.add(layers.Dense(3))
+
+        return model
+
+    def discriminator_loss(self, real_output, fake_output, is_galaxy):
+        # fake = 0, real galaxy = 2, real other = 1
+        real_labels = tf.one_hot(tf.constant(is_galaxy+1, shape=(fake_output.shape[0], 1)), 3)
+        real_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=real_labels, logits=real_output))
+        fake_labels = tf.one_hot(tf.constant(0, shape=(fake_output.shape[0], 1)), 3)
+        fake_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=fake_labels, logits=fake_output))
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+    def generator_loss(self, fake_output, is_galaxy):
+        #return self.loss(tf.ones_like(fake_output), fake_output)
+        labels = tf.one_hot(tf.constant(is_galaxy+1, shape=(fake_output.shape[0], 1)), 3)
+        return tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=fake_output))
+
+class BetterD2GAN(Model):
     def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
         #print("Data shape is: {}".format(data_shape))
         super(BetterD2GAN, self).__init__()
@@ -642,7 +736,6 @@ class BetterD2GAN():
         total_loss = fake_loss_1 + fake_loss_2
         return total_loss
 
-
 class CVAE(tf.keras.Model):
     def __init__(self, latent_dim, learning_rate=1e-3, name="default_vae_name"):
         super(CVAE, self).__init__()
@@ -660,7 +753,7 @@ class CVAE(tf.keras.Model):
                   filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same"),
               tf.keras.layers.Flatten(),
               # No activation
-              tf.keras.layers.Dense(units=128, activation='relu'),
+              tf.keras.layers.Dense(units=256, activation='relu'),
               tf.keras.layers.Dense(latent_dim + latent_dim)
             ]
         )
@@ -668,7 +761,7 @@ class CVAE(tf.keras.Model):
         self.generative_net = tf.keras.Sequential(
             [
                 tf.keras.layers.InputLayer(input_shape=(latent_dim,)),
-                tf.keras.layers.Dense(units=128, activation='relu'),
+                tf.keras.layers.Dense(units=256, activation='relu'),
                 tf.keras.layers.Dense(units=40*40*32, activation='relu'),
                 tf.keras.layers.Reshape(target_shape=(40, 40, 32)),
                 tf.keras.layers.Conv2DTranspose(
@@ -756,10 +849,10 @@ class CVAE(tf.keras.Model):
     def save_nets(self, dest_dir="./saved_models"):
         if not os.path.isdir(dest_dir):
             os.mkdir(dest_dir)
-        self.generative_net.save(os.path.join(dest_dir, "generative_net_" + self.__name__))
-        self.inference_net.save(os.path.join(dest_dir, "inference_net_" + self.__name__))
+        self.generative_net.save_weights(os.path.join(dest_dir, "generative_net_" + self.__name__))
+        self.inference_net.save_weights(os.path.join(dest_dir, "inference_net_" + self.__name__))
         if self.scoring is not None:
-            self.scoring.save(os.path.join(dest_dir, "scoring_net_" + self.__name__))
+            self.scoring.save_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
 
     def load_nets(self, dest_dir="./saved_models"):
         self .generative_net.load_weights(os.path.join(dest_dir, "generative_net_" + self.__name__))
@@ -967,7 +1060,6 @@ class VAEGAN(BaseModel):
     def load_nets(self, dest_dir="./saved_models"):
         self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
         self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
-
 
 class TwoStepsVEAGAN(VAEGAN):
     def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,

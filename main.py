@@ -5,17 +5,14 @@ import os
 from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.backend import set_session
 import pandas as pd
 import utils
 import matplotlib.pyplot as plt
-
 import sklearn
 from sklearn.model_selection import train_test_split
 
 
-from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN, CGAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -84,7 +81,6 @@ def main():
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     sess = tf.compat.v1.Session()
     graph = tf.compat.v1.get_default_graph()
-    set_session(sess)
     tf.compat.v1.global_variables_initializer()
 
     #Uncomment to create folders for labeled data
@@ -103,12 +99,14 @@ def main():
     val_ratio = 0.1
 
     vae = CVAE(latent_dim)
-    vae.load_nets()
+    # vae.load_nets()
     inf_vae = tf.keras.models.clone_model(vae.inference_net)
     print(inf_vae.summary())
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
+
+    ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
     labeled_datagen = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
     def vae_latent(im):
         return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
@@ -170,35 +168,43 @@ def main():
                                                         color_mode='grayscale')
 
     print("Data generators have been created")
+    noise_dim = 63
+    cgan = CGAN(noise_dim=noise_dim, data_shape=(64, 64))
 
-    # # Create the model
-    model = BetterD2GAN(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
-    #if REGRESSOR_TYPE:
-    #    utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=100)
-    #    return
+    galaxy_generator_64 = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
+                                                            class_mode='binary',
+                                                            classes=['1'],
+                                                            batch_size=batch_size,
+                                                            target_size=(64, 64),
+                                                            color_mode='grayscale')
 
-    # # Create the model
-    #model = TwoStepsVEAGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
-
-    # Train the model
+    other_generator_64 = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
+                                                              class_mode='binary',
+                                                              classes=['0'],
+                                                              batch_size=batch_size,
+                                                              target_size=(64, 64),
+                                                              color_mode='grayscale')
+    noise = np.random.normal(0, 1, [batch_size, noise_dim])
+    input = tf.concat([noise, tf.constant(1.0, shape=(batch_size, 1))], axis=-1)
     trainer = Trainer(
-        model, sess, graph, labeled_generator, scored_generator_train, scored_generator_val, os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'Results/'))
+        cgan, None, None, labeled_generator, scored_generator_train, scored_generator_val, './Results/'
     )
 
-    seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
+    g = cgan.generator(input)
+    print(g.shape)
 
-    #Specify epochs, steps_per_epoch, save_every
+    resizer = tf.keras.Sequential(
+        [tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2))]
+    )
 
-    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=70,
-                  steps_per_epoch=1000/batch_size,
-                  batch_processing_fct=vae_latent,
-                  gen_imgs=True)
-    print("Generator trained")
+    trainer.cgan_train(batch_size, input, galaxy_generator_64, other_generator_64,
+                       epochs=1, steps_per_epoch_galaxy=1000/batch_size, steps_per_epoch_other=200/batch_size,
+                       save_every=15, batch_processing_fct=resizer, gen_imgs=True)
 
-    trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=200,
-                         steps_per_epoch=1000/batch_size,
-                         batch_processing_fct=None,
-                         gen_imgs=True)
 
 if __name__ == '__main__':
     main()
