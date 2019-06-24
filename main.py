@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
 
-from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN
+
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -89,7 +90,7 @@ def main():
     #Uncomment to create folders for labeled data
     #create_labeled_folders(data_path)
 
-    checkpoint_dir = './training_checkpoints'
+    checkpoint_dir = os.path.join(os.path.dirname( __file__ ), os.pardir, 'runs/Base_LSGAN/')
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
     ### ------------------- ###
@@ -108,15 +109,23 @@ def main():
 
     # Create the labeled data generator
     #create_labeled_folders("../cosmology_aux_data_170429")
+    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
     def vae_latent(im):
         return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
-
-    labeled_datagen = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing)
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
-                                        class_mode='binary', 
+                                        class_mode='binary',
+                                        classes=['1'], 
                                         batch_size=batch_size, 
                                         target_size=(1000, 1000),
                                         color_mode='grayscale')
+
+
+    labeled_datagen_gan = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
+    labeled_generator_gan = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
+                                                            class_mode='binary',
+                                                            batch_size=batch_size,
+                                                            target_size=(1000, 1000),
+                                                            color_mode='grayscale')
 
     
     #Added Validation Split value here, but not sure if it is compatible
@@ -124,6 +133,7 @@ def main():
 
     scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
     scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
+
     scores_path = os.path.join(data_path, "scored.csv")
     scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
     id_to_score = scores.to_dict(orient="index")
@@ -151,8 +161,6 @@ def main():
     all_indexes = [int(item.split('.')[0]) for item in only_files]
     sorted_queries = np.sort(all_indexes)
 
-    print(np.reshape(sorted_queries, (-1, 1)))
-
     query_datagen = ImageDataGenerator()
     query_generator = query_datagen.flow_from_directory(os.path.join(data_path, "query"),
                                                         class_mode=None,
@@ -161,18 +169,16 @@ def main():
                                                         target_size=(1000,1000),
                                                         color_mode='grayscale')
 
-
     print("Data generators have been created")
 
-
-    # -------------------- #
-
-    if REGRESSOR_TYPE:
-        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=100)
-        return
+    # # Create the model
+    model = BetterD2GAN(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
+    #if REGRESSOR_TYPE:
+    #    utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=100)
+    #    return
 
     # # Create the model
-    model = TwoStepsVEAGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
+    #model = TwoStepsVEAGAN(vae, data_shape, 2*latent_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False)
 
     # Train the model
     trainer = Trainer(
@@ -182,17 +188,17 @@ def main():
     seed = np.random.normal(0, 1, [trainer.num_examples, model.noise_dim])
 
     #Specify epochs, steps_per_epoch, save_every
-    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
-                  steps_per_epoch=3,
+
+    trainer.vaegan_train(batch_size=batch_size, seed=seed, epochs=70,
+                  steps_per_epoch=1000/batch_size,
                   batch_processing_fct=vae_latent,
                   gen_imgs=True)
     print("Generator trained")
 
-    trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=1,
-                         steps_per_epoch=3,
+    trainer.two_steps_vaegan_train(batch_size=batch_size, seed=seed, epochs=200,
+                         steps_per_epoch=1000/batch_size,
                          batch_processing_fct=None,
                          gen_imgs=True)
-
 
 if __name__ == '__main__':
     main()
