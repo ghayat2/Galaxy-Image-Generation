@@ -156,20 +156,21 @@ with tf.Session(config=config) as sess:
     # losses
     print("Losses ...")
     sys.stdout.flush()
-    loss = model.compute_loss(outputs_gt, outputs_pred)
+    losses = model.compute_loss(outputs_gt, outputs_pred)
     
 #    sys.exit(0)
     # define trainer
     print("Train_op ...")
     sys.stdout.flush()
-    train_op, global_step = model.train_op(loss, LR, beta1=BETA1, beta2=BETA2)
+    train_ops, global_step = model.train_op(losses, LR, beta1=BETA1, beta2=BETA2)
     
 #    sys.exit(0)
     
     # define summaries
     print("Summaries ...")
     sys.stdout.flush()
-    train_loss_summary = tf.summary.scalar("train_loss", loss)
+    loss_pl = tf.placeholder(dtype=tf.float32, shape=[])
+    train_loss_summary = tf.summary.scalar("train_loss", loss_pl)
     
 #    sys.exit(0)
     # summaries and graph writer
@@ -202,9 +203,12 @@ with tf.Session(config=config) as sess:
     
     print("Train start ...")
     NUM_SAMPLES = nb_reals
+    NB_STEPS = int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))
+    j_prev = 0
+    print("train__op", j_prev)
     sys.stdout.flush()
 #    sys.exit(0)
-    with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
+    with trange(NB_STEPS) as t:
         for i in t: # for each step
         
             # display training status
@@ -212,14 +216,20 @@ with tf.Session(config=config) as sess:
             iter_cur = (i * BATCH_SIZE ) % NUM_SAMPLES # nb of images processed in current epoch
             t.set_postfix(epoch=epoch_cur,iter_percent="%d %%"%(iter_cur/float(NUM_SAMPLES)*100) )
             
-            
+            j = int(i / (NB_STEPS/NB_STACKS))
+            if j >= len(train_ops):
+                j -= 1
+            if j != j_prev:
+                print("moving to train_op", j)
+                j_prev = j
             
             if (i+1) % LOG_ITER_FREQ == 0:
-                _, global_step_val, summary = sess.run([train_op, global_step, train_loss_summary], {training_pl:True}) # perform a train_step and get loss summary
+                _, global_step_val, loss = sess.run([train_ops[j], global_step, losses[j]], {training_pl:True}) # perform a train_step and get loss summary
+                summary = sess.run(train_loss_summary, feed_dict={loss_pl: loss})
                 writer.add_summary(summary, global_step_val)
                 
             else:
-                sess.run([train_op], {training_pl:True}) # train_step only (no summaries)
+                sess.run([train_ops[j]], {training_pl:True}) # train_step only (no summaries)
 
             
             # save model
