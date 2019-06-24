@@ -1,12 +1,15 @@
 import random
+import os
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
+import random
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
+from keras.preprocessing import image as krs_image
 
 from sklearn.datasets import load_sample_image
 from sklearn.feature_extraction import image
@@ -15,6 +18,64 @@ from skimage.exposure import histogram
 from skimage.feature import shape_index
 from skimage.measure import shannon_entropy
 
+# CODE SNIPPET TO USE CUSTOM GENERATOR BELOW
+# 
+# manual_feats = np.loadtxt('scoring_feats.gz')
+# manual_ids = np.loadtxt('scoring_feats_ids.gz').astype(int)
+
+# manual_dict = dict(zip(manual_ids, manual_feats))
+
+# print(manual_feats[0])
+# print(manual_ids[0])
+# print(manual_dict[manual_ids[0]])
+
+# scores_path = os.path.join(data_path, "scored.csv")
+# scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
+# id_to_score = scores.to_dict(orient="index")
+# id_to_score = {k: v[1] for k, v in id_to_score.items()}
+
+# scored_images_path = os.path.join(data_path, "scored")
+# scored_images_path = pathlib.Path(scored_images_path)
+# onlyFiles = [f for f in os.listdir(scored_images_path) if (os.path.isfile(os.path.join(scored_images_path, f)) and (f != None))]
+
+# all_indexes = [item.split('.')[0] for item in onlyFiles]
+# all_indexes = filter(None, all_indexes)
+# all_pairs = [[os.path.join(scored_images_path, item) + '.png', id_to_score[int(item)]] for item in all_indexes]
+
+# all_pairs_train, all_pairs_val = train_test_split(all_pairs, test_size=0.1)
+
+# X_train = np.array(all_pairs_train)[:, 0]
+# X_val = np.array(all_pairs_val)[:, 0]
+
+def custom_generator(images_list, manual_dict, batch_size=16):
+    i = 0
+    while True:
+        batch = {'images': [], 'manual': [], 'scores': []}
+        for b in range(batch_size):
+            if i == len(images_list):
+                i = 0
+                random.shuffle(images_list)
+            # Read image from list and convert to array
+            image_path = images_list[i]
+            image_name = int(os.path.basename(image_path).replace('.png', ''))
+            image = krs_image.load_img(image_path, target_size=(1000, 1000), color_mode='grayscale')
+            image = gan_preprocessing(krs_image.img_to_array(image))
+
+            manual_features = manual_dict[image_name][:34]
+
+            score = manual_dict[image_name][34]
+
+            batch['images'].append(image)
+            batch['manual'].append(manual_features)
+            batch['scores'].append(score)
+
+            i += 1
+
+        batch['images'] = np.array(batch['images'])
+        batch['manual'] = np.array(batch['manual'])
+        batch['scores'] = np.array(batch['scores'])
+
+        yield [batch['images'], batch['manual']], batch['scores']
 
 def get_hand_crafted(one_image):
     hist = histogram(one_image, nbins=20, normalize=True)

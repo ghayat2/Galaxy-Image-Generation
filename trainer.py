@@ -247,8 +247,18 @@ class Trainer:
             self.model.scorer.fit_generator(self.train_dataset_scored, epochs=epochs, callbacks=self.model.score_callbacks, validation_data=self.val_dataset_scored, validation_steps=100, use_multiprocessing=True, verbose=1)
 
     def labeling(self, labeler, X_train, y_train, X_val, y_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
-        
         labeler.labeler.fit(x=X_train, y=y_train, batch_size=batch_size, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=(X_val, y_val), validation_steps=val_steps)
+
+    def score_feats(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
+        self.model.scorer.fit_generator(X_train, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=self.model.score_callbacks, validation_data=X_val, validation_steps=100, use_multiprocessing=True, verbose=1)
+
+
+    def predict_feats(self, predictor, X, ids):
+        predictions = predictor.predict(X, verbose=1)
+        predictions = np.clip(predictions, a_min=0, a_max=8)
+        indexed_predictions = np.concatenate([np.reshape(ids, (-1, 1)), predictions], axis=1)
+        print(indexed_predictions)
+        np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")    
 
     def predict(self, query_generator, query_numbers):
         predictions = self.model.scorer.predict_generator(query_generator, verbose=1)

@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow import keras 
 from tensorflow.keras import layers, models, regularizers, optimizers, losses
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.initializers import glorot_normal
 import matplotlib.pyplot as plt
 
 class Model:
@@ -233,15 +234,15 @@ class BaseFusedModel(Model):
     def make_labeling_model(self):
         model = keras.Sequential()
         
-        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, )), trainable=False)
-        model.add(layers.BatchNormalization(momentum=0.8), trainable=False)
-        model.add(layers.Dropout(self.dropout), trainable=False)
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, ), trainable=False))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=False))
+        model.add(layers.Dropout(self.dropout, trainable=False))
         
-        model.add(layers.Dense(10, activation='relu'), trainable=False)
-        model.add(layers.BatchNormalization(momentum=0.8), trainable=False)
-        model.add(layers.Dropout(self.dropout), trainable=False)
+        model.add(layers.Dense(10, activation='relu', trainable=False))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=False))
+        model.add(layers.Dropout(self.dropout, trainable=False))
 
-        model.add(layers.Dense(1), trainable=False)
+        model.add(layers.Dense(1, trainable=False))
 
         return model
 
@@ -260,10 +261,6 @@ class BaseFusedModel(Model):
     def load_nets(self, dest_dir="./saved_models"):
         self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
         self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
-
-
-
-
 
 class ImageRegressor(BaseModel):
     def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
@@ -298,7 +295,7 @@ class ImageRegressor(BaseModel):
 
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
 
-    def make_scoring_model(self):
+    def make_scoring_model(self, model):
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
         assert model.output_shape == (None, 500, 500, 4)
@@ -642,7 +639,6 @@ class BetterD2GAN():
         total_loss = fake_loss_1 + fake_loss_2
         return total_loss
 
-
 class CVAE(tf.keras.Model):
     def __init__(self, latent_dim, learning_rate=1e-3, name="default_vae_name"):
         super(CVAE, self).__init__()
@@ -968,7 +964,6 @@ class VAEGAN(BaseModel):
         self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
         self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
 
-
 class TwoStepsVEAGAN(VAEGAN):
     def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,
                  reload_ckpt=False, name="TwoStepsVEAGAN_default"):
@@ -1162,3 +1157,194 @@ class LabelClassifier():
 
     def load_nets(self, dest_dir="./saved_models"):
         self.labeler.load_weights(os.path.join(dest_dir, "labeler" + self.__name__))
+
+class ScorePredictor():
+    def __init__(self, feat_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        super(ScorePredictor, self).__init__()
+        self.dropout=0.5
+        self.__name__ = "default_score_predictor"
+
+        self.feat_dim = feat_dim
+
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_prefix = checkpoint_prefix
+
+        self.labeler = self.make_scoring_model()
+        self.optimizer = tf.keras.optimizers.Adam(1e-4)
+        self.loss = losses.MeanAbsoluteError()
+
+        label_ckpt_file = self.checkpoint_dir + '/labeling_weights.best.hdf5'
+        #Apparently there is an issue with the outputted loss/accuracy being better than the
+        #evaluated one when using fit_generator, so just save last one for now (save_best_only = False)
+        #https://github.com/keras-team/keras/issues/10014
+        self.label_checkpoint = ModelCheckpoint(label_ckpt_file, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        self.label_callbacks = [self.label_checkpoint]
+
+        logdir = os.path.join(
+            "logs", datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+
+        self.label_opt = optimizers.Adam(1e-4)
+
+        if(reload_ckpt == True):
+            self.labeler.load_weights(label_ckpt_file)
+
+        self.labeler.compile(loss=self.loss, optimizer=self.label_opt)
+    
+    def set_name(self, name):
+        self.__name__ = name
+
+    def make_labeling_model(self):
+        model = keras.Sequential()
+        
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, )))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
+        
+        model.add(layers.Dense(10, activation='relu'))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+    def make_scoring_model(self):
+        model = keras.Sequential()
+        
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, )))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
+        
+        model.add(layers.Dense(15, activation='relu'))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
+
+        model.add(layers.Dense(10, activation='relu'))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.Dropout(self.dropout))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+    def apply_gradients(self, gradients):
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.labeler.save(os.path.join(dest_dir, "scoring_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self.labeler.load_weights(os.path.join(dest_dir, "scoring_" + self.__name__))
+
+class MounirRegressor(BaseModel):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(MounirRegressor, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+
+    def to_scoring(self, reload_ckpt=False):
+
+        self.global_seed=5
+        self.initializer = glorot_normal(seed=self.global_seed)
+        self.feat_dim = 34
+
+        self.scorer = self.make_scoring_model(keras.Sequential())
+        self.manual = self.make_manual_model()
+        self.scorer = self.fuse_models()
+        self.score_opt = optimizers.Adam(1e-4)
+
+        self.score_callbacks = []
+
+        self.scorer.compile(loss=losses.MeanAbsoluteError(), optimizer=self.score_opt)
+
+    def make_scoring_model(self, model):
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
+
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+        # assert model.output_shape == (None, 256, 256, 1)    
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))        
+        model.add(layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 128, 128, 32)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 64, 64, 64)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 32, 32, 128)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 16, 16, 256)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 8, 8, 512)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 4, 4, 1024)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        model.add(layers.Dropout(self.disc_dropout))
+        model.add(layers.LeakyReLU())
+        
+        model.add(layers.Dense(1, use_bias=True))
+
+        return model
+
+    def make_manual_model(self):
+        model = keras.Sequential()
+        
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, ), trainable=True))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        
+        model.add(layers.Dense(15, activation='relu', trainable=True))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+        model.add(layers.Dense(10, activation='relu', trainable=True))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+        model.add(layers.Dense(1, trainable=True))
+
+        model.load_weights(os.path.join("./saved_models", "scoring_" + 'default_score_predictor'))
+
+        return model
+
+    def fuse_models(self):
+        combined = layers.concatenate([self.scorer.output, self.manual.output])
+        z = layers.Dense(1, use_bias=True)(combined)
+
+        return models.Model(inputs=[self.scorer.input, self.manual.input], outputs=z)
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.scorer.save(os.path.join(dest_dir, "scoring_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self.scorer.load_weights(os.path.join(dest_dir, "scoring_" + self.__name__))
