@@ -6,11 +6,14 @@ from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
 import random
+
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
 from keras.preprocessing import image as krs_image
 
+from sklearn import model_selection
+from sklearn.externals import joblib
 from sklearn.datasets import load_sample_image
 from sklearn.feature_extraction import image
 from skimage.feature import blob_doh, blob_log
@@ -108,40 +111,45 @@ def vae_preprocessing(image):
     #image = image / 255.0
     return image
 
-def train_regressor(regr, vae , epochs, scored_generator_train,\
-                                  latent_dim=100, batch_size=16, max_depth=2, \
-                                  random_state=0, nb_trees=100, iteration_limit=None): 
+
+def train_regressor(regr, vae , scored_generator_train, epochs=1, \
+                                  latent_dim=100, batch_size=16): 
   
   start_time = t.time()
+  
+  print("Encoding training data in latent space..")
+  
   for epoch in range(epochs):
     i = 0
+    train_data, score_data = [], []
     
     for X_batch, score_batch in scored_generator_train:
     
       mean, logvar = vae.encode(X_batch)
-      z = vae.reparameterize(mean, logvar)  
+      z = vae.reparameterize(mean, logvar)      
       z = np.reshape(np.clip(np.reshape(z, (-1)),-1e15, 1e15), (batch_size, latent_dim))
-      regr.partial_fit(z, score_batch) if regr == "MLP" else regr.fit(z, score_batch)
-        
-      if iteration_limit and i >= iteration_limit:
-        return regr
-        
-      if i % 50 == 0:
-        if not iteration_limit:
-          iteration_limit = len(scored_generator_train)
-        print("progression: epoch, ", epoch, ", iteration: ", i, "time since start: ", \
-              t.time() - start_time ," s, " , i/min(iteration_limit, len(scored_generator_train))*100, "%")
-        
-      i = i + 1
+      train_data.append(z)
+      score_data.append(score_batch)
       
+      if i % 50 == 0:
+        print("progression: epoch, ", epoch, ", iteration: ", i, "time since start: ", \
+              t.time() - start_time ," s, " , i/len(scored_generator_train)*100, "%")
+        
       if i >= len(scored_generator_train):
         break
+      i = i + 1
+   
+  train_data = np.array(train_data).reshape((-1, latent_dim))
+  score_data = np.array(score_data).reshape((-1))
+  print("Finished encoding: training data", np.shape(train_data), "score_data:", np.shape(score_data))
+  print("Fitting data..")
+  regr.fit(train_data, score_data)
         
   return regr
               
-def predict(vae, regr, query_generator, query_numbers):
+def predict(vae, regr, query_generator, query_numbers, latent_dim):
     
-        predictions = make_predictions(vae, regr, query_generator)
+        predictions = make_predictions(vae, regr, query_generator, latent_dim)
         predictions = np.clip(predictions, a_min=0, a_max=8)
         
         predictions = np.array(predictions).reshape((-1, 1))
@@ -154,39 +162,55 @@ def predict(vae, regr, query_generator, query_numbers):
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
         
         
-def make_predictions(regr, vae, query_generator):
-    predictions = []
+def make_predictions(regr, vae, query_generator, latent_dim):
+  
     start_time = t.time()
     i = 0
+    queries = []
+    predictions = []
     for query in query_generator:
         mean, logvar = vae.encode(query)
         z = vae.reparameterize(mean, logvar)  
-        predictions.append(regr.predict(z))
+        queries.append(z)
         if i %50 == 0:
           print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ", i/len(query_generator)*100, "%")
         if i >= len(query_generator)-1:
-          return predictions
+          break
         i = i + 1
+    
+    queries = np.array(queries).reshape((-1, latent_dim))
+    predictions = np.array(regr.predict(queries))
+    print("Finished predicting: predictions", np.shape(predictions))
+
         
     return predictions
   
 def predict_with_regressor(vae, regr_type, scored_generator_train, query_generator,
-                           sorted_queries, alpha=0.5, epochs=10, 
-                           batch_size=16, max_depth=2, random_state=0):
+                           sorted_queries, latent_dim=100, epochs=1, batch_size=16,
+                           random_state=10, data_path="./Regressor/"):
     
-    if regr_type == "Random Forest":      
-        regr = RandomForestRegressor(max_depth=max_depth, random_state=random_state)
+    if regr_type == "Random Forest": 
+      
+      base_model = RandomForestRegressor(criterion="mae", max_features=None, oob_score=True,
+												random_state = random_state) 
+      regr = model_selection.GridSearchCV(base_model, {"n_estimators": [5, 10, 50, 100]},
+                                          verbose=5, scoring='neg_mean_absolute_error') 
+    
     elif regr_type == "Ridge":
-        regr = linear_model.Ridge(alpha=alpha)
-    elif regr_type == "MLP":
-        regr = neural_network.MLPRegressor(batch_size=batch_size)
+      
+      base_model = linear_model.Ridge()
+      regr = model_selection.GridSearchCV(base_model, {"alpha": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100, 1000]}, verbose=5, scoring= 'neg_mean_absolute_error' )      
     else :
-        raise NameError("Unknown regressor type !")
+      raise NameError("Unknown regressor type !")
 
-    print("Training regressor...")
-    regr = train_regressor(regr, vae, epochs, scored_generator_train,
+    print("--Training regressor--")
+    regr = train_regressor(regr, vae, scored_generator_train, epochs=epochs,
                                          batch_size=batch_size)
     
-    print("Creating prediction.csv file...")
-    predict(regr, vae, query_generator, sorted_queries)
-    
+    print("--Creating prediction.csv file--")
+    predict(regr, vae, query_generator, sorted_queries, latent_dim)
+          
+    if(not os.path.isdir(data_path)):
+      os.mkdir(data_path)
+        
+    joblib.dump(regr, data_path + regr_type)   

@@ -69,6 +69,27 @@ class Trainer:
         self.model.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.model.discriminator.trainable_variables))
         return gen_loss, disc_loss
 
+    def cgan_train_step(self, images, batch_size, is_galaxy):
+        noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
+                                                          # to discriminator (i,e batch_size)
+        c = tf.constant(is_galaxy, shape=(batch_size, 1), dtype=tf.float32)
+        input = tf.concat([noise, c], axis=-1)
+
+        with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+            generated_images = self.model.generator(input, training=True)
+            real_output = self.model.discriminator(images, training=True)
+            fake_output = self.model.discriminator(generated_images, training=True)
+
+            gen_loss = self.model.generator_loss(fake_output, is_galaxy)
+            disc_loss = self.model.discriminator_loss(real_output, fake_output, is_galaxy)
+
+        gradients_of_generator = gen_tape.gradient(gen_loss, self.model.generator.trainable_variables)
+        gradients_of_discriminator = disc_tape.gradient(disc_loss, self.model.discriminator.trainable_variables)
+
+        self.model.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.model.generator.trainable_variables))
+        self.model.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.model.discriminator.trainable_variables))
+        return gen_loss, disc_loss
+
     def d2gan_train_step(self, images, batch_size):
         noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
                                                           # to discriminator (i,e batch_size)
@@ -238,7 +259,64 @@ class Trainer:
         #display.clear_output(wait=True)
         self.generate_and_save_images(seed, "epoch", nb = epochs, vae=None, show=False, training_id="2steps", prime=True)
 
+    def cgan_train(self, batch_size, seed, galaxy_generator, other_generator,
+                   epochs=1, steps_per_epoch_galaxy=2, steps_per_epoch_other=2, save_every=15,
+                   batch_processing_fct=None, gen_imgs=True):
+        step = 1
+        gen_loss = -1
+        disc_loss = -1
+        for epoch in range(epochs):
+            # print("Epoch: {}, Gen_loss: {}, Disc_loss: {}, step : {}".format(epoch, gen_loss, disc_loss, step))
+            start = time.time()
+            b = 0  # batch nb
+            for batch, labels in galaxy_generator:
+                if batch_processing_fct is not None:
+                    batch = batch_processing_fct(batch)
+                print(batch.shape)
+                # gen_loss, disc_loss = self.train_step(batch, batch_size)
+                # print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                gen_loss, disc_loss = self.cgan_train_step(batch, batch_size, 1)
+                print(f"gen_loss: {gen_loss}, disc_loss: {disc_loss}")
+                b += 1
+                if step % self.generate_every == 0:
+                    display.clear_output(wait=True)
+                    if gen_imgs:
+                        self.generate_and_save_images(seed, "step", nb=step, vmin=-1, vmax=1)
+                step += 1
+                if (b >= steps_per_epoch_galaxy):
+                    break
 
+            b = 0  # batch nb
+            for batch, labels in other_generator:
+                if batch_processing_fct is not None:
+                    batch = batch_processing_fct(batch)
+                # gen_loss, disc_loss = self.train_step(batch, batch_size)
+                # print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
+                gen_loss, disc_loss = self.cgan_train_step(batch, batch_size, 0)
+                print(f"gen_loss: {gen_loss}, disc_loss: {disc_loss}")
+                b += 1
+                if step % self.generate_every == 0:
+                    display.clear_output(wait=True)
+                    if gen_imgs:
+                        self.generate_and_save_images(seed, "step", nb=step, vmin=-1, vmax=1)
+                step += 1
+                if (b >= steps_per_epoch_other):
+                    break
+
+
+            if gen_imgs:
+                self.generate_and_save_images(seed, "epoch", nb=epoch, vmin=-1, vmax=1)
+
+            # Save the model every N epochs
+            # NOTE: each checkpoint can be 400+ MB
+            # If we checkpoint too much, it can cause serious trouble
+            if (epoch + 1) % save_every == 0:
+                self.model.checkpoint.save(file_prefix=self.model.checkpoint_prefix)
+
+            print('Time for epoch {} is {} sec'.format(epoch, time.time() - start))
+        # Generate after the final epoch
+        display.clear_output(wait=True)
+        self.generate_and_save_images(seed, "epoch", nb=epochs)
 
     def score(self, batch_size, epochs=10, steps_per_epoch=3):
         if(steps_per_epoch is not None):
@@ -267,7 +345,9 @@ class Trainer:
         print(indexed_predictions)
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
 
-    def generate_and_save_images(self, test_input, str, nb, vae=None, show=False, training_id="default", prime=False):
+
+    def generate_and_save_images(self, test_input, str, nb, vae=None, show=False, training_id="default", prime=False,
+                                 vmin=0, vmax=1):
         if prime:
             mean, logvar = tf.split(self.model.generator(test_input), num_or_size_splits=2, axis=1)
             z = self.model.vae.reparameterize(mean, logvar)
@@ -287,7 +367,7 @@ class Trainer:
         for i in range(predictions.shape[0]):
             image = predictions[i, :, :, 0].numpy() # take the i'th predicted image, remove the last dimension (result is 2D)
             plt.subplot(self.lines, self.cols, i+1) # consider the default figure as lines x cols grid and select the (i+1)th cell
-            plt.imshow(image, cmap='gray', vmin=-1.0, vmax=1.0) # plot the image on the selected cell
+            plt.imshow(image, cmap='gray', vmin=vmin, vmax=vmax) # plot the image on the selected cell
             plt.axis('off')
             maxval = image.max()
             minval = image.min()

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-import os, sys
+import os, sys, glob
 import matplotlib.pyplot as plt
 from PIL import Image
 import layers
@@ -144,8 +144,22 @@ def create_dataloader_train_scored(data_root, batch_size, batches_to_prefetch=20
     
     print("Done.")
     return to_return
-        
-        
+
+def create_dataloader_query(data_root, batches_to_prefetch=20):
+    all_files = glob.glob(os.path.join(data_root, "query", "*"))
+
+    print("Creating Dataset ...")
+    full_ds = tf.data.Dataset.from_tensor_slices(all_files)
+            
+    print("Mapping Data...")
+    full_ds = full_ds.map(load_and_preprocess_image)
+    
+    print("Batching Data...")
+    full_ds = full_ds.repeat() # repeat dataset indefinitely
+    full_ds = full_ds.batch(1, drop_remainder=True).prefetch(batches_to_prefetch) # batch data with batch_size of 1 and prefetch batches
+    full_ds = full_ds.make_one_shot_iterator().get_next() # convert to iterator
+    
+    return full_ds, all_files, len(all_files)
         
 #batch_size = 1
 #real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train_labeled("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
@@ -213,7 +227,7 @@ def create_dataloader_train_scored(data_root, batch_size, batches_to_prefetch=20
 #print(im_train.shape)
 #print(score_train.shape)
 
-
+#print(create_dataloader_query(data_root="./data", batches_to_prefetch=20))
 
 
 

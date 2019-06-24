@@ -125,7 +125,7 @@ def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padd
     with tf.name_scope("conv_block"):
         tmp = conv_layer(inp, out_channels, filter_size, strides, padding, use_bias)
         tmp = batch_norm_layer(tmp, training)
-        out = leaky_relu_layer(tmp)
+        out = leaky_relu_layer(tmp, alpha)
 #        out = dropout_layer(out, training, 0.3)
     return out
 
@@ -158,16 +158,16 @@ def residual_module_srm(inp, training, out_channels, nb_blocks, pad_values=0, us
 # Scorer
 def conv_block_scorer(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=0, use_bias=False, alpha=0.2):
     with tf.name_scope("conv_block"):
-        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values,  use_bias)
+        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values, use_bias)
         tmp = batch_norm_layer(tmp, training)
-        out = leaky_relu_layer(tmp)
+        out = leaky_relu_layer(tmp, alpha)
     return out
     
 def dense_block_scorer(inp, training, units, use_bias=False, dropout_rate=0.0):
     with tf.name_scope("dense_block"):
         tmp = dense_layer(inp, units, use_bias)
-        tmp = dropout_layer(tmp, training, dropout_rate)
-        out = relu_layer(tmp)
+        tmp = relu_layer(tmp)
+        out = dropout_layer(tmp, training, dropout_rate)   
     return out
         
      

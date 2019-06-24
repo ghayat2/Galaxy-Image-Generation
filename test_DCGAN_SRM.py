@@ -10,6 +10,7 @@ from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
+import layers
 
 global_seed=5
 
@@ -115,11 +116,11 @@ while counter < TO_GENERATE:
     fake_im_val = ((fake_im_val)+1)/2.0 # renormalize to [0, 1] to feed it to StackedSRM model
     
     srm_feed_dict = {fake_im_pl: fake_im_val}
-    last_output = srm_sess.run(outputs_pred[-1], srm_feed_dict) # get the last output of the StackedSRM model
+    last_output = srm_sess.run(layers.resize_layer(outputs_pred[-1], new_size=[1024, 1024], resize_method=tf.image.ResizeMethod.AREA), srm_feed_dict) # get the last output of the StackedSRM model
     
 #    print(last_output.shape)
 
-    img = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    img = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[12:-12, 12:-12, 0] # denormalize output and convert to channels last format and remove padding (i,e convert to 1000x1000)
     
     print(img.shape)
     print("min: {}, max: {}".format(img.min(), img.max()))
