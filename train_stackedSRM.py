@@ -11,6 +11,7 @@ from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
+import patoolib
 
 global_seed=5
 
@@ -18,10 +19,10 @@ tf.random.set_random_seed(global_seed)
 np.random.seed(global_seed)
 
 parser = ArgumentParser()
-parser.add_argument('-ne', '--num_epochs', type = int, default = 500, help = 'number of training epochs')
-parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
-parser.add_argument('-ns', '--nb_stacks', type = int, default = 1, help = 'number of stacks')
-parser.add_argument('-lr', '--learning_rate', type = float, default = 1e-3, help = 'learning rate for the optimizer')
+parser.add_argument('-ne', '--num_epochs', type = int, default = 100, help = 'number of training epochs')
+parser.add_argument('-bs', '--batch_size', type = int, default = 4, help = 'size of training batch')
+parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, choices=[1, 2, 3, 4], help = 'number of stacks')
+parser.add_argument('-lr', '--learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -36,12 +37,17 @@ args = parser.parse_args()
 def timestamp():
     return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
 
+def create_zip_code_files(output_file, submission_files):
+    patoolib.create_archive(output_file, submission_files)
+
 CURR_TIMESTAMP=timestamp()
 
 NUM_EPOCHS=args.num_epochs
 BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
 LR = args.learning_rate # learning rate
+BETA1 = 0.5
+BETA2 = 0.999
 NB_STACKS=args.nb_stacks
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
@@ -64,6 +70,25 @@ if CONTINUE_TRAINING: # continue training from last training experiment
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "samples")
 
+class Logger(object):  # logger to log output to both terminal and file
+    def __init__(self, log_dir):
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        self.terminal = sys.stdout
+        self.log = open(os.path.join(log_dir, "output"), "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)  
+
+    def flush(self):
+        self.log.flush()
+        self.terminal.flush()
+        pass    
+
+sys.stdout = Logger(LOG_DIR)
+
 # printing parameters
 print("\n")
 print("Run infos:")
@@ -71,6 +96,8 @@ print("    NUM_EPOCHS: {}".format(NUM_EPOCHS))
 print("    BATCH_SIZE: {}".format(BATCH_SIZE))
 print("    NB_STACKS: {}".format(NB_STACKS))
 print("    LEARNING_RATE: {}".format(LR))
+print("    BETA1: {}".format(BETA1))
+print("    BETA2: {}".format(BETA2))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
 print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
 print("    SAVE_ITER_FREQ: {}".format(SAVE_ITER_FREQ))
@@ -81,10 +108,20 @@ print("    CONTINUE_TRAINING: {}".format(CONTINUE_TRAINING))
 print("\n")
 sys.stdout.flush()
 
+
+files = ["data.py",
+         "layers.py",
+         "StackedSRM.py",
+         "train_stackedSRM.py"
+         ]
+         
+if not CONTINUE_TRAINING: # save code used for this experiment
+    create_zip_code_files(os.path.join(LOG_DIR, "code.zip"), files)
+
 #sys.exit(0)
 # remove warning messages
-#os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
-#tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -97,6 +134,7 @@ with tf.Session(config=config) as sess:
     training_pl = tf.placeholder(dtype=tf.bool, shape=[])
     
     real_im = (real_im+1)/2 # renormalize images to the range [0, 1]
+    
     # image preprocessing
     padded    = layers.padding_layer(real_im, padding=(12, 12), pad_values=0) # 1024x1024
     max_pool1 = layers.max_pool_layer(padded, pool_size=(2,2), strides=(2,2)) # 512x512
@@ -124,7 +162,7 @@ with tf.Session(config=config) as sess:
     # define trainer
     print("Train_op ...")
     sys.stdout.flush()
-    train_op, global_step = model.train_op(loss, LR, beta1=0.5, beta2=0.999)
+    train_op, global_step = model.train_op(loss, LR, beta1=BETA1, beta2=BETA2)
     
 #    sys.exit(0)
     
