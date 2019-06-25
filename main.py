@@ -168,6 +168,11 @@ def main():
                                                         color_mode='grayscale')
 
     print("Data generators have been created")
+    
+    if REGRESSOR_TYPE:
+        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=1)
+        return
+    
     noise_dim = 63
     cgan = CGAN(noise_dim=noise_dim, data_shape=(64, 64))
 
