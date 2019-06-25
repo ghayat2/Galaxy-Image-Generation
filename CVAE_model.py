@@ -28,7 +28,7 @@ class CVAE:
             relu3 = layers.relu_layer(dense1)
             dense2 = layers.dense_layer(relu3, units=2*self.latent_dim, use_bias=True)
             
-        mean, logvar = tf.split(dense2, num_or_size_splits=2, axis=1)
+            mean, logvar = tf.split(dense2, num_or_size_splits=2, axis=1)
 #        print(logvar.shape)
 #        sys.exit(0)
             
@@ -99,25 +99,28 @@ class CVAE:
         return logits, out, list_ops
     
     def reparameterize(self, mean, logvar):
-        eps = tf.random.normal(shape=mean.shape) #sample from normal distribution
-        return eps * tf.exp(logvar * .5) + mean
+        with tf.name_scope("reparametrization"):
+            eps = tf.random.normal(shape=mean.shape) #sample from normal distribution
+            return eps * tf.exp(logvar * .5) + mean
 
     def compute_loss(self, mean, logvar, logits, labels, z):
-        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=labels)
 
         def log_likelihood_loss(logits, labels):
-            loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=labels)
-            # Sum across channels and pixels, average across batch dimension
-            return tf.reduce_mean(tf.reduce_sum(loss, axis=[1, 2, 3]), axis=0)
+            with tf.name_scope("log_likelihood_loss"):
+                loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=labels)
+                # Sum across channels and pixels, average across batch dimension
+                return tf.reduce_mean(tf.reduce_sum(loss, axis=[1, 2, 3]), axis=0)
 
         def kld_loss(Z_mu, Z_logvar):
-            # Return the KL divergence between Z and a Gaussian prior N(0, I)
-            kld = -0.5 * tf.reduce_sum(1 + Z_logvar - Z_mu ** 2 - tf.exp(Z_logvar), axis=1)
-            # Average across batch dimension
-            return tf.reduce_mean(kld, axis=0)
-
-        loss = log_likelihood_loss(logits, labels) + kld_loss(mean, logvar)
-        return loss
+            with tf.name_scope("kld_loss"):
+                # Return the KL divergence between Z and a Gaussian prior N(0, I)
+                kld = -0.5 * tf.reduce_sum(1 + Z_logvar - Z_mu ** 2 - tf.exp(Z_logvar), axis=1)
+                # Average across batch dimension
+                return tf.reduce_mean(kld, axis=0)
+        
+        with tf.name_scope("loss"):
+            loss = log_likelihood_loss(logits, labels) + kld_loss(mean, logvar)
+            return loss
 
     def train_op(self, loss, learning_rate, beta1, beta2):
         with tf.name_scope("train_op"):
