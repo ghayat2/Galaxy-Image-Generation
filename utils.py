@@ -112,8 +112,7 @@ def vae_preprocessing(image):
     return image
 
 
-def train_regressor(regr, vae , scored_generator_train, epochs=1, \
-                                  latent_dim=100, batch_size=16): 
+def encode_scored_images(vae, generator, latent_dim=100, batch_size=16, epochs=1):
   
   start_time = t.time()
   
@@ -123,7 +122,7 @@ def train_regressor(regr, vae , scored_generator_train, epochs=1, \
     i = 0
     train_data, score_data = [], []
     
-    for X_batch, score_batch in scored_generator_train:
+    for X_batch, score_batch in generator:
     
       mean, logvar = vae.encode(X_batch)
       z = vae.reparameterize(mean, logvar)      
@@ -133,23 +132,57 @@ def train_regressor(regr, vae , scored_generator_train, epochs=1, \
       
       if i % 50 == 0:
         print("progression: epoch, ", epoch, ", iteration: ", i, "time since start: ", \
-              t.time() - start_time ," s, " , i/len(scored_generator_train)*100, "%")
+              t.time() - start_time ," s, " , i/len(generator)*100, "%")
         
-      if i >= len(scored_generator_train):
+      if i >= len(generator):
         break
       i = i + 1
    
+  print("Saving latent space image representation..")
   train_data = np.array(train_data).reshape((-1, latent_dim))
+  np.save("scored_images_" + str(latent_dim), train_data)
   score_data = np.array(score_data).reshape((-1))
+  np.save("scores", score_data)
+  
+def encode_query_images(vae, generator, latent_dim=100, epochs=1):
+  
+  start_time = t.time()
+  i = 0
+  queries = []
+  for query in generator:
+      mean, logvar = vae.encode(query)
+      z = vae.reparameterize(mean, logvar)  
+      queries.append(z)
+      if i %50 == 0:
+        print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ", i/len(generator)*100, "%")
+      if i >= len(generator)-1:
+        break
+      i = i + 1
+   
+  print("Saving latent space image representation..")
+  queries = np.array(queries).reshape((-1, latent_dim))
+  np.save("query_images_" + str(latent_dim), queries)
+
+def train_regressor(regr, vae , scored_generator_train, vae_encoded_images = False, 
+                   epochs=1, latent_dim=100, batch_size=16):
+  
+  
+  if not vae_encoded_images:
+    encode_scored_images(vae, scored_generator_train, latent_dim=latent_dim, batch_size=batch_size)
+    
+  train_data = np.load("scored_images_" + str(latent_dim) + ".npy")
+  score_data = np.load("scores.npy")
+  
   print("Finished encoding: training data", np.shape(train_data), "score_data:", np.shape(score_data))
   print("Fitting data..")
   regr.fit(train_data, score_data)
         
   return regr
               
-def predict(vae, regr, query_generator, query_numbers, latent_dim):
+def predict(vae, regr, query_generator, query_numbers, vae_encoded_images=False, latent_dim=100):
     
-        predictions = make_predictions(vae, regr, query_generator, latent_dim)
+        predictions = make_predictions(vae, regr, query_generator, 
+                                       vae_encoded_images=vae_encoded_images, latent_dim=latent_dim)
         predictions = np.clip(predictions, a_min=0, a_max=8)
         
         predictions = np.array(predictions).reshape((-1, 1))
@@ -162,31 +195,21 @@ def predict(vae, regr, query_generator, query_numbers, latent_dim):
         np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
         
         
-def make_predictions(regr, vae, query_generator, latent_dim):
-  
-    start_time = t.time()
-    i = 0
-    queries = []
-    predictions = []
-    for query in query_generator:
-        mean, logvar = vae.encode(query)
-        z = vae.reparameterize(mean, logvar)  
-        queries.append(z)
-        if i %50 == 0:
-          print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ", i/len(query_generator)*100, "%")
-        if i >= len(query_generator)-1:
-          break
-        i = i + 1
+def make_predictions(regr, vae, query_generator, vae_encoded_images=False, latent_dim=100):
+     
+  if not vae_encoded_images:
+    encode_query_images(vae, query_generator, latent_dim=latent_dim)
     
-    queries = np.array(queries).reshape((-1, latent_dim))
-    predictions = np.array(regr.predict(queries))
-    print("Finished predicting: predictions", np.shape(predictions))
+    
+  queries = np.load("query_images_" + str(latent_dim)+ ".npy")
+  predictions = np.array(regr.predict(queries))
+  print("Finished predicting: predictions", np.shape(predictions))
 
         
-    return predictions
+  return predictions
   
 def predict_with_regressor(vae, regr_type, scored_generator_train, query_generator,
-                           sorted_queries, latent_dim=100, epochs=1, batch_size=16,
+                           sorted_queries, vae_encoded_images = False, latent_dim=100, epochs=1, batch_size=16,
                            random_state=10, data_path="./Regressor/"):
     
     if regr_type == "Random Forest": 
@@ -204,11 +227,11 @@ def predict_with_regressor(vae, regr_type, scored_generator_train, query_generat
       raise NameError("Unknown regressor type !")
 
     print("--Training regressor--")
-    regr = train_regressor(regr, vae, scored_generator_train, epochs=epochs,
-                                         batch_size=batch_size)
+    regr = train_regressor(regr, vae, scored_generator_train, vae_encoded_images=vae_encoded_images, epochs=epochs,
+                                         batch_size=batch_size, latent_dim=latent_dim)
     
     print("--Creating prediction.csv file--")
-    predict(regr, vae, query_generator, sorted_queries, latent_dim)
+    predict(regr, vae, query_generator, sorted_queries, vae_encoded_images=vae_encoded_images, latent_dim=latent_dim)
           
     if(not os.path.isdir(data_path)):
       os.mkdir(data_path)

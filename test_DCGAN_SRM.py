@@ -20,7 +20,7 @@ np.random.seed(global_seed)
 parser = ArgumentParser()
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 parser.add_argument('-to_gen', '--to_generate', type = int, default = 100, help = 'the number of samples to generate')
-parser.add_argument('-ns', '--nb_stacks', type = int, default = 3, help = 'number of stacks')
+parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, help = 'number of stacks')
 
 args = parser.parse_args()
 
@@ -76,7 +76,7 @@ dcgan_sess = tf.Session(graph=dcgan_graph, config=config)
 with dcgan_graph.as_default():
     # DCGAN model
     # define noise and test data
-    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], name="random_noise") # noise fed to generator
+    noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
 
     print("Building DCGAN model ...")
     sys.stdout.flush()
@@ -116,11 +116,15 @@ while counter < TO_GENERATE:
     fake_im_val = ((fake_im_val)+1)/2.0 # renormalize to [0, 1] to feed it to StackedSRM model
     
     srm_feed_dict = {fake_im_pl: fake_im_val}
-    last_output = srm_sess.run(layers.resize_layer(outputs_pred[-1], new_size=[1024, 1024], resize_method=tf.image.ResizeMethod.AREA), srm_feed_dict) # get the last output of the StackedSRM model
+    last_output = srm_sess.run(outputs_pred[-1], srm_feed_dict) # get the last output of the StackedSRM model
     
 #    print(last_output.shape)
-
+    
     img = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[12:-12, 12:-12, 0] # denormalize output and convert to channels last format and remove padding (i,e convert to 1000x1000)
+    #--------------------------------------------------------
+#    max_val = img.max()
+#    img = ((img/max_val)*255.0).astype("uint8")
+    #-------------------------------------------------------- 
     
     print(img.shape)
     print("min: {}, max: {}".format(img.min(), img.max()))

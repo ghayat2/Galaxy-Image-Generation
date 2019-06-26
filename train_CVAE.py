@@ -1,19 +1,17 @@
 import tensorflow as tf
-from tensorflow.python.client import device_lib
 import numpy as np
 import sys, os, glob, gc
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 from data import create_dataloader_train_labeled
-from StackedSRM import StackedSRM
+from CVAE_model import CVAE
 import layers
 from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
 import patoolib
-import signal, shutil
 
 global_seed=5
 
@@ -21,10 +19,10 @@ tf.random.set_random_seed(global_seed)
 np.random.seed(global_seed)
 
 parser = ArgumentParser()
-parser.add_argument('-ne', '--num_epochs', type = int, default = 100, help = 'number of training epochs')
-parser.add_argument('-bs', '--batch_size', type = int, default = 4, help = 'size of training batch')
-parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, choices=[1, 2, 3, 4], help = 'number of stacks')
-parser.add_argument('-lr', '--learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer')
+parser.add_argument('-ne', '--num_epochs', type = int, default = 175, help = 'number of training epochs')
+parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
+parser.add_argument('-lr', '--learning_rate', type = float, default = 1e-5, help = 'learning rate for the optimizer')
+parser.add_argument('-nd', '--noise_dim', type = int, default = 100, help = 'noise dimension')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -41,14 +39,6 @@ def timestamp():
 
 def create_zip_code_files(output_file, submission_files):
     patoolib.create_archive(output_file, submission_files)
-    
-def copy_stderr_to_stdout(log_dir):
-    std_err_dir = os.path.join(log_dir, "stderr", timestamp())
-    if not os.path.exists(std_err_dir):
-        os.makedirs(std_err_dir)
-    sys.stderr.flush()
-    shutil.move("./stderr", os.path.join(std_err_dir, "stderr"))
-    sys.exit(0)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -56,16 +46,17 @@ NUM_EPOCHS=args.num_epochs
 BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
 LR = args.learning_rate # learning rate
-BETA1 = 0.5
+BETA1 = 0.9
 BETA2 = 0.999
-NB_STACKS=args.nb_stacks
+NOISE_DIM = args.noise_dim
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
 SAMPLE_ITER_FREQ = args.sample_iter_freq
 CONTINUE_TRAINING = args.continue_training
 
-FIG_SIZE = 20 # in inches
+FIG_SIZE = 10 # in inches
+C, H, W = 1, 1000, 1000
 #RUNNING_ON_COLAB = args.colab
 
 # paths
@@ -73,9 +64,9 @@ DATA_ROOT="./data"
 CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
-LOG_DIR=os.path.join(".", "LOG_SRM", CURR_TIMESTAMP)
+LOG_DIR=os.path.join(".", "LOG_CVAE", CURR_TIMESTAMP)
 if CONTINUE_TRAINING: # continue training from last training experiment
-    list_of_files = glob.glob(os.path.join(".", "LOG_SRM", "*"))
+    list_of_files = glob.glob(os.path.join(".", "LOG_CVAE", "*"))
     LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "samples")
@@ -85,35 +76,26 @@ class Logger(object):  # logger to log output to both terminal and file
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         
-        self.terminal_write = sys.stdout.write
-        self.terminal_flush = sys.stdout.flush
+        self.terminal = sys.stdout
         self.log = open(os.path.join(log_dir, "output"), "a")
 
     def write(self, message):
-        self.terminal_write(message)
+        self.terminal.write(message)
         self.log.write(message)  
 
     def flush(self):
-        self.terminal_flush()
         self.log.flush()
+        self.terminal.flush()
+        pass    
 
-logger = Logger(LOG_DIR)
-sys.stdout = logger
-signal.signal(signal.SIGINT, lambda a, b: copy_stderr_to_stdout(LOG_DIR)) # copy stderr output to log_dir in case of keyboard interrupt
-
-l = device_lib.list_local_devices()
-gpus_list = [(device.physical_device_desc, device.memory_limit) for device in l if device.device_type == "GPU"]
-print("\nGPUs List:")
-for info in gpus_list:
-    print(info[0])
-    print("memory limit:", info[1])
+sys.stdout = Logger(LOG_DIR)
 
 # printing parameters
 print("\n")
 print("Run infos:")
 print("    NUM_EPOCHS: {}".format(NUM_EPOCHS))
 print("    BATCH_SIZE: {}".format(BATCH_SIZE))
-print("    NB_STACKS: {}".format(NB_STACKS))
+print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    LEARNING_RATE: {}".format(LR))
 print("    BETA1: {}".format(BETA1))
 print("    BETA2: {}".format(BETA2))
@@ -130,8 +112,8 @@ sys.stdout.flush()
 
 files = ["data.py",
          "layers.py",
-         "StackedSRM.py",
-         "train_stackedSRM.py"
+         "CVAE_model.py",
+         "train_CVAE.py"
          ]
          
 if not CONTINUE_TRAINING: # save code used for this experiment
@@ -151,23 +133,17 @@ with tf.Session(config=config) as sess:
     real_im, _, nb_reals, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=False)
 
     training_pl = tf.placeholder(dtype=tf.bool, shape=[])
+    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W])
     
-    real_im = (real_im+1)/2 # renormalize images to the range [0, 1]
-    
-    # image preprocessing
-    padded    = layers.padding_layer(real_im, padding=(12, 12), pad_values=0) # 1024x1024
-    max_pool1 = layers.max_pool_layer(padded, pool_size=(2,2), strides=(2,2)) # 512x512
-    max_pool2 = layers.max_pool_layer(max_pool1, pool_size=(2,2), strides=(2,2)) # 256x256
-    max_pool3 = layers.max_pool_layer(max_pool2, pool_size=(2,2), strides=(2,2)) # 128x128
-    max_pool4 = layers.max_pool_layer(max_pool3, pool_size=(2,2), strides=(2,2)) # 64x64
-    
-    outputs_gt = [max_pool3, max_pool2, max_pool1, padded] # outputs to predict
+    real_im = (real_im+1)*128.0 # denormalize images to the range [0.0, 255.0]
     
     #model
     print("Building model ...")
     sys.stdout.flush()
-    model= StackedSRM(NB_STACKS)
-    outputs_pred = model(max_pool4, training_pl)
+    model = CVAE(batch_size=BATCH_SIZE, latent_dim=NOISE_DIM)
+    mean, logvar, _ = model.inference_model(inp=im_pl, training=training_pl)
+    z = model.reparameterize(mean, logvar)
+    logits, out, _ = model.generative_model(noise=z, training=training_pl)
 
 #    for output in outputs_pred:
 #        print(output.shape)
@@ -175,21 +151,20 @@ with tf.Session(config=config) as sess:
     # losses
     print("Losses ...")
     sys.stdout.flush()
-    losses = model.compute_loss(outputs_gt, outputs_pred)
+    loss = model.compute_loss(mean=mean, logvar=logvar, logits=logits, labels=im_pl, z=z)
     
 #    sys.exit(0)
     # define trainer
     print("Train_op ...")
     sys.stdout.flush()
-    train_ops, global_step = model.train_op(losses, LR, beta1=BETA1, beta2=BETA2)
+    train_op, global_step = model.train_op(loss, LR, beta1=BETA1, beta2=BETA2)
     
 #    sys.exit(0)
     
     # define summaries
     print("Summaries ...")
     sys.stdout.flush()
-    loss_pl = tf.placeholder(dtype=tf.float32, shape=[])
-    train_loss_summary = tf.summary.scalar("train_loss", loss_pl)
+    train_loss_summary = tf.summary.scalar("train_loss", loss)
     
 #    sys.exit(0)
     # summaries and graph writer
@@ -223,8 +198,6 @@ with tf.Session(config=config) as sess:
     print("Train start ...")
     NUM_SAMPLES = nb_reals
     NB_STEPS = int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))
-    j_prev = 0
-    print("train__op", j_prev)
     sys.stdout.flush()
 #    sys.exit(0)
     with trange(NB_STEPS) as t:
@@ -234,21 +207,17 @@ with tf.Session(config=config) as sess:
             epoch_cur = i * BATCH_SIZE/ NUM_SAMPLES # nb of epochs completed (e,g 1.5 => one epoch and a half)
             iter_cur = (i * BATCH_SIZE ) % NUM_SAMPLES # nb of images processed in current epoch
             t.set_postfix(epoch=epoch_cur,iter_percent="%d %%"%(iter_cur/float(NUM_SAMPLES)*100) )
-            
-            j = int(i / (NB_STEPS/NB_STACKS))
-            if j >= len(train_ops):
-                j -= 1
-            if j != j_prev:
-                print("moving to train_op", j)
-                j_prev = j
-            
+
             if (i+1) % LOG_ITER_FREQ == 0:
-                _, global_step_val, loss = sess.run([train_ops[j], global_step, losses[j]], {training_pl:True}) # perform a train_step and get loss summary
-                summary = sess.run(train_loss_summary, feed_dict={loss_pl: loss})
+                im_val = sess.run(real_im)
+                feed_dict_train={training_pl: True, im_pl: im_val}
+                _, global_step_val, summary = sess.run([train_op, global_step, train_loss_summary], feed_dict_train) # perform a train_step and get loss summary
                 writer.add_summary(summary, global_step_val)
                 
             else:
-                sess.run([train_ops[j]], {training_pl:True}) # train_step only (no summaries)
+                im_val = sess.run(real_im)
+                feed_dict_train={training_pl: True, im_pl: im_val}
+                sess.run(train_op, feed_dict_train) # train_step only (no summaries)
 
             
             # save model
@@ -258,41 +227,34 @@ with tf.Session(config=config) as sess:
                 gc.collect() # free-up memory once model saved
                 
             if (i+1) % SAMPLE_ITER_FREQ == 0:
-                input_imgs, outputs_imgs_gt, outputs_imgs_pred, global_step_val = sess.run([max_pool4, outputs_gt, outputs_pred, global_step], {training_pl:False})
-                
-                images_batches_pred = [input_imgs] + outputs_imgs_pred # concat lists
-                images_batches_gt = [input_imgs] + outputs_imgs_gt
-                
-                index = 0 # index of the image to show
+                im_val = sess.run(real_im)
+                feed_dict_test = {training_pl: False, im_pl: im_val}
+                out_val = sess.run(out, feed_dict_test)
+
+                index = 0 # np.random.randint(BATCH_SIZE) # index of the image to show
                 
                 if not os.path.exists(SAMPLES_DIR):
                     os.makedirs(SAMPLES_DIR)
                     
                 fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE)) # Create a new "fig_size" inches by "fig_size" inches figure as default figure
-                lines = len(images_batches_pred)
+                lines = 1
                 cols = 2
+                
+                im_gt = im_val[index].transpose(1,2,0).astype("uint8")[:, :, 0] # put in channels_last and remove the channels dimension
+                im_recon = (out_val[index]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize, put in channels_last and remove the channels dimension
+                
+                plt.subplot(lines, cols, 1) # consider the default figure as lines x cols grid and select the 1st cell
+                min_val = im_gt.min()
+                max_val = im_gt.max()
+                plt.imshow(im_gt, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
+                plt.title("min: {}, max: {}".format(min_val, max_val))
+                
+                plt.subplot(lines, cols, 2) # consider the default figure as lines x cols grid and select the 1st cell
+                min_val = im_recon.min()
+                max_val = im_recon.max()
+                plt.imshow(im_recon, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
+                plt.title("min: {}, max: {}".format(min_val, max_val))
 
-                for j in range(len(images_batches_pred)):
-                    if j == 0:
-                        image_gt = ((images_batches_gt[j][index])*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
-                        image_pred = image_gt
-                    else:
-                        image_gt = (images_batches_gt[j][index]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
-                        image_pred = (images_batches_pred[j][index]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # unnormalize image and put channels_last and remove the channels dimension
-                    
-                    # plot gt image
-                    plt.subplot(lines, cols, 2*j+1) # consider the default figure as lines x cols grid and select the (j+1)th cell
-                    min_val = image_gt.min()
-                    max_val = image_gt.max()
-                    plt.imshow(image_gt, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
-                    plt.title("min: {}, max: {}".format(min_val, max_val))
-                    
-                    # plot predicted image
-                    plt.subplot(lines, cols, 2*j+2) # consider the default figure as lines x cols grid and select the (j+1)th cell
-                    min_val = image_pred.min()
-                    max_val = image_pred.max()
-                    plt.imshow(image_pred, cmap='gray', vmin=0, vmax=255) # plot the image on the selected cell
-                    plt.title("min: {}, max: {}".format(min_val, max_val))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
                 plt.close()
                 
@@ -300,7 +262,6 @@ with tf.Session(config=config) as sess:
     global_step_val = sess.run(global_step) # get the global step value
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
-    copy_stderr_to_stdout(LOG_DIR)
     
     
     
