@@ -240,7 +240,7 @@ with tf.Session(config=config) as sess:
                 j -= 1
             if CONTINUE_TRAINING:
                 j = len(train_ops) - 1 # continue training using the last train_op (i,e train all stacks)
-                
+
             if j != j_prev:
                 print("moving to train_op", j)
                 j_prev = j
