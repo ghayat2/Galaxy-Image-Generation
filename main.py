@@ -17,16 +17,13 @@ from trainer import Trainer
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
-"""
-    The REGRESSOR_TYPE Flag specifies the type of regressor that will be
-        trained on the VAE latent space and will be used to make predictions
-        on the scored image dataset
-        Options: None (default: Use different model to output prediction), 
-                 Random Forest, Ridge, MLP
+"""The REGRESSOR_TYPE Flag specifies the type of regressor that will be
+trained on the VAE latent space and will be used to make predictions
+on the query image dataset
+Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP
 """
 REGRESSOR_TYPE = None  #Random Forest, Ridge, MLP
 
-#Function to try to ignore the dataset class and just have a Keras DataGenerator pipeline
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
     print('## Ignore next message from keras, values are replaced anyways')
@@ -48,8 +45,10 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
     return df_gen
 
 def create_labeled_folders(data_path):
-
-    #Create labeled dirs:
+    """Creates two folders within the labeled folder of the cosmology_aux_data_170429 folder,
+    separating images associated to a label of 0 and of 1
+    :param str data_path: Containing the path of the cosmology_aux_data_170429 folder
+    """
     name = "labeled"
     labels_path = os.path.join(data_path, name + ".csv")
     labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
@@ -76,24 +75,20 @@ def create_labeled_folders(data_path):
 
 
 def main():
-        
-    print(tf.executing_eagerly())
+    """ The main method of our project takes care of running our model and/or 
+    predicting scores of the query images
+    """
+    print("Eager execution (required): ", tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
-    sess = tf.compat.v1.Session()
-    graph = tf.compat.v1.get_default_graph()
     tf.compat.v1.global_variables_initializer()
 
     #Uncomment to create folders for labeled data
     #create_labeled_folders(data_path)
 
-    checkpoint_dir = os.path.join(os.path.dirname( __file__ ), os.pardir, 'runs/Base_LSGAN/')
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-
     ### ------------------- ###
 
     # Create dataset
     batch_size = 16
-    data_shape = [1000, 1000, 1]
     noise_dim = 1000
     latent_dim = 100
     val_ratio = 0.1
@@ -103,32 +98,29 @@ def main():
     inf_vae = tf.keras.models.clone_model(vae.inference_net)
     print(inf_vae.summary())
 
-    # Create the labeled data generator
-    #create_labeled_folders("../cosmology_aux_data_170429")
-
+    ### Creating the generators to yield images in the labeled folder ###
     ImageDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator
     labeled_datagen = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
-    def vae_latent(im):
-        return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
     labeled_generator = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"), 
                                         class_mode='binary',
                                         classes=['1'], 
                                         batch_size=batch_size, 
                                         target_size=(1000, 1000),
                                         color_mode='grayscale')
-
-
+    
     labeled_datagen_gan = ImageDataGenerator(preprocessing_function=utils.gan_preprocessing)
     labeled_generator_gan = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
                                                             class_mode='binary',
                                                             batch_size=batch_size,
                                                             target_size=(1000, 1000),
                                                             color_mode='grayscale')
+    def vae_latent(im):
+        return tf.reshape(tf.squeeze(inf_vae(im)), (-1, 2*latent_dim, 1, 1))
 
+
+
+    ## Preprocessing data to create generators interating through the scored images dataset ###
     
-    #Added Validation Split value here, but not sure if it is compatible
-    #with the custom flow_from_dataframe function above
-
     scored_datagen_train = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
     scored_datagen_val = ImageDataGenerator(preprocessing_function=utils.vae_preprocessing, validation_split=0.5)
 
@@ -153,7 +145,9 @@ def main():
     scored_generator_train = flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
     scored_generator_val = flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
 
-    query_images_path = os.path.join(data_path, "query")
+    ## Preprocessing data to create generators interating through the query image dataset ###
+    
+    query_images_path = os.path.join(data_path, "query/1")
     query_images_path = pathlib.Path(query_images_path)
     only_files = [f for f in os.listdir(query_images_path) if (os.path.isfile(os.path.join(query_images_path, f)) and (f != None))]
     all_indexes = [int(item.split('.')[0]) for item in only_files]
@@ -166,11 +160,38 @@ def main():
                                                         shuffle=False,
                                                         target_size=(1000,1000),
                                                         color_mode='grayscale')
+    
+    
+    ### Preprocessing data to create generators interating through the scored        ###
+    ### and query dataset and associate features to the images. Note that the        ###
+    ### image features need to be included in the folder given by the following path ###
+    
+    feature_path = "cosmology_aux_data_170429/features/"
+    manual_score_feats = np.loadtxt(feature_path + 'scoring_feats.csv')
+    manual_score_ids = np.loadtxt(feature_path + 'scoring_feats_ids.csv').astype(int)
+    manual_query_feats = np.loadtxt(feature_path + 'query_feats.csv')
+    manual_query_ids = np.loadtxt(feature_path + 'query_feats_ids.csv').astype(int)
+
+    print("Shape manual score features", manual_score_feats.shape)
+    print("Shape manual score ids", manual_score_ids.shape)
+    print("Shape manual query features", manual_query_feats.shape)
+    print("Shape manual query ids", manual_query_ids.shape)
+
+
+    manual_score_dict = dict(zip(manual_score_ids, manual_score_feats))
+    manual_query_dict = dict(zip(manual_query_ids, manual_query_feats))
+
+    image_score_list = [os.path.join(scored_images_path, str(i) + ".png") for i in manual_score_ids]
+
+    scored_feature_generator = utils.custom_generator(image_score_list, manual_score_dict)
+
+    image_query_list = [os.path.join(query_images_path, str(i) + ".png") for i in manual_query_ids]
+    query_feature_generator = utils.custom_generator(image_query_list, manual_query_dict, score= False, batch_size=1)
 
     print("Data generators have been created")
     
     if REGRESSOR_TYPE:
-        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_generator_train, query_generator, sorted_queries, epochs=1)
+        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_feature_generator, query_feature_generator, sorted_queries)
         return
     
     noise_dim = 63
