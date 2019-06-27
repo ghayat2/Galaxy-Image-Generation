@@ -84,6 +84,9 @@ def gan_preprocessing(image):
 
 
 def custom_generator2(images_list, manual_dict, batch_size=16):
+    """
+    Generator that yields the images along with their hand-crafted features
+    """
     i = 0
     while True:
         batch = {'images': [], 'manual': []}
@@ -152,7 +155,14 @@ def extract_and_save_features(image_dir, prefix):
     np.savetxt(prefix + "_features_means.gz", means)
     np.savetxt(prefix + "_vars.gz", vars)
 
+
 def heatmap(images_set, decode=False, shape=(1000, 1000)):
+    """
+    Given an image set, summarized it into a mean image
+    :param decode: weather the image needs to be decoded and pre-processed
+    :param shape: input shape
+    :return: the mean image
+    """
     sum = np.zeros(shape)
     for image in images_set:
         if decode:
@@ -164,12 +174,32 @@ def heatmap(images_set, decode=False, shape=(1000, 1000)):
     sum /= len(images_set)
     return sum
 
-def gan_preprocessing(image):
-    rint = random.randint(1, 4)
-    image = np.rot90(image, rint)
-    image = image / 255.0
-    image = (image - 0.5) / 0.5
-    return image
+def knn_diversity_stats(training_set, generated_imgs):
+    """
+    Find the k=3 nearest neighnors of an image in the training set and
+    returns the average distance
+    """
+    knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
+    knn.fit(training_set)
+
+    dists, idxs = knn.neighbors(generated_imgs)
+    return np.average(dists)
+
+def make_max_pooling_resizer():
+    """
+    Keras resizer for resizing 1000x1000 images into 64x64 max_pooled images
+    """
+    resizer = tf.keras.Sequential(
+        [tf.keras.layers.Lambda(lambda x: x + 1),
+         tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
+         tf.keras.layers.Lambda(lambda x: x - 1),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.Reshape(target_shape=(64, 64, 1))]
+    )
+    return resizer
 
 
 def vanilla_preprocessing(image):
@@ -399,10 +429,3 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
 
 
     joblib.dump(regr, data_path + regr_type)
-
-def knn_diversity_stats(training_set, generated_imgs):
-    knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
-    knn.fit(training_set)
-
-    dists, idxs = knn.neighbors(generated_imgs)
-    return np.average(dists)
