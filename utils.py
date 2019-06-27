@@ -1,17 +1,21 @@
 import random
 import os
 import numpy as np
+import sklearn as sk
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
 import random
+import imageio
+import pathlib
 
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
 from keras.preprocessing import image as krs_image
 
+import os
 from sklearn import model_selection
 from sklearn.externals import joblib
 from sklearn.datasets import load_sample_image
@@ -20,6 +24,10 @@ from skimage.feature import blob_doh, blob_log
 from skimage.exposure import histogram
 from skimage.feature import shape_index
 from skimage.measure import shannon_entropy
+from scipy import misc
+
+from skimage import color
+from skimage import io
 
 # CODE SNIPPET TO USE CUSTOM GENERATOR BELOW
 # 
@@ -80,6 +88,31 @@ def custom_generator(images_list, manual_dict, batch_size=16):
 
         yield [batch['images'], batch['manual']], batch['scores']
 
+def custom_generator2(images_list, manual_dict, batch_size=16):
+    i = 0
+    while True:
+        batch = {'images': [], 'manual': []}
+        for b in range(batch_size):
+            if i == len(images_list):
+                i = 0
+                random.shuffle(images_list)
+            # Read image from list and convert to array
+            image_path = images_list[i]
+            image_name = int(os.path.basename(image_path).replace('.png', ''))
+            image = krs_image.load_img(image_path, target_size=(1000, 1000), color_mode='grayscale')
+            image = gan_preprocessing(krs_image.img_to_array(image))
+
+            manual_features = manual_dict[image_name][20:21]
+
+            batch['images'].append(image)
+            batch['manual'].append(manual_features)
+            i += 1
+
+        batch['images'] = np.array(batch['images'])
+        batch['manual'] = np.array(batch['manual'])
+
+        yield batch['images'], batch['manual']
+
 def get_hand_crafted(one_image):
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
@@ -92,6 +125,45 @@ def get_hand_crafted(one_image):
     variance_val = np.var(one_image)
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val]])
     return features
+
+
+def features_summary(image_set, decode=False):
+    features = []
+    for image in image_set:
+        if decode:
+            image = color.rgb2gray(io.imread(image))
+            image = vanilla_preprocessing(image)
+        assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
+        features.append(get_hand_crafted(image))
+    features = np.array(features)
+
+    # Compute mean and variance of the features
+    mean_features = np.mean(np.copy(features), axis=0)
+    var_features = np.var(np.copy(features), axis=0)
+
+    return features, mean_features, var_features
+
+def extract_and_save_features(image_dir, prefix):
+    """
+    Extract manual features from images contained in dir and saves them in the current directory
+    """
+    all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
+    features, means, vars = features_summary(all_images, True)
+    np.savetxt(prefix + "_features.gz", features)
+    np.savetxt(prefix + "_features_means.gz", means)
+    np.savetxt(prefix + "_vars.gz", vars)
+
+def heatmap(images_set, decode=False, shape=(1000, 1000)):
+    sum = np.zeros(shape)
+    for image in images_set:
+        if decode:
+            image = np.array(io.imread(image), dtype=np.float)
+            image = vanilla_preprocessing(image)
+
+        assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
+        sum += image
+    sum /= len(images_set)
+    return sum
 
 def gan_preprocessing(image):
     rint = random.randint(1, 4)
@@ -108,7 +180,7 @@ def vanilla_preprocessing(image):
 def vae_preprocessing(image):
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
-    #image = image / 255.0
+    image = image / 255.0
     return image
 
 
@@ -213,4 +285,11 @@ def predict_with_regressor(vae, regr_type, scored_generator_train, query_generat
     if(not os.path.isdir(data_path)):
       os.mkdir(data_path)
         
-    joblib.dump(regr, data_path + regr_type)   
+    joblib.dump(regr, data_path + regr_type)
+
+def knn_diversity_stats(training_set, generated_imgs):
+    knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
+    knn.fit(training_set)
+
+    dists, idxs = knn.neighbors(generated_imgs)
+    return np.average(dists)

@@ -1,7 +1,8 @@
 from datetime import datetime
 import glob
 import numpy as np 
-import os 
+import os
+from scipy import misc
 from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
@@ -12,7 +13,7 @@ import sklearn
 from sklearn.model_selection import train_test_split
 
 
-from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN, CGAN
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN, LCGAN, DAE, MCGAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
@@ -169,7 +170,7 @@ def main():
 
     print("Data generators have been created")
     noise_dim = 63
-    cgan = CGAN(noise_dim=noise_dim, data_shape=(64, 64))
+    cgan = LCGAN(noise_dim=noise_dim, data_shape=(64, 64))
 
     galaxy_generator_64 = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
                                                             class_mode='binary',
@@ -193,18 +194,80 @@ def main():
     g = cgan.generator(input)
     print(g.shape)
 
-    resizer = tf.keras.Sequential(
-        [tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
-         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2))]
-    )
 
+    resizer = tf.keras.Sequential(
+        [tf.keras.layers.Lambda(lambda x: x+1),
+         tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
+         tf.keras.layers.Lambda(lambda x: x-1),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.Reshape(target_shape=(64, 64, 1))]
+    )
+    """
     trainer.cgan_train(batch_size, input, galaxy_generator_64, other_generator_64,
                        epochs=1, steps_per_epoch_galaxy=1000/batch_size, steps_per_epoch_other=200/batch_size,
                        save_every=15, batch_processing_fct=resizer, gen_imgs=True)
+    """
+    """
+    #data_path = "./cosmology_aux_data_170429/"
+    model = DAE(1000, data_shape=(1000, 1000, 1), learning_rate=1e-4)
+    trainer = Trainer(
+        model, None, None, labeled_generator, scored_generator_train, scored_generator_val, './Results/'
+    )
 
+    trainer.dae_train(model, batch_processing_fct=None)
+    """
+    
+    manual_feats = np.loadtxt('scoring_feats.gz')
+    manual_ids = np.loadtxt('scoring_feats_ids.gz').astype(int)
+
+    manual_dict = dict(zip(manual_ids, manual_feats))
+
+    print(manual_feats[0])
+    print(manual_ids[0])
+    print(manual_dict[manual_ids[0]])
+
+    scores_path = os.path.join(data_path, "scored.csv")
+    scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
+    id_to_score = scores.to_dict(orient="index")
+    id_to_score = {k: v[1] for k, v in id_to_score.items()}
+
+    scored_images_path = os.path.join(data_path, "scored")
+    scored_images_path = pathlib.Path(scored_images_path)
+    onlyFiles = [f for f in os.listdir(scored_images_path) if (os.path.isfile(os.path.join(scored_images_path, f)) and (f != None))]
+
+    all_indexes = [item.split('.')[0] for item in onlyFiles]
+    all_indexes = filter(None, all_indexes)
+    all_pairs = [[os.path.join(scored_images_path, item) + '.png', id_to_score[int(item)]] for item in all_indexes]
+
+    all_pairs_train, all_pairs_val = train_test_split(all_pairs, test_size=0.1)
+
+    X_train = np.array(all_pairs_train)[:, 0]
+    X_val = np.array(all_pairs_val)[:, 0]
+
+
+    mcgan = MCGAN(data_shape=(64, 64, 1), feat_dim=1, noise_dim=1000, checkpoint_dir=None, checkpoint_prefix=None)
+    trainer = Trainer(
+        mcgan, None, None, utils.custom_generator2(X_train, manual_dict), scored_generator_train, scored_generator_val, './Results/'
+    )
+    noise_seed = np.random.normal(0, 1, [batch_size, 1000])
+    n_blobs_seed = tf.constant(np.random.randint(1, 10, [batch_size, 1]))
+
+    trainer.mcgan_train(batch_size=batch_size, seed=tf.concat([noise_seed, n_blobs_seed], axis=-1))
+    """
+
+    mcgan = MCGAN(data_shape=(64, 64, 1), feat_dim=1, noise_dim=1000, checkpoint_dir=None, checkpoint_prefix=None)
+    trainer = Trainer(
+        mcgan, None, None, utils.custom_generator2(X_train, manual_dict), scored_generator_train, scored_generator_val,
+        './Results/'
+    )
+    noise_seed = np.random.normal(0, 1, [batch_size, 1000])
+    n_blobs_seed = tf.constant(np.random.randint(1, 20, [batch_size, 1]))
+
+    trainer.mcgan_train(batch_size=batch_size, seed=tf.concat([noise_seed, n_blobs_seed], axis=-1))
+    """
 
 if __name__ == '__main__':
     main()
