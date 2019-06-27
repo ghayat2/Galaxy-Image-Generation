@@ -26,7 +26,8 @@ class DCGAN:
                 
             gen_out = layers.tanh_layer(deconv4)
         print("Built Generator model in {} s".format(time.time()-a))
-        list_ops = [dense1, relu1, reshaped, deconv1, deconv2, deconv3, deconv4, gen_out] # list of operations, can be used to run the graph up to a certain op
+        list_ops = {"dense1": dense1, "relu1": relu1, "reshaped": reshaped, "deconv1": deconv1, "deconv2": deconv2, 
+                    "deconv3": deconv3, "deconv4": deconv4, "gen_out": gen_out} # list of operations, can be used to run the graph up to a certain op
                                                                                                                      # i,e get the subgraph
         return gen_out, list_ops
         
@@ -40,16 +41,16 @@ class DCGAN:
                 inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
                 inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
 
-            conv1 = layers.conv_block_dcgan(inp, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 128, 32, 32)
-            conv2 = layers.conv_block_dcgan(conv1, training, out_channels=256, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 256, 16, 16)
-            conv3 = layers.conv_block_dcgan(conv2, training, out_channels=512, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 512, 8, 8)
-            conv4 = layers.conv_block_dcgan(conv3, training, out_channels=1024, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=True, alpha=0.2) # shape=(batch_size, 1024, 4, 4)
+            conv1 = layers.conv_block_dcgan(inp, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, alpha=0.2) # shape=(batch_size, 128, 32, 32)
+            conv2 = layers.conv_block_dcgan(conv1, training, out_channels=256, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, alpha=0.2) # shape=(batch_size, 256, 16, 16)
+            conv3 = layers.conv_block_dcgan(conv2, training, out_channels=512, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, alpha=0.2) # shape=(batch_size, 512, 8, 8)
+            conv4 = layers.conv_block_dcgan(conv3, training, out_channels=1024, filter_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, alpha=0.2) # shape=(batch_size, 1024, 4, 4)
             flat = tf.reshape(conv4, [-1, 1024*4*4])
             logits = layers.dense_layer(flat, units=2, use_bias=True)
             
             out = logits
         print("Built Discriminator model in {} s".format(time.time()-a))
-        list_ops = [inp, conv1, conv2, conv3, conv4, flat, logits, out]
+        list_ops = {"inp": inp, "conv1": conv1, "conv2": conv2, "conv3": conv3, "conv4": conv4, "flat": flat, "logits": logits, "out": out}
         
         return out, list_ops
         

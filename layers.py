@@ -121,9 +121,9 @@ def deconv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, pa
         out = relu_layer(tmp)
     return out
     
-def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padding="same", use_bias=False, alpha=0.2):
+def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.2):
     with tf.name_scope("conv_block"):
-        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, use_bias)
+        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values, use_bias)
         tmp = batch_norm_layer(tmp, training)
         out = leaky_relu_layer(tmp, alpha)
 #        out = dropout_layer(out, training, 0.3)

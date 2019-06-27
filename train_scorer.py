@@ -21,6 +21,8 @@ parser = ArgumentParser()
 parser.add_argument('-ne', '--num_epochs', type = int, default = 200, help = 'number of training epochs')
 parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
 parser.add_argument('-lr', '--learning_rate', type = float, default = 1e-3, help = 'learning rate for the optimizer')
+parser.add_argument('-b1', '--beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer')
+parser.add_argument('-b2', '--beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer')
 parser.add_argument('-vp', '--valid_precent', type = float, default = 0.1, help = 'percentage of the data to use for validation')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
@@ -46,8 +48,8 @@ NUM_EPOCHS=args.num_epochs
 BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
 LR = args.learning_rate # learning rate
-BETA1 = 0.5
-BETA2 = 0.999
+BETA1 = args.beta_1
+BETA2 = args.beta_2
 VALID_PERCENT = args.valid_precent
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
