@@ -10,11 +10,11 @@ class Scorer_head:
         
     def scorer_head_model(self, features, training, reuse=False):
         with tf.variable_scope("scorer_head", reuse=reuse): # define variable scope
-#            dense1 = layers.dense_layer(features, units=1024, use_bias=True)
-#            relu1 = layers.relu_layer(dense1)
-#            dense2 = layers.dense_layer(features, units=512, use_bias=True)
-#            relu2 = layers.relu_layer(dense2)
-            dense3 = layers.dense_layer(features, units=256, use_bias=True)
+            dense1 = layers.dense_layer(features, units=1024, use_bias=True)
+            relu1 = layers.relu_layer(dense1)
+            dense2 = layers.dense_layer(relu1, units=512, use_bias=True)
+            relu2 = layers.relu_layer(dense2)
+            dense3 = layers.dense_layer(relu2, units=256, use_bias=True)
             relu3 = layers.relu_layer(dense3)
             dense4 = layers.dense_layer(relu3, units=1, use_bias=True)
             
