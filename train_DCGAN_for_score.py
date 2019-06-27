@@ -5,11 +5,13 @@ import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 from data import create_dataloader_train_scored
-from Scorer import Scorer
+from DCGAN import DCGAN
+from DCGAN_Scorer import Scorer_head
 from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
+import layers
 import patoolib
 
 global_seed=5
@@ -31,8 +33,6 @@ parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
-parser.add_argument('-zc', '--zero_center', help = 'whether to zero_center image data i,e normalize to [-1, 1] or not i,e normalize to [0, 1]', action="store_true")
-#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
 
@@ -41,6 +41,15 @@ def timestamp():
 
 def create_zip_code_files(output_file, submission_files):
     patoolib.create_archive(output_file, submission_files)
+    
+def get_uninitialized_vars(sess):
+    uninitialized_vars = []
+    for var in tf.all_variables():
+        try:
+            sess.run(var)
+        except tf.errors.FailedPreconditionError:
+            uninitialized_vars.append(var)
+    return uninitialized_vars
 
 CURR_TIMESTAMP=timestamp()
 
@@ -55,22 +64,25 @@ LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of step
 SAVE_ITER_FREQ = args.save_iter_freq
 VALID_ITER_FREQ = args.valid_iter_freq
 CONTINUE_TRAINING = args.continue_training
-ZERO_CENTER = args.zero_center
 
-C, H, W = 1, 1000, 1000 # images dimensions
-#RUNNING_ON_COLAB = args.colab
+C, H, W = 1, 1000, 1000
 
-# paths
+# DCGAN paths
+list_of_files = glob.glob('./LOG_DCGAN/*')
+latest_dir = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment
+LOG_DIR_DCGAN=latest_dir
+CHECKPOINTS_PATH_DCGAN = os.path.join(LOG_DIR_DCGAN, "checkpoints")
+
+# Scorer
 DATA_ROOT="./data"
 CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
-LOG_DIR=os.path.join(".", "LOG_SCORER", CURR_TIMESTAMP)
+LOG_DIR=os.path.join(".", "LOG_DCGAN_SCORER", CURR_TIMESTAMP)
 if CONTINUE_TRAINING: # continue training from last training experiment
-    list_of_files = glob.glob(os.path.join(".", "LOG_SCORER", "*"))
+    list_of_files = glob.glob(os.path.join(".", "LOG_DCGAN_SCORER", "*"))
     LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
-SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
 
 class Logger(object):  # logger to log output to both terminal and file
     def __init__(self, log_dir):
@@ -99,7 +111,6 @@ print("    BATCH_SIZE: {}".format(BATCH_SIZE))
 print("    BETA1: {}".format(BETA1))
 print("    BETA2: {}".format(BETA2))
 print("    LEARNING_RATE: {}".format(LR))
-print("    ZERO_CENTER: {}".format(ZERO_CENTER))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
 print("    VALID_PERCENT: {}".format(VALID_PERCENT))
 print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
@@ -113,15 +124,16 @@ sys.stdout.flush()
 
 files = ["data.py",
          "layers.py",
-         "Scorer.py",
-         "train_scorer.py"
+         "DCGAN.py",
+         "DCGAN_Scorer.py",
+         "train_DCGAN_for_score.py",
+         "test_DCGAN_scorer.py"
          ]
          
 if not CONTINUE_TRAINING:
     create_zip_code_files(os.path.join(LOG_DIR, "code.zip"), files)
-
+    
 #sys.exit(0)
-
 # remove warning messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -129,44 +141,48 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.visible_device_list = "0"
-with tf.Session(config=config) as sess:
 
+with tf.Session(config=config) as sess:
+    
     # data
     train_ds, nb_train, valid_ds, nb_valid = create_dataloader_train_scored(DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, valid_percent=VALID_PERCENT)
     im_train, scores_train = train_ds # unzip
     im_valid, scores_valid = valid_ds # unzip
     
-    if not ZERO_CENTER:
-        im_train = (im_train+1.0)/2.0 # renormalize to [0, 1]
-        im_valid = (im_valid+1.0)/2.0 # renormalize to [0, 1]
-    
-    # define placeholders
-    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W]) # placeholder for images
+    # placeholder
+    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W]) # placeholder for images fed to discriminator
     scores_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1]) # placeholder for scores
-
     training_pl = tf.placeholder(dtype=tf.bool, shape=[])
-    
-    #model
-    print("Building model ...")
+
+    print("Building DCGAN model ...")
     sys.stdout.flush()
-    model = Scorer()
-    scores_pred = model(inp=im_pl, training=training_pl, zero_centered=ZERO_CENTER)
-    
-#    print(scores_pred.shape)
+    model1 = DCGAN()
+    _, ops = model1.discriminator_model(inp=im_pl, training=False, resize=True) # get discriminator output
+
+#    discr_vars = model1.discriminator_vars()
+#    print(sess.run(discr_vars[0])[0])
 #    sys.exit(0)
+    print("Restoring latest model from {}\n".format(CHECKPOINTS_PATH_DCGAN))
+    saver = tf.train.Saver()
+    saver.restore(sess, tf.train.latest_checkpoint(CHECKPOINTS_PATH_DCGAN))
+#    print(sess.run(discr_vars[0])[0])
+    
+    flat = ops["flat"]
+    model2 = Scorer_head()
+    scores_pred = model2.scorer_head_model(features=flat, training=training_pl)
     
     # losses
     print("Losses ...")
     sys.stdout.flush()
-    loss = model.compute_loss(scores_pl, scores_pred)
-
+    loss = model2.compute_loss(scores_pl, scores_pred)
+    
 #    sys.exit(0)
     # define trainer
     print("Train_op ...")
     sys.stdout.flush()
-    train_op, global_step = model.train_op(loss, LR, beta1=BETA1, beta2=BETA2)
-    
-#    sys.exit(0)
+    var_list = model2.scorer_head_vars()
+    scope = model2.get_scope()
+    train_op, global_step = model2.train_op(loss, LR, beta1=BETA1, beta2=BETA2, var_list=var_list, scope=scope)
     
     # define summaries
     print("Summaries ...")
@@ -174,7 +190,7 @@ with tf.Session(config=config) as sess:
     train_loss_summary = tf.summary.scalar("train_loss", loss)
     valid_loss_pl = tf.placeholder(dtype=tf.float32, shape=[]) # placeholder for mean validation loss
     valid_loss_summary = tf.summary.scalar("valid_loss", valid_loss_pl)
-
+    
     # summaries and graph writer
     print("Initializing summaries writer ...")
     sys.stdout.flush()
@@ -200,15 +216,17 @@ with tf.Session(config=config) as sess:
     else: # initialize using initializers
         print("\nInitializing Variables")
         sys.stdout.flush()
-        tf.global_variables_initializer().run()
+        init_new_vars_op = tf.initialize_variables(get_uninitialized_vars(sess))
+        sess.run(init_new_vars_op)
     
-    
+#    print(sess.run(discr_vars[0])[0])
+
     print("Train start ...")
     sys.stdout.flush()
     NUM_SAMPLES = nb_train
     NUM_VALID_SAMPLES = nb_valid
-    best_valid_mae = None
-    best_global_step = 0
+#    best_valid_mae = None
+#    best_global_step = 0
 #    sys.exit(0)
     with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
         for i in t: # for each step
@@ -267,9 +285,7 @@ with tf.Session(config=config) as sess:
     print("Done with global_step_val: {}".format(global_step_val))
     
 #    print("Training done with global_step_val: {}".format(global_step_val))
-    
-    
-    
+
     
     
     

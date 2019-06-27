@@ -1355,6 +1355,422 @@ class ScorePredictor():
     def load_nets(self, dest_dir="./saved_models"):
         self.labeler.load_weights(os.path.join(dest_dir, "scoring_" + self.__name__))
 
+class MounirRegressor2(BaseModel):
+    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        super(MounirRegressor2, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+
+    def to_scoring(self, reload_ckpt=False):
+
+        self.global_seed=5
+        self.initializer = glorot_normal(seed=self.global_seed)
+        self.feat_dim = 34
+
+        # self.scorer = self.make_scoring_model(keras.Sequential())
+        # self.onethousand = self.make_onethousand()
+        # self.twofifty = self.make_twofifty()
+        # self.sixtyfour = self.make_sixtyfour()
+        # self.manual = self.make_manual_model()
+        self.scorer = self.fuse_models()
+        self.score_opt = optimizers.Adam(1e-4)
+
+        self.score_callbacks = []
+
+        self.scorer.compile(loss=losses.MeanAbsoluteError(), optimizer=self.score_opt)
+
+    def make_onethousand(self):
+
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
+
+        # assert model.output_shape == (None, 1024, 1024, 1)    
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))        
+        model.add(layers.Conv2D(8, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 128, 128, 32)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))        
+        model.add(layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 128, 128, 32)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))        
+        model.add(layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 128, 128, 32)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 64, 64, 64)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 32, 32, 128)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 16, 16, 256)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 8, 8, 512)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 4, 4, 1024)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        model.add(layers.Dropout(0.5))
+        model.add(layers.LeakyReLU())
+
+    def make_twofifty(self):
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
+
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+        # assert model.output_shape == (None, 256, 256, 1)    
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))        
+        model.add(layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 128, 128, 32)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 64, 64, 64)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 32, 32, 128)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 16, 16, 256)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 8, 8, 512)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 4, 4, 1024)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        model.add(layers.Dropout(0.5))
+        model.add(layers.LeakyReLU())
+        
+        #model.add(layers.Dense(1, use_bias=True))
+
+        return model
+
+    def make_sixtyfour(self):
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
+
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        model.add(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 32, 32, 128)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+        
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 16, 16, 256)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 8, 8, 512)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        # assert model.output_shape == (None, 4, 4, 1024)
+        model.add(layers.BatchNormalization())
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Flatten())
+        
+        model.add(layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        model.add(layers.Dropout(0.5))
+        model.add(layers.LeakyReLU())
+        
+        #model.add(layers.Dense(1, use_bias=True))
+
+        return model
+
+    def make_manual_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Input(shape=self.feat_dim))
+        
+        # model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, ), trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        
+        # model.add(layers.Dense(15, activation='relu', trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+        # model.add(layers.Dense(10, activation='relu', trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+        # model.add(layers.Dense(1, trainable=True))
+
+        # model.load_weights(os.path.join("./saved_models", "scoring_" + 'default_score_predictor'))
+
+        return model
+
+    def fuse_models(self):
+        input_img = layers.Input(shape=self.data_shape)
+        base_pad = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1))(input_img)
+
+        #1024
+
+        pl_1024_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(base_pad)      
+        c_1024_1 = layers.Conv2D(8, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_1)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_1 = layers.BatchNormalization()(c_1024_1)
+        lr_1024_1 = layers.LeakyReLU()(bn_1024_1)
+        dr_1024_1 = layers.Dropout(0.3)(lr_1024_1)
+
+        pl_1024_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_1)      
+        c_1024_2 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_2)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_2 = layers.BatchNormalization()(c_1024_2)
+        lr_1024_2 = layers.LeakyReLU()(bn_1024_2)
+        dr_1024_2 = layers.Dropout(0.3)(lr_1024_2)
+
+        pl_1024_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_2)      
+        c_1024_3 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_3)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_3 = layers.BatchNormalization()(c_1024_3)
+        lr_1024_3 = layers.LeakyReLU()(bn_1024_3)
+        dr_1024_3 = layers.Dropout(0.3)(lr_1024_3)
+        
+        pl_1024_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_3)      
+        c_1024_4 = layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_4)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_4 = layers.BatchNormalization()(c_1024_4)
+        lr_1024_4 = layers.LeakyReLU()(bn_1024_4)
+        dr_1024_4 = layers.Dropout(0.3)(lr_1024_4)
+
+        pl_1024_5 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_4)      
+        c_1024_5 = layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_5)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_5 = layers.BatchNormalization()(c_1024_5)
+        lr_1024_5 = layers.LeakyReLU()(bn_1024_5)
+        dr_1024_5 = layers.Dropout(0.3)(lr_1024_5)
+        
+        pl_1024_6 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_5)      
+        c_1024_6 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_6)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_6 = layers.BatchNormalization()(c_1024_6)
+        lr_1024_6 = layers.LeakyReLU()(bn_1024_6)
+        dr_1024_6 = layers.Dropout(0.3)(lr_1024_6)
+
+        pl_1024_7 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_6)      
+        c_1024_7 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_7)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_7 = layers.BatchNormalization()(c_1024_7)
+        lr_1024_7 = layers.LeakyReLU()(bn_1024_7)
+        dr_1024_7 = layers.Dropout(0.3)(lr_1024_7)
+
+        pl_1024_8 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_7)      
+        c_1024_8 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_8)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_1024_8 = layers.BatchNormalization()(c_1024_8)
+        lr_1024_8 = layers.LeakyReLU()(bn_1024_8)
+        dr_1024_8 = layers.Dropout(0.3)(lr_1024_8)
+
+        flat_1024 = layers.Flatten()(dr_1024_8)
+        
+        dense_1024_l = layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(flat_1024)
+        dense_1024_dr = layers.Dropout(0.5)(dense_1024_l)
+        dense_1024_lr =layers.LeakyReLU()(dense_1024_dr)
+
+        #256
+
+        pool_256_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
+        pool_256_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_256_1)
+
+        pl_256_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(pool_256_2)      
+        c_256_1 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_1)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_1 = layers.BatchNormalization()(c_256_1)
+        lr_256_1 = layers.LeakyReLU()(bn_256_1)
+        dr_256_1 = layers.Dropout(0.3)(lr_256_1)
+
+        pl_256_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_1)      
+        c_256_2 = layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_2)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_2 = layers.BatchNormalization()(c_256_2)
+        lr_256_2 = layers.LeakyReLU()(bn_256_2)
+        dr_256_2 = layers.Dropout(0.3)(lr_256_2)
+
+        pl_256_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_2)      
+        c_256_3 = layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_3)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_3 = layers.BatchNormalization()(c_256_3)
+        lr_256_3 = layers.LeakyReLU()(bn_256_3)
+        dr_256_3 = layers.Dropout(0.3)(lr_256_3)
+        
+        pl_256_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_3)      
+        c_256_4 = layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_4)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_4 = layers.BatchNormalization()(c_256_4)
+        lr_256_4 = layers.LeakyReLU()(bn_256_4)
+        dr_256_4 = layers.Dropout(0.3)(lr_256_4)
+
+        pl_256_5 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_4)      
+        c_256_5 = layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_5)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_5 = layers.BatchNormalization()(c_256_5)
+        lr_256_5 = layers.LeakyReLU()(bn_256_5)
+        dr_256_5 = layers.Dropout(0.3)(lr_256_5)
+        
+        pl_256_6 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_5)      
+        c_256_6 = layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_6)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_256_6 = layers.BatchNormalization()(c_256_6)
+        lr_256_6 = layers.LeakyReLU()(bn_256_6)
+        dr_256_6 = layers.Dropout(0.3)(lr_256_6)
+
+        flat_256 = layers.Flatten()(dr_256_6)
+        
+        dense_256_l = layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(flat_256)
+        dense_256_dr = layers.Dropout(0.5)(dense_256_l)
+        dense_256_lr =layers.LeakyReLU()(dense_256_dr)
+
+        #64
+
+        pool_64_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
+        pool_64_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_1)
+        pool_64_3 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_2)
+        pool_64_4 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_3)
+
+        pl_64_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(pool_64_4)      
+        c_64_1 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_1)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_64_1 = layers.BatchNormalization()(c_64_1)
+        lr_64_1 = layers.LeakyReLU()(bn_64_1)
+        dr_64_1 = layers.Dropout(0.3)(lr_64_1)
+
+        pl_64_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_1)      
+        c_64_2 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_2)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_64_2 = layers.BatchNormalization()(c_64_2)
+        lr_64_2 = layers.LeakyReLU()(bn_64_2)
+        dr_64_2 = layers.Dropout(0.3)(lr_64_2)
+
+        pl_64_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_2)      
+        c_64_3 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_3)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_64_3 = layers.BatchNormalization()(c_64_3)
+        lr_64_3 = layers.LeakyReLU()(bn_64_3)
+        dr_64_3 = layers.Dropout(0.3)(lr_64_3)
+        
+        pl_64_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_3)      
+        c_64_4 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_4)
+        # assert model.output_shape == (None, 128, 128, 32)
+        bn_64_4 = layers.BatchNormalization()(c_64_4)
+        lr_64_4 = layers.LeakyReLU()(bn_64_4)
+        dr_64_4 = layers.Dropout(0.3)(lr_64_4)
+
+        flat_64 = layers.Flatten()(dr_64_4)
+        
+        dense_64_l = layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(flat_64)
+        dense_64_dr = layers.Dropout(0.5)(dense_64_l)
+        dense_64_lr =layers.LeakyReLU()(dense_64_dr)
+
+        #Combination        
+
+        combined = layers.concatenate([dense_1024_lr, dense_256_lr, dense_64_lr])
+
+        #128 * 3 = 375 + 9 = 384 dim latent space
+
+        d1 = layers.Dense(200, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(combined)
+        bn1 = layers.BatchNormalization()(d1)
+        lr1 = layers.LeakyReLU()(bn1)
+        dr1 = layers.Dropout(0.5)(lr1)
+
+        d2 = layers.Dense(50, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(dr1)
+        bn2 = layers.BatchNormalization()(d2)
+        lr2 = layers.LeakyReLU()(bn2)
+        dr2 = layers.Dropout(0.5)(lr2)
+
+        z = layers.Dense(1, use_bias=True)(dr2)
+        clipped = layers.Lambda(lambda x: tf.clip_by_value(x, clip_value_min=0, clip_value_max=8))(z) 
+
+        return models.Model(inputs=input_img, outputs=clipped)
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.scorer.save(os.path.join(dest_dir, "scoring_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self.scorer.load_weights(os.path.join(dest_dir, "scoring_" + self.__name__))
+
 class MounirRegressor(BaseModel):
     def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
         #print("Data shape is: {}".format(data_shape))
@@ -1389,73 +1805,95 @@ class MounirRegressor(BaseModel):
         # assert model.output_shape == (None, 128, 128, 32)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
         
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
         model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
         # assert model.output_shape == (None, 64, 64, 64)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
         model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
         # assert model.output_shape == (None, 32, 32, 128)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
         
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
         model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
         # assert model.output_shape == (None, 16, 16, 256)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
         model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
         # assert model.output_shape == (None, 8, 8, 512)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1)))
         model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
         # assert model.output_shape == (None, 4, 4, 1024)
         model.add(layers.BatchNormalization())
         model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
 
         model.add(layers.Flatten())
         
         model.add(layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
-        model.add(layers.Dropout(self.disc_dropout))
+        model.add(layers.Dropout(0.5))
         model.add(layers.LeakyReLU())
         
-        model.add(layers.Dense(1, use_bias=True))
+        #model.add(layers.Dense(1, use_bias=True))
 
         return model
 
     def make_manual_model(self):
         model = keras.Sequential()
+
+        model.add(layers.Input(shape=self.feat_dim))
         
-        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, ), trainable=True))
-        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
-        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        # model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim, ), trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
         
-        model.add(layers.Dense(15, activation='relu', trainable=True))
-        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
-        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        # model.add(layers.Dense(15, activation='relu', trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
 
-        model.add(layers.Dense(10, activation='relu', trainable=True))
-        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
-        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        # model.add(layers.Dense(10, activation='relu', trainable=True))
+        # model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        # model.add(layers.Dropout(self.disc_dropout, trainable=True))
 
-        model.add(layers.Dense(1, trainable=True))
+        # model.add(layers.Dense(1, trainable=True))
 
-        model.load_weights(os.path.join("./saved_models", "scoring_" + 'default_score_predictor'))
+        # model.load_weights(os.path.join("./saved_models", "scoring_" + 'default_score_predictor'))
 
         return model
 
     def fuse_models(self):
         combined = layers.concatenate([self.scorer.output, self.manual.output])
-        z = layers.Dense(1, use_bias=True)(combined)
 
-        return models.Model(inputs=[self.scorer.input, self.manual.input], outputs=z)
+        #128 + 34 = 162 dim latent space
+
+        d1 = layers.Dense(100, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(combined)
+        bn1 = layers.BatchNormalization()(d1)
+        lr1 = layers.LeakyReLU()(bn1)
+        dr1 = layers.Dropout(0.5)(lr1)
+
+        d2 = layers.Dense(50, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(dr1)
+        bn2 = layers.BatchNormalization()(d2)
+        lr2 = layers.LeakyReLU()(bn2)
+        dr2 = layers.Dropout(0.5)(lr2)
+
+        z = layers.Dense(1, use_bias=True)(dr2)
+        clipped = layers.Lambda(lambda x: tf.clip_by_value(x, clip_value_min=0, clip_value_max=8))(z) 
+
+        return models.Model(inputs=[self.scorer.input, self.manual.input], outputs=clipped)
 
     def save_nets(self, dest_dir="./saved_models"):
         if not os.path.isdir(dest_dir):

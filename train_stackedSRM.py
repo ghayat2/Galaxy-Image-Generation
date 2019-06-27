@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.client import device_lib
 import numpy as np
 import sys, os, glob, gc
 import matplotlib as mpl
@@ -12,6 +13,7 @@ from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
 import patoolib
+#import signal, shutil
 
 global_seed=5
 
@@ -39,6 +41,14 @@ def timestamp():
 
 def create_zip_code_files(output_file, submission_files):
     patoolib.create_archive(output_file, submission_files)
+    
+#def copy_stderr_to_stdout(log_dir):
+#    std_err_dir = os.path.join(log_dir, "stderr", timestamp())
+#    if not os.path.exists(std_err_dir):
+#        os.makedirs(std_err_dir)
+#    sys.stderr.flush()
+#    shutil.move("./stderr", os.path.join(std_err_dir, "stderr"))
+#    sys.exit(0)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -75,19 +85,28 @@ class Logger(object):  # logger to log output to both terminal and file
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         
-        self.terminal = sys.stdout
+        self.terminal_write = sys.stdout.write
+        self.terminal_flush = sys.stdout.flush
         self.log = open(os.path.join(log_dir, "output"), "a")
 
     def write(self, message):
-        self.terminal.write(message)
+        self.terminal_write(message)
         self.log.write(message)  
 
     def flush(self):
+        self.terminal_flush()
         self.log.flush()
-        self.terminal.flush()
-        pass    
 
-sys.stdout = Logger(LOG_DIR)
+logger = Logger(LOG_DIR)
+sys.stdout = logger
+#signal.signal(signal.SIGINT, lambda a, b: copy_stderr_to_stdout(LOG_DIR)) # copy stderr output to log_dir in case of keyboard interrupt
+
+l = device_lib.list_local_devices()
+gpus_list = [(device.physical_device_desc, device.memory_limit) for device in l if device.device_type == "GPU"]
+print("\nGPUs List:")
+for info in gpus_list:
+    print(info[0])
+    print("memory limit:", info[1])
 
 # printing parameters
 print("\n")
@@ -219,6 +238,9 @@ with tf.Session(config=config) as sess:
             j = int(i / (NB_STEPS/NB_STACKS))
             if j >= len(train_ops):
                 j -= 1
+            if CONTINUE_TRAINING:
+                j = len(train_ops) - 1 # continue training using the last train_op (i,e train all stacks)
+
             if j != j_prev:
                 print("moving to train_op", j)
                 j_prev = j
@@ -281,6 +303,7 @@ with tf.Session(config=config) as sess:
     global_step_val = sess.run(global_step) # get the global step value
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
+#    copy_stderr_to_stdout(LOG_DIR)
     
     
     
