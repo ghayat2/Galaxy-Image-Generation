@@ -1,8 +1,7 @@
 from datetime import datetime
 import glob
 import numpy as np 
-import os
-from scipy import misc
+import os 
 from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
@@ -11,19 +10,34 @@ import utils
 import matplotlib.pyplot as plt
 import sklearn
 from sklearn.model_selection import train_test_split
+import sys
 
-
-from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN, LCGAN, DAE, MCGAN
+from model import Model, BaseModel, CVAE, VAEGAN, TwoStepsVEAGAN, ImageRegressor, BetterD2GAN, CGAN
 from trainer import Trainer 
 from dataset import Dataset, ImageLoader, ImageGen
 import pathlib, time
 
-"""The REGRESSOR_TYPE Flag specifies the type of regressor that will be
-trained on the VAE latent space and will be used to make predictions
-on the query image dataset
-Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP
-"""
-REGRESSOR_TYPE = None  #Random Forest, Ridge, MLP
+
+
+def del_all_flags(FLAGS):
+    flags_dict = FLAGS._flags()    
+    keys_list = [keys for keys in flags_dict]    
+    for keys in keys_list:
+        FLAGS.__delattr__(keys)
+
+del_all_flags(tf.flags.FLAGS)
+
+## REGRESSOR PROPERTIES ##
+tf.flags.DEFINE_string("regressor_type", "Random Forest", """specifies the type of regressor that will betrained on the VAE latent space 
+                      and will be used to make predictionson the query image dataset
+                      Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP""")
+tf.flags.DEFINE_bool("vae_encoded_images", False, "True if the images of scored and query dataset were previously encoded by the vae model")
+tf.flags.DEFINE_bool("only_features", False, "Train the regressor only on manually crafted features")
+tf.flags.DEFINE_integer("feature_dim", 34, "Number of manually crafted features")
+tf.flags.DEFINE_integer("latent_dim", 100, "The dimension of the latent space of the vae")
+
+FLAGS = tf.flags.FLAGS
+FLAGS(sys.argv)
 
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
@@ -41,7 +55,7 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
     df_gen.samples = in_df.shape[0]
     df_gen.n = in_df.shape[0]
     df_gen.directory = '' # since we have the full path
-    df_gen._set_index_array()           
+    df_gen._set_index_array()        
     print('Reinserting dataframe: {} images'.format(in_df.shape[0]))
     return df_gen
 
@@ -79,10 +93,10 @@ def main():
     """ The main method of our project takes care of running our model and/or 
     predicting scores of the query images
     """
+    
     print("Eager execution (required): ", tf.executing_eagerly())
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     tf.compat.v1.global_variables_initializer()
-
     #Uncomment to create folders for labeled data
     #create_labeled_folders(data_path)
 
@@ -90,12 +104,11 @@ def main():
 
     # Create dataset
     batch_size = 16
-    noise_dim = 1000
     latent_dim = 100
     val_ratio = 0.1
 
     vae = CVAE(latent_dim)
-    # vae.load_nets()
+    vae.load_nets()
     inf_vae = tf.keras.models.clone_model(vae.inference_net)
     print(inf_vae.summary())
 
@@ -155,7 +168,7 @@ def main():
     sorted_queries = np.sort(all_indexes)
 
     query_datagen = ImageDataGenerator()
-    query_generator = query_datagen.flow_from_directory(os.path.join(data_path, "query"),
+    query_generator = query_datagen.flow_from_directory(os.path.join(data_path, "query/1"),
                                                         class_mode=None,
                                                         batch_size=1,
                                                         shuffle=False,
@@ -163,11 +176,12 @@ def main():
                                                         color_mode='grayscale')
     
     
+
     ### Preprocessing data to create generators interating through the scored        ###
     ### and query dataset and associate features to the images. Note that the        ###
     ### image features need to be included in the folder given by the following path ###
     
-    feature_path = "cosmology_aux_data_170429/features/"
+    feature_path = os.path.join(data_path, "features/")
     manual_score_feats = np.loadtxt(feature_path + 'scoring_feats.csv')
     manual_score_ids = np.loadtxt(feature_path + 'scoring_feats_ids.csv').astype(int)
     manual_query_feats = np.loadtxt(feature_path + 'query_feats.csv')
@@ -191,12 +205,14 @@ def main():
 
     print("Data generators have been created")
     
-    if REGRESSOR_TYPE:
-        utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_feature_generator, query_feature_generator, sorted_queries)
+    if FLAGS.regressor_type:
+        utils.predict_with_regressor(vae, FLAGS.regressor_type, scored_feature_generator, 
+                                     query_feature_generator, sorted_queries, vae_encoded_images=FLAGS.vae_encoded_images, 
+                                     only_features=FLAGS.only_features, feature_dim=FLAGS.feature_dim, latent_dim=FLAGS.latent_dim)
         return
     
     noise_dim = 63
-    cgan = LCGAN(noise_dim=noise_dim, data_shape=(64, 64))
+    cgan = CGAN(noise_dim=noise_dim, data_shape=(64, 64))
 
     galaxy_generator_64 = labeled_datagen.flow_from_directory(os.path.join(data_path, "labeled"),
                                                             class_mode='binary',
@@ -220,80 +236,17 @@ def main():
     g = cgan.generator(input)
     print(g.shape)
 
-
     resizer = tf.keras.Sequential(
-        [tf.keras.layers.Lambda(lambda x: x+1),
-         tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
-         tf.keras.layers.Lambda(lambda x: x-1),
+        [tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-         tf.keras.layers.Reshape(target_shape=(64, 64, 1))]
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2))]
     )
-    """
+
     trainer.cgan_train(batch_size, input, galaxy_generator_64, other_generator_64,
                        epochs=1, steps_per_epoch_galaxy=1000/batch_size, steps_per_epoch_other=200/batch_size,
                        save_every=15, batch_processing_fct=resizer, gen_imgs=True)
-    """
-    """
-    #data_path = "./cosmology_aux_data_170429/"
-    model = DAE(1000, data_shape=(1000, 1000, 1), learning_rate=1e-4)
-    trainer = Trainer(
-        model, None, None, labeled_generator, scored_generator_train, scored_generator_val, './Results/'
-    )
-
-    trainer.dae_train(model, batch_processing_fct=None)
-    """
-    
-    manual_feats = np.loadtxt('scoring_feats.gz')
-    manual_ids = np.loadtxt('scoring_feats_ids.gz').astype(int)
-
-    manual_dict = dict(zip(manual_ids, manual_feats))
-
-    print(manual_feats[0])
-    print(manual_ids[0])
-    print(manual_dict[manual_ids[0]])
-
-    scores_path = os.path.join(data_path, "scored.csv")
-    scores = pd.read_csv(scores_path, index_col=0, skiprows=1, header=None)
-    id_to_score = scores.to_dict(orient="index")
-    id_to_score = {k: v[1] for k, v in id_to_score.items()}
-
-    scored_images_path = os.path.join(data_path, "scored")
-    scored_images_path = pathlib.Path(scored_images_path)
-    onlyFiles = [f for f in os.listdir(scored_images_path) if (os.path.isfile(os.path.join(scored_images_path, f)) and (f != None))]
-
-    all_indexes = [item.split('.')[0] for item in onlyFiles]
-    all_indexes = filter(None, all_indexes)
-    all_pairs = [[os.path.join(scored_images_path, item) + '.png', id_to_score[int(item)]] for item in all_indexes]
-
-    all_pairs_train, all_pairs_val = train_test_split(all_pairs, test_size=0.1)
-
-    X_train = np.array(all_pairs_train)[:, 0]
-    X_val = np.array(all_pairs_val)[:, 0]
-
-
-    mcgan = MCGAN(data_shape=(64, 64, 1), feat_dim=1, noise_dim=1000, checkpoint_dir=None, checkpoint_prefix=None)
-    trainer = Trainer(
-        mcgan, None, None, utils.custom_generator2(X_train, manual_dict), scored_generator_train, scored_generator_val, './Results/'
-    )
-    noise_seed = np.random.normal(0, 1, [batch_size, 1000])
-    n_blobs_seed = tf.constant(np.random.randint(1, 10, [batch_size, 1]))
-
-    trainer.mcgan_train(batch_size=batch_size, seed=tf.concat([noise_seed, n_blobs_seed], axis=-1))
-    """
-
-    mcgan = MCGAN(data_shape=(64, 64, 1), feat_dim=1, noise_dim=1000, checkpoint_dir=None, checkpoint_prefix=None)
-    trainer = Trainer(
-        mcgan, None, None, utils.custom_generator2(X_train, manual_dict), scored_generator_train, scored_generator_val,
-        './Results/'
-    )
-    noise_seed = np.random.normal(0, 1, [batch_size, 1000])
-    n_blobs_seed = tf.constant(np.random.randint(1, 20, [batch_size, 1]))
-
-    trainer.mcgan_train(batch_size=batch_size, seed=tf.concat([noise_seed, n_blobs_seed], axis=-1))
-    """
 
 if __name__ == '__main__':
     main()
