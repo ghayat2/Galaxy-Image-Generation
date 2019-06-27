@@ -157,7 +157,7 @@ with tf.Session(config=config) as sess:
     print("Building DCGAN model ...")
     sys.stdout.flush()
     model1 = DCGAN()
-    _, ops = model1.discriminator_model(inp=im_pl, training=training_pl, resize=True) # get discriminator output
+    _, ops = model1.discriminator_model(inp=im_pl, training=False, resize=True) # get discriminator output
 
 #    discr_vars = model1.discriminator_vars()
 #    print(sess.run(discr_vars[0])[0])
@@ -181,7 +181,8 @@ with tf.Session(config=config) as sess:
     print("Train_op ...")
     sys.stdout.flush()
     var_list = model2.scorer_head_vars()
-    train_op, global_step = model2.train_op(loss, LR, beta1=BETA1, beta2=BETA2, var_list=None, scope=None)
+    scope = model2.get_scope()
+    train_op, global_step = model2.train_op(loss, LR, beta1=BETA1, beta2=BETA2, var_list=var_list, scope=scope)
     
     # define summaries
     print("Summaries ...")
