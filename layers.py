@@ -28,7 +28,7 @@ def conv_layer(inp, out_channels, filter_size=1, strides=1, padding="same", pad_
                                 data_format="channels_first", use_bias=use_bias, kernel_initializer=initializer, 
                                 bias_initializer=initializer)
                                 
-def deconv_layer(inp, out_channels, filter_size=1, strides=1, padding="same", use_bias=False, activation=None): 
+def deconv_layer(inp, out_channels, filter_size=1, strides=1, padding="same", use_bias=False, activation=None):
     with tf.name_scope("deconv_layer"):
         pad = padding
         if isinstance(padding, (list, tuple)): # if a list/tuple passed
@@ -121,10 +121,11 @@ def deconv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, pa
         out = relu_layer(tmp)
     return out
     
-def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.2):
+def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.2, batch_norm=True):
     with tf.name_scope("conv_block"):
         tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values, use_bias)
-        tmp = batch_norm_layer(tmp, training)
+        if batch_norm:
+            tmp = batch_norm_layer(tmp, training)
         out = leaky_relu_layer(tmp, alpha)
 #        out = dropout_layer(out, training, 0.3)
     return out
@@ -171,8 +172,33 @@ def dense_block_scorer(inp, training, units, use_bias=False, dropout_rate=0.0):
     return out
         
      
-    
-    
+# MCGAN
+def deconv_block_mcgan(inp, training, momentum, out_channels, filter_size=1, strides=1, padding="same", use_bias=False, batch_norm=True):
+    with tf.name_scope("deconv_block"):
+        tmp = deconv_layer(inp, out_channels, filter_size, strides, padding, use_bias)
+        if batch_norm:
+            tmp = batch_norm_layer(tmp, training, momentum)
+        out = relu_layer(tmp)
+    return out
+
+def conv_block_mcgan(inp, training, momentum, out_channels, filter_size=1, strides=1, padding="same", pad_value=-1, use_bias=False, batch_norm=True, alpha=0.3):
+    with tf.name_scope("conv_block"):
+        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_value, use_bias)
+        if batch_norm:
+            tmp = batch_norm_layer(tmp, training, momentum)
+        out = leaky_relu_layer(tmp, alpha)
+        #out = dropout_layer(tmp, training, dropout_rate)
+    return out
+
+def dense_block_mcgan(inp, training, units, dropout_rate, use_bias=False):
+    with tf.name_scope("dense_block"):
+        return dropout_layer(leaky_relu_layer(dense_layer(inp, units, use_bias)), training, dropout_rate)
+
+def batch_norm_layer_mcgan(inp, training, momentum=0.99, epsilon=0.001):
+    with tf.name_scope("batch_norm_layer"):
+        return tf.layers.batch_normalization(inputs=inp, axis=1, momentum=momentum, epsilon=epsilon,
+                                             training=training)
+
     
     
     
