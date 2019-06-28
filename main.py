@@ -243,9 +243,12 @@ def main():
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2))]
     )
 
+
+    """
     trainer.cgan_train(batch_size, input, galaxy_generator_64, other_generator_64,
                        epochs=1, steps_per_epoch_galaxy=1000/batch_size, steps_per_epoch_other=200/batch_size,
                        save_every=15, batch_processing_fct=resizer, gen_imgs=True)
+    """
 
 if __name__ == '__main__':
     main()

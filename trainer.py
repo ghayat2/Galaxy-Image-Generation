@@ -582,7 +582,6 @@ class Trainer:
         self.generate_and_save_images(seed, "epoch", nb=epochs)
 
 
-
     def vprint(self, msg):
         if self.verbose:
             print(msg)

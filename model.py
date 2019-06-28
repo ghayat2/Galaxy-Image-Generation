@@ -38,7 +38,7 @@ class BaseModel(Model):
                  checkpoint_prefix=None,
                  reload_ckpt=False,
                  disc_opt=optimizers.Adam(2e-4, beta_1=0.5),
-                 gen_opt=optimizers.Adam(1e-3, beta_1=0.5)):
+                 gen_opt=optimizers.Adam(2e-4, beta_1=0.5)):
         """
 
         :param data_shape: input data shape
@@ -1379,7 +1379,7 @@ class MounirRegressor2(BaseModel):
         self.scorer.compile(loss=losses.MeanAbsoluteError(), optimizer=self.score_opt)
 
     def make_onethousand(self):
-
+        model = tf.keras.Sequential()
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -1448,6 +1448,8 @@ class MounirRegressor2(BaseModel):
         model.add(layers.LeakyReLU())
 
     def make_twofifty(self):
+        model = tf.keras.Sequential()
+
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -1509,6 +1511,8 @@ class MounirRegressor2(BaseModel):
         return model
 
     def make_sixtyfour(self):
+        model = tf.keras.Sequential()
+
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -2006,6 +2010,17 @@ class MCGAN(BaseModel):
     def load_nets(self):
         self.discriminator.load_weights(os.path.join(self.out_dir, "discriminator_weights"))
         self.generator.load_weights(os.path.join(self.out_dir, "generator_weights"))
+
+    def discriminator_loss(self, real_output, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        real_loss = tf.reduce_mean(tf.math.squared_difference(real_output, label))
+        fake_loss = tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0 - label))
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+    def generator_loss(self, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        return tf.reduce_mean(tf.math.squared_difference(fake_output, label))
 
 
 class CDCGAN(BaseModel):
