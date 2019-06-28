@@ -41,10 +41,10 @@ class DCGAN:
                 inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
                 inp = layers.max_pool_layer(inp, pool_size=(2,2), strides=(2,2))
 
-            conv1 = layers.conv_block_dcgan(inp, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=True, alpha=0.3) # shape=(batch_size, 128, 32, 32)
-            conv2 = layers.conv_block_dcgan(conv1, training, out_channels=256, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=True, alpha=0.3) # shape=(batch_size, 256, 16, 16)
-            conv3 = layers.conv_block_dcgan(conv2, training, out_channels=512, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=True, alpha=0.3) # shape=(batch_size, 512, 8, 8)
-            conv4 = layers.conv_block_dcgan(conv3, training, out_channels=1024, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=True, alpha=0.3) # shape=(batch_size, 1024, 4, 4)
+            conv1 = layers.conv_block_dcgan(inp, training, out_channels=128, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=False, alpha=0.3) # shape=(batch_size, 128, 32, 32)
+            conv2 = layers.conv_block_dcgan(conv1, training, out_channels=256, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=False, alpha=0.3) # shape=(batch_size, 256, 16, 16)
+            conv3 = layers.conv_block_dcgan(conv2, training, out_channels=512, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=False, alpha=0.3) # shape=(batch_size, 512, 8, 8)
+            conv4 = layers.conv_block_dcgan(conv3, training, out_channels=1024, filter_size=(4, 4), strides=(2, 2), padding=(1, 1), use_bias=False, alpha=0.3) # shape=(batch_size, 1024, 4, 4)
             flat = tf.reshape(conv4, [-1, 1024*4*4])
             logits = layers.dense_layer(flat, units=2, use_bias=True)
             
