@@ -320,7 +320,7 @@ with tf.Session(config=config) as sess:
                     max_val = image.max()
                     plt.imshow(image, cmap='gray', vmin=0, vmax=255)  # plot the image on the selected cell
                     plt.axis('off')
-                    plt.title("min: {}, max: {}".format(min_val, max_val))
+                    plt.title("min: {}, max: {}, label: {}".format(min_val, max_val, feats_test[j]))
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val)))  # save image to dir
                 plt.close()
 
