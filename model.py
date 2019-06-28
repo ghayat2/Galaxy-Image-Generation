@@ -32,7 +32,7 @@ class BaseModel(Model):
         super(BaseModel, self).__init__()
         self.data_shape = data_shape
         self.noise_dim = noise_dim
-        self.disc_dropout = 0.5
+        self.disc_dropout = 0.3
         self.gen_dropout = 0.2
         self.scoring_l2_regularisation = 1e-3
 
@@ -41,6 +41,8 @@ class BaseModel(Model):
         self.generator_optimizer = optimizers.Adam(1e-3)
         self.discriminator_optimizer = optimizers.Adam(1e-4)
         self.loss = losses.BinaryCrossentropy(from_logits=True)
+
+        self.__name__ = 'basemodel'
 
         self.checkpoint = None
         self.checkpoint_dir = None
@@ -68,7 +70,7 @@ class BaseModel(Model):
         model.add(layers.Dense(5*5*256, use_bias=False, input_shape=(self.noise_dim,)))
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.gen_dropout))
+        #model.add(layers.Dropout(self.gen_dropout))
 
         model.add(layers.Reshape((5, 5, 256)))
         assert model.output_shape == (None, 5, 5, 256) # Note: None is the batch size
@@ -77,13 +79,13 @@ class BaseModel(Model):
         assert model.output_shape == (None, 5, 5, 128)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.gen_dropout))
+        #model.add(layers.Dropout(self.gen_dropout))
 
         model.add(layers.Conv2DTranspose(64, (5, 5), strides=(5, 5), padding='same', use_bias=False))
         assert model.output_shape == (None, 25, 25, 64)
         model.add(layers.BatchNormalization(momentum=0.8))
         model.add(layers.LeakyReLU())
-        model.add(layers.Dropout(self.gen_dropout))
+        #model.add(layers.Dropout(self.gen_dropout))
 
         model.add(layers.Conv2DTranspose(32, (3, 3), strides=(1, 1), padding='same', use_bias=False))
         assert model.output_shape == (None, 25, 25, 32)
@@ -220,6 +222,17 @@ class BaseModel(Model):
     def generator_loss(self, fake_output):
         #return self.loss(tf.ones_like(fake_output), fake_output)
         return tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0))
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.generator.save(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.save(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self .generator.load_weights(os.path.join(dest_dir, "generator_" + self.__name__))
+        self.discriminator.load_weights(os.path.join(dest_dir, "discriminator_" + self.__name__))
+
 
 class BaseFusedModel(Model):
 
@@ -1564,56 +1577,56 @@ class MounirRegressor2(BaseModel):
         #1024
 
         pl_1024_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(base_pad)      
-        c_1024_1 = layers.Conv2D(8, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_1)
+        c_1024_1 = layers.Conv2D(1, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_1)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_1 = layers.BatchNormalization()(c_1024_1)
         lr_1024_1 = layers.LeakyReLU()(bn_1024_1)
         dr_1024_1 = layers.Dropout(0.3)(lr_1024_1)
 
         pl_1024_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_1)      
-        c_1024_2 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_2)
+        c_1024_2 = layers.Conv2D(2, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_2)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_2 = layers.BatchNormalization()(c_1024_2)
         lr_1024_2 = layers.LeakyReLU()(bn_1024_2)
         dr_1024_2 = layers.Dropout(0.3)(lr_1024_2)
 
         pl_1024_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_2)      
-        c_1024_3 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_3)
+        c_1024_3 = layers.Conv2D(4, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_3)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_3 = layers.BatchNormalization()(c_1024_3)
         lr_1024_3 = layers.LeakyReLU()(bn_1024_3)
         dr_1024_3 = layers.Dropout(0.3)(lr_1024_3)
         
         pl_1024_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_3)      
-        c_1024_4 = layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_4)
+        c_1024_4 = layers.Conv2D(8, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_4)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_4 = layers.BatchNormalization()(c_1024_4)
         lr_1024_4 = layers.LeakyReLU()(bn_1024_4)
         dr_1024_4 = layers.Dropout(0.3)(lr_1024_4)
 
         pl_1024_5 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_4)      
-        c_1024_5 = layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_5)
+        c_1024_5 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_5)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_5 = layers.BatchNormalization()(c_1024_5)
         lr_1024_5 = layers.LeakyReLU()(bn_1024_5)
         dr_1024_5 = layers.Dropout(0.3)(lr_1024_5)
         
         pl_1024_6 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_5)      
-        c_1024_6 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_6)
+        c_1024_6 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_6)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_6 = layers.BatchNormalization()(c_1024_6)
         lr_1024_6 = layers.LeakyReLU()(bn_1024_6)
         dr_1024_6 = layers.Dropout(0.3)(lr_1024_6)
 
         pl_1024_7 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_6)      
-        c_1024_7 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_7)
+        c_1024_7 = layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_7)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_7 = layers.BatchNormalization()(c_1024_7)
         lr_1024_7 = layers.LeakyReLU()(bn_1024_7)
         dr_1024_7 = layers.Dropout(0.3)(lr_1024_7)
 
         pl_1024_8 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_1024_7)      
-        c_1024_8 = layers.Conv2D(16, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_8)
+        c_1024_8 = layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_1024_8)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_1024_8 = layers.BatchNormalization()(c_1024_8)
         lr_1024_8 = layers.LeakyReLU()(bn_1024_8)
@@ -1627,52 +1640,52 @@ class MounirRegressor2(BaseModel):
 
         #256
 
-        pool_256_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
-        pool_256_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_256_1)
+        # pool_256_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
+        # pool_256_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_256_1)
 
-        pl_256_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(pool_256_2)      
-        c_256_1 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_1)
+        pl_256_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(base_pad)      
+        c_256_1 = layers.Conv2D(2, (8, 8), strides=(4, 4), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_1)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_256_1 = layers.BatchNormalization()(c_256_1)
         lr_256_1 = layers.LeakyReLU()(bn_256_1)
         dr_256_1 = layers.Dropout(0.3)(lr_256_1)
 
         pl_256_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_1)      
-        c_256_2 = layers.Conv2D(64, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_2)
+        c_256_2 = layers.Conv2D(8, (8, 8), strides=(4, 4), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_2)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_256_2 = layers.BatchNormalization()(c_256_2)
         lr_256_2 = layers.LeakyReLU()(bn_256_2)
         dr_256_2 = layers.Dropout(0.3)(lr_256_2)
 
         pl_256_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_2)      
-        c_256_3 = layers.Conv2D(128, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_3)
+        c_256_3 = layers.Conv2D(32, (8, 8), strides=(4, 4), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_3)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_256_3 = layers.BatchNormalization()(c_256_3)
         lr_256_3 = layers.LeakyReLU()(bn_256_3)
         dr_256_3 = layers.Dropout(0.3)(lr_256_3)
         
         pl_256_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_3)      
-        c_256_4 = layers.Conv2D(256, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_4)
+        c_256_4 = layers.Conv2D(128, (8, 8), strides=(4, 4), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_4)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_256_4 = layers.BatchNormalization()(c_256_4)
         lr_256_4 = layers.LeakyReLU()(bn_256_4)
         dr_256_4 = layers.Dropout(0.3)(lr_256_4)
 
-        pl_256_5 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_4)      
-        c_256_5 = layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_5)
-        # assert model.output_shape == (None, 128, 128, 32)
-        bn_256_5 = layers.BatchNormalization()(c_256_5)
-        lr_256_5 = layers.LeakyReLU()(bn_256_5)
-        dr_256_5 = layers.Dropout(0.3)(lr_256_5)
+        # pl_256_5 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_4)      
+        # c_256_5 = layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_5)
+        # # assert model.output_shape == (None, 128, 128, 32)
+        # bn_256_5 = layers.BatchNormalization()(c_256_5)
+        # lr_256_5 = layers.LeakyReLU()(bn_256_5)
+        # dr_256_5 = layers.Dropout(0.3)(lr_256_5)
         
-        pl_256_6 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_5)      
-        c_256_6 = layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_6)
-        # assert model.output_shape == (None, 128, 128, 32)
-        bn_256_6 = layers.BatchNormalization()(c_256_6)
-        lr_256_6 = layers.LeakyReLU()(bn_256_6)
-        dr_256_6 = layers.Dropout(0.3)(lr_256_6)
+        # pl_256_6 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_256_5)      
+        # c_256_6 = layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_256_6)
+        # # assert model.output_shape == (None, 128, 128, 32)
+        # bn_256_6 = layers.BatchNormalization()(c_256_6)
+        # lr_256_6 = layers.LeakyReLU()(bn_256_6)
+        # dr_256_6 = layers.Dropout(0.3)(lr_256_6)
 
-        flat_256 = layers.Flatten()(dr_256_6)
+        flat_256 = layers.Flatten()(dr_256_4)
         
         dense_256_l = layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(flat_256)
         dense_256_dr = layers.Dropout(0.5)(dense_256_l)
@@ -1680,40 +1693,40 @@ class MounirRegressor2(BaseModel):
 
         #64
 
-        pool_64_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
-        pool_64_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_1)
-        pool_64_3 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_2)
-        pool_64_4 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_3)
+        # pool_64_1 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(base_pad)
+        # pool_64_2 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_1)
+        # pool_64_3 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_2)
+        # pool_64_4 = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(pool_64_3)
 
-        pl_64_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(pool_64_4)      
-        c_64_1 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_1)
+        pl_64_1 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(base_pad)      
+        c_64_1 = layers.Conv2D(8, (16, 16), strides=(8, 8), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_1)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_64_1 = layers.BatchNormalization()(c_64_1)
         lr_64_1 = layers.LeakyReLU()(bn_64_1)
         dr_64_1 = layers.Dropout(0.3)(lr_64_1)
 
         pl_64_2 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_1)      
-        c_64_2 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_2)
+        c_64_2 = layers.Conv2D(128, (16, 16), strides=(8, 8), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_2)
         # assert model.output_shape == (None, 128, 128, 32)
         bn_64_2 = layers.BatchNormalization()(c_64_2)
         lr_64_2 = layers.LeakyReLU()(bn_64_2)
         dr_64_2 = layers.Dropout(0.3)(lr_64_2)
 
-        pl_64_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_2)      
-        c_64_3 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_3)
-        # assert model.output_shape == (None, 128, 128, 32)
-        bn_64_3 = layers.BatchNormalization()(c_64_3)
-        lr_64_3 = layers.LeakyReLU()(bn_64_3)
-        dr_64_3 = layers.Dropout(0.3)(lr_64_3)
+        # pl_64_3 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_2)      
+        # c_64_3 = layers.Conv2D(512, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_3)
+        # # assert model.output_shape == (None, 128, 128, 32)
+        # bn_64_3 = layers.BatchNormalization()(c_64_3)
+        # lr_64_3 = layers.LeakyReLU()(bn_64_3)
+        # dr_64_3 = layers.Dropout(0.3)(lr_64_3)
         
-        pl_64_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_3)      
-        c_64_4 = layers.Conv2D(32, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_4)
-        # assert model.output_shape == (None, 128, 128, 32)
-        bn_64_4 = layers.BatchNormalization()(c_64_4)
-        lr_64_4 = layers.LeakyReLU()(bn_64_4)
-        dr_64_4 = layers.Dropout(0.3)(lr_64_4)
+        # pl_64_4 = layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [1, 1], [1, 1]], constant_values=-1))(dr_64_3)      
+        # c_64_4 = layers.Conv2D(1024, (4, 4), strides=(2, 2), use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(pl_64_4)
+        # # assert model.output_shape == (None, 128, 128, 32)
+        # bn_64_4 = layers.BatchNormalization()(c_64_4)
+        # lr_64_4 = layers.LeakyReLU()(bn_64_4)
+        # dr_64_4 = layers.Dropout(0.3)(lr_64_4)
 
-        flat_64 = layers.Flatten()(dr_64_4)
+        flat_64 = layers.Flatten()(dr_64_2)
         
         dense_64_l = layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer)(flat_64)
         dense_64_dr = layers.Dropout(0.5)(dense_64_l)
@@ -1879,3 +1892,225 @@ class MounirRegressor(BaseModel):
 
     def load_nets(self, dest_dir="./saved_models"):
         self.scorer.load_weights(os.path.join(dest_dir, "scoring_" + self.__name__))
+
+class CAE(tf.keras.Model):
+    def __init__(self, data_shape, latent_dim, feat_dim=34, learning_rate=1e-4, name="default_cae_name"):
+        super(CAE, self).__init__()
+        self.data_shape = data_shape
+        self.latent_dim = latent_dim
+        self.feat_dim = feat_dim
+        self.loss = losses.MeanSquaredError()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.scoring = None
+        self.__name__ = name
+
+        self.make_autoencoder()
+
+    def make_autoencoder(self):
+        input_img = layers.Input(shape=self.data_shape)
+        conv_1 = layers.Conv2D(filters=32, kernel_size=20, strides=(5, 5), activation='relu', padding="same")(input_img)
+        conv_2 = layers.Conv2D(filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same")(conv_1)
+        flat_1 = layers.Flatten()(conv_2)
+        d1 = layers.Dense(units=256, activation='relu')(flat_1)
+
+        encoded = layers.Dense(self.latent_dim)(d1)
+        encoded_input = layers.Input(shape=self.latent_dim)
+        input_manual = layers.Input(shape=self.feat_dim)
+        latent = layers.concatenate([encoded_input, input_manual])
+
+        d2 = layers.Dense(units=256, activation='relu')(latent)
+        d3 = layers.Dense(units=40*40*32, activation='relu')(d2)
+        reshape_l = layers.Reshape(target_shape=(40, 40, 32))(d3)
+        conv_t_1 = layers.Conv2DTranspose(filters=32,kernel_size=10,strides=(5, 5),padding="same",activation='relu')(reshape_l)
+        decoded = layers.Conv2DTranspose(filters=1,kernel_size=20,strides=(5, 5),padding="same",activation='linear')(conv_t_1)
+
+        self.encoder = models.Model(input_img, encoded)
+        self.decoder = models.Model([encoded_input, input_manual], decoded)
+        self.autoencoder = models.Model([input_img, input_manual], self.decoder([self.encoder(input_img), input_manual]))
+
+        self.autoencoder.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.autoencoder.save_weights(os.path.join(dest_dir, "autoencoder_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.save_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self.autoencoder.load_weights(os.path.join(dest_dir, "autoencoder_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.load_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
+
+    def compile_scoring(self, optimizer=None):
+        self.scoring = tf.keras.models.clone_model(self.inference_net)
+        self.make_scoring_model(self.scoring)
+        optim = optimizer if optimizer is not None else self.optimizer
+        self.scoring.compile(loss='mean_squared_error', optimizer=optim, metrics=["mse"])
+
+    @staticmethod
+    def make_scoring_model(model):
+        model.pop()
+
+        model.add(layers.Dense(100))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+        model.add(layers.Dropout(0.3))
+
+        model.add(layers.Dense(1))
+
+        return model
+
+    def set_name(self, name):
+        self.__name__ = name
+
+class MCVAE(tf.keras.Model):
+    def __init__(self, data_shape, latent_dim, feat_dim, learning_rate=1e-3, name="default_mcvae_name"):
+        super(MCVAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.feat_dim = feat_dim
+        self.data_shape = data_shape
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.scoring = None
+        self.__name__ = name
+
+        self.make_vae()
+
+    def make_vae(self):
+        input_img = layers.Input(shape=self.data_shape)
+        conv_1 = layers.Conv2D(filters=32, kernel_size=20, strides=(5, 5), activation='relu', padding="same")(input_img)
+        conv_2 = layers.Conv2D(filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same")(conv_1)
+        flat_1 = layers.Flatten()(conv_2)
+        d1 = layers.Dense(units=256, activation='relu')(flat_1)
+
+        encoded = layers.Dense(self.latent_dim + self.latent_dim)(d1)
+        encoded_input = layers.Input(shape=self.latent_dim)
+        input_manual = layers.Input(shape=self.feat_dim)
+        latent = layers.concatenate([encoded_input, input_manual])
+
+        d2 = layers.Dense(units=256, activation='relu')(latent)
+        d3 = layers.Dense(units=40*40*32, activation='relu')(d2)
+        reshape_l = layers.Reshape(target_shape=(40, 40, 32))(d3)
+        conv_t_1 = layers.Conv2DTranspose(filters=32,kernel_size=10,strides=(5, 5),padding="same",activation='relu')(reshape_l)
+        decoded = layers.Conv2DTranspose(filters=1,kernel_size=20,strides=(5, 5),padding="same",activation='linear')(conv_t_1)
+
+        self.inference_net = models.Model(input_img, encoded)
+        self.generative_net = models.Model([encoded_input, input_manual], decoded)
+
+    def set_untrainable(self):
+        for layer in self.generative_net.layers:
+            layer.trainable = False
+        for layer in self.inference_net.layers:
+            layer.trainable = False
+
+    # def sample(self, eps=None):
+    #     if eps is None:
+    #         eps = tf.random.normal(shape=(1, self.latent_dim))
+    #     return self.decode(eps, apply_sigmoid=True)
+
+    def encode(self, x):
+        mean, logvar = tf.split(self.inference_net(x), num_or_size_splits=2, axis=1)
+        return mean, logvar
+
+    def reparameterize(self, mean, logvar):
+        eps = tf.random.normal(shape=mean.shape) #sample from normal distribution
+        return eps * tf.exp(logvar * .5) + mean
+
+    def decode(self, z, manual, apply_sigmoid=False):
+        logits = self.generative_net([z.astype(np.float32), manual.astype(np.float32)])
+        if apply_sigmoid:
+            probs = tf.sigmoid(logits)
+            return probs
+
+        return logits
+
+    def log_normal_pdf(self, sample, mean, logvar, raxis=1):
+        log2pi = tf.math.log(2. * np.pi)
+        return tf.reduce_sum(
+            -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+            axis=raxis)
+
+    def compute_loss(self, x, manual):
+        mean, logvar = self.encode(x)
+        z = self.reparameterize(mean, logvar).numpy()
+        x_logit = self.decode(z, manual)
+        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+        logpx_z = -tf.reduce_mean(cross_ent, axis=[1, 2, 3])
+        logpz = self.log_normal_pdf(z, 0., 0.)
+        logqz_x = self.log_normal_pdf(z, mean, logvar)
+
+        def log_likelihood_loss(X_reconstruction, X_target):
+            loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=X_reconstruction, labels=X_target)
+
+            # Sum across channels and pixels, average across batch dimension
+            return tf.reduce_mean(tf.reduce_sum(loss, axis=[1, 2, 3]), axis=0)
+
+        def kld_loss(Z_mu, Z_logvar):
+            # Return the KL divergence between Z and a Gaussian prior N(0, I)
+            kld = -0.5 * tf.reduce_sum(1 + Z_logvar - Z_mu ** 2 - tf.exp(Z_logvar), axis=1)
+            # Average across batch dimension
+            return tf.reduce_mean(kld, axis=0)
+
+        loss = log_likelihood_loss(x_logit, x) + kld_loss(mean, logvar)
+        #print(f"ELBO: {}, GAB_ELBO: {loss}")
+        #print(f"log_like: {log_likelihood_loss(x_logit, x)}, kdl: {kld_loss(mean, logvar)}")
+        return loss
+
+    def compute_gradients(self, x):
+        with tf.GradientTape() as tape:
+            loss = self.compute_loss(x[0], x[1])
+        return tape.gradient(loss, self.trainable_variables), loss
+
+    def apply_gradients(self, gradients):
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    def save_nets(self, dest_dir="./saved_models"):
+        if not os.path.isdir(dest_dir):
+            os.mkdir(dest_dir)
+        self.generative_net.save_weights(os.path.join(dest_dir, "generative_net_" + self.__name__))
+        self.inference_net.save_weights(os.path.join(dest_dir, "inference_net_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.save_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
+
+    def load_nets(self, dest_dir="./saved_models"):
+        self .generative_net.load_weights(os.path.join(dest_dir, "generative_net_" + self.__name__))
+        self.inference_net.load_weights(os.path.join(dest_dir, "inference_net_" + self.__name__))
+        if self.scoring is not None:
+            self.scoring.load_weights(os.path.join(dest_dir, "scoring_net_" + self.__name__))
+
+    # def sample_and_show(self):
+    #     x_sample = self.sample()
+    #     pic = x_sample[0]
+    #     plt.figure(figsize=(10, 10))
+    #     plt.imshow(tf.squeeze(pic), cmap="gray")
+    #     plt.show()
+
+    def random_recon_and_show(self, X, manual):
+        mean, logvar = self.encode(X)
+        z = self.reparameterize(mean, logvar).numpy()
+        i = self.decode(z, manual, apply_sigmoid=True)
+        plt.figure(figsize=(10, 10))
+        plt.imshow(tf.squeeze(i), cmap="gray")
+        plt.show()
+
+    # def compile_scoring(self, optimizer=None):
+    #     self.scoring = tf.keras.models.clone_model(self.inference_net)
+    #     self.make_scoring_model(self.scoring)
+    #     optim = optimizer if optimizer is not None else self.optimizer
+    #     self.scoring.compile(loss='mean_squared_error', optimizer=optim, metrics=["mse"])
+
+    # @staticmethod
+    # def make_scoring_model(model):
+    #     model.pop()
+
+    #     model.add(layers.Dense(100))
+    #     model.add(layers.BatchNormalization(momentum=0.8))
+    #     model.add(layers.LeakyReLU())
+    #     model.add(layers.Dropout(0.3))
+
+    #     model.add(layers.Dense(1))
+
+    #     return model
+
+    def set_name(self, name):
+        self.__name__ = name

@@ -138,7 +138,6 @@ class Trainer:
         self.model.discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, self.model.discriminator_prime.trainable_variables))
         return gen_loss, disc_loss
 
-
     def train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None, gen_imgs=True):
         step = 1
         gen_loss = -1
@@ -155,15 +154,15 @@ class Trainer:
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 # gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
                 b += 1
-                if step % self.generate_every == 0:
-                    display.clear_output(wait=False)
-                    if gen_imgs:
-                        self.generate_and_save_images(seed, "step", nb = step, show=True)
+                # if step % self.generate_every == 0:
+                #     display.clear_output(wait=False)
+                #     if gen_imgs:
+                #         self.generate_and_save_images(seed, "step", nb = step, show=True)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
             if gen_imgs:
-                self.generate_and_save_images(seed, "epoch", nb = epoch, show=True)
+                self.generate_and_save_images(seed, "epoch", nb = epoch, show=True, vmin=-1)
 
             # Save the model every N epochs
             # NOTE: each checkpoint can be 400+ MB
@@ -176,6 +175,7 @@ class Trainer:
         # Generate after the final epoch
         display.clear_output(wait=False)
         self.generate_and_save_images(seed, "epoch", nb = epochs)
+
 
     def vaegan_train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None,
                      gen_imgs=True, save_ckpt=False):
@@ -326,8 +326,11 @@ class Trainer:
 
     def labeling(self, labeler, X_train, y_train, X_val, y_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
         labeler.labeler.fit(x=X_train, y=y_train, batch_size=batch_size, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=(X_val, y_val), validation_steps=val_steps)
+    
+    def autoencoding(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=1000):
+        self.model.autoencoder.fit_generator(X_train, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=X_val, validation_steps=val_steps)
 
-    def score_feats(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
+    def score_feats(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=1000):
         self.model.scorer.fit_generator(X_train, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=self.model.score_callbacks, validation_data=X_val, validation_steps=100, use_multiprocessing=True, verbose=1)
 
 
@@ -414,6 +417,42 @@ class Trainer:
                         vae.random_recon_and_show(test_batch)
                         break
                     vae.sample_and_show()
+        self.vprint(f"VAE trained for {epochs} epochs")
+
+    def mcvae_train(self, vae, train_gen, epochs=75, steps_per_epoch=1000/32, show_sample=True):
+        print(f"Steps per epochs = {steps_per_epoch}")
+        for epoch in range(1, epochs + 1):
+            self.dprint(f"epoch: {epoch}")
+            start_time = time.time()
+            b = 0
+            for batch, labels in train_gen:
+                gradients, loss = vae.compute_gradients(batch)
+                vae.apply_gradients(gradients)
+                b += 1
+                if b > steps_per_epoch:
+                    break
+            end_time = time.time()
+
+            if epoch % self.generate_every == 0:
+                loss = tf.keras.metrics.Mean()
+                c = 0
+                for test_batch, labels in train_gen:
+                    loss(vae.compute_loss(test_batch[0], test_batch[1]))
+                    if c > steps_per_epoch:
+                        break
+                    c += 1
+                elbo = -loss.result()
+                self.vprint('Epoch: {}, Test set ELBO: {}'
+                      'time elapse for current epoch {}'.format(epoch,
+                                                                elbo,
+                                                                end_time - start_time))
+                if show_sample:
+                    for test_batch, labels in train_gen:
+                        curr_im = test_batch[0][0:1]
+                        curr_man = test_batch[1][0:1]
+                        vae.random_recon_and_show(curr_im, curr_man)
+                        break
+                    # vae.sample_and_show()
         self.vprint(f"VAE trained for {epochs} epochs")
 
     def vprint(self, msg):
