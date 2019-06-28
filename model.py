@@ -26,20 +26,45 @@ class Model:
         raise NotImplementedError('subclasses must override generator_loss()')
 
 class BaseModel(Model):
+    """
+    This class is the basic GAN class.
+    """
 
-    def __init__(self, data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt=False):
-        #print("Data shape is: {}".format(data_shape))
+    def __init__(self, data_shape,
+                 noise_dim,
+                 disc_dropout=0.2,
+                 gen_dropout=0.2,
+                 checkpoint_dir=None,
+                 checkpoint_prefix=None,
+                 reload_ckpt=False,
+                 disc_opt=optimizers.Adam(2e-4, beta_1=0.5),
+                 gen_opt=optimizers.Adam(2e-4, beta_1=0.5)):
+        """
+
+        :param data_shape: input data shape
+        :param noise_dim: length of the noise inputed to the generator model
+        :param disc_dropout: discriminant dropout
+        :param gen_dropout: generator dropout
+        :param checkpoint_dir: directory where to checkpoint
+        :param checkpoint_prefix:
+        :param reload_ckpt: Bool wheather to reload a checkpoint
+        :param disc_opt: optimizer for the discriminant training
+        :param gen_opt: optimizer for the generator training
+        """
+
         super(BaseModel, self).__init__()
+
         self.data_shape = data_shape
         self.noise_dim = noise_dim
-        self.disc_dropout = 0.3
-        self.gen_dropout = 0.2
+
+        self.disc_dropout = disc_dropout
+        self.gen_dropout = gen_dropout
         self.scoring_l2_regularisation = 1e-3
 
         self.generator = self.make_generator_model()
         self.discriminator = self.make_discriminator_model()
-        self.generator_optimizer = optimizers.Adam(1e-3)
-        self.discriminator_optimizer = optimizers.Adam(1e-4)
+        self.generator_optimizer = disc_opt
+        self.discriminator_optimizer = gen_opt
         self.loss = losses.BinaryCrossentropy(from_logits=True)
 
         self.__name__ = 'basemodel'
@@ -118,37 +143,30 @@ class BaseModel(Model):
       
         model.add(layers.Conv2D(4, (3, 3), strides=(2, 2), padding='same',
                                          input_shape=self.data_shape))
-        assert model.output_shape == (None, 500, 500, 4)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(8, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 250, 250, 8)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
 
         model.add(layers.Conv2D(16, (3, 3), strides=(2, 2), padding='same'))
-        assert model.output_shape == (None, 125, 125, 16)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
 
         model.add(layers.Conv2D(32, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 25, 25, 32)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 25, 25, 64)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(128, (5, 5), strides=(5, 5), padding='same'))
-        assert model.output_shape == (None, 5, 5, 128)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
         
         model.add(layers.Conv2D(256, (3, 3), strides=(1, 1), padding='same'))
-        assert model.output_shape == (None, 5, 5, 256)
         model.add(layers.LeakyReLU())
         model.add(layers.Dropout(self.disc_dropout))
         
@@ -167,11 +185,12 @@ class BaseModel(Model):
         return model
 
 
-    ## Removes the final layer(s) of the discriminator and adds complexity
-    ## to try to predict scores on the learned representation from the
-    ## galaxy classification
-
     def to_scoring(self, reload_ckpt=False):
+        """
+        Removes the final layer(s) of the discriminator and adds complexity
+        to try to predict scores on the learned representation from the
+        galaxy classification
+        """
 
         score_ckpt_file = self.checkpoint_dir + '/weights.best.hdf5'
         #Apparently there is an issue with the outputted loss/accuracy being better than the
@@ -200,6 +219,12 @@ class BaseModel(Model):
         self.scorer.compile(loss='mean_squared_error', optimizer=self.score_opt)
 
     def make_scoring_model(self, model):
+        """
+        Transform the current discriminant into a scoring model
+        by appending a regressive MLP head
+        :param model: the model to transform
+        :return: the transformed model
+        """
         model.pop()
 
         model.add(layers.Dense(100))
@@ -211,17 +236,16 @@ class BaseModel(Model):
 
         return model
 
-    def discriminator_loss(self, real_output, fake_output):
-        #real_loss = self.loss(tf.ones_like(real_output), real_output)
-        #fake_loss = self.loss(tf.zeros_like(fake_output), fake_output)
-        real_loss = tf.reduce_mean(tf.math.squared_difference(real_output, 1.0))
-        fake_loss = tf.reduce_mean(tf.square(fake_output))
+    def discriminator_loss(self, real_output, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        real_loss = tf.reduce_mean(tf.math.squared_difference(real_output, label))
+        fake_loss = tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0 - label))
         total_loss = real_loss + fake_loss
         return total_loss
 
-    def generator_loss(self, fake_output):
-        #return self.loss(tf.ones_like(fake_output), fake_output)
-        return tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0))
+    def generator_loss(self, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        return tf.reduce_mean(tf.math.squared_difference(fake_output, label))
 
     def save_nets(self, dest_dir="./saved_models"):
         if not os.path.isdir(dest_dir):
@@ -364,11 +388,11 @@ class ImageRegressor(BaseModel):
 
         return model
 
-class CGAN(Model):
+class LCGAN(Model):
     def __init__(self, data_shape, noise_dim, checkpoint_dir=None, checkpoint_prefix=None, reload_ckpt=False,
                  p_galaxy=0.8):
         #print("Data shape is: {}".format(data_shape))
-        super(CGAN, self).__init__()
+        super(LCGAN, self).__init__()
         self.data_shape = data_shape
         self.noise_dim = noise_dim
         self.disc_dropout = 0.5
@@ -762,7 +786,7 @@ class CVAE(tf.keras.Model):
                   filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same"),
               tf.keras.layers.Flatten(),
               # No activation
-              tf.keras.layers.Dense(units=256, activation='relu'),
+              #tf.keras.layers.Dense(units=256, activation='relu'),
               tf.keras.layers.Dense(latent_dim + latent_dim)
             ]
         )
@@ -770,7 +794,7 @@ class CVAE(tf.keras.Model):
         self.generative_net = tf.keras.Sequential(
             [
                 tf.keras.layers.InputLayer(input_shape=(latent_dim,)),
-                tf.keras.layers.Dense(units=256, activation='relu'),
+                #tf.keras.layers.Dense(units=256, activation='relu'),
                 tf.keras.layers.Dense(units=40*40*32, activation='relu'),
                 tf.keras.layers.Reshape(target_shape=(40, 40, 32)),
                 tf.keras.layers.Conv2DTranspose(
@@ -1018,9 +1042,9 @@ class VAEGAN(BaseModel):
     def __init__(self, vae, data_shape=None, noise_dim=None, checkpoint_dir=None, checkpoint_prefix=None,
                  reload_ckpt=False, name="VEAGAN_default"):
         if noise_dim is None:
-            noise_dim = vae.inferense_net.output_shape
+            noise_dim = vae.inference_net.output_shape
         if data_shape is None:
-            data_shape = vae.inferense_net.output_shape
+            data_shape = vae.inference_net.output_shape
         self.vae = vae
         self.vae.set_untrainable()
         self.__name__ = name
@@ -1369,7 +1393,7 @@ class MounirRegressor2(BaseModel):
         self.scorer.compile(loss=losses.MeanAbsoluteError(), optimizer=self.score_opt)
 
     def make_onethousand(self):
-
+        model = tf.keras.Sequential()
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -1438,6 +1462,8 @@ class MounirRegressor2(BaseModel):
         model.add(layers.LeakyReLU())
 
     def make_twofifty(self):
+        model = tf.keras.Sequential()
+
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -1499,6 +1525,8 @@ class MounirRegressor2(BaseModel):
         return model
 
     def make_sixtyfour(self):
+        model = tf.keras.Sequential()
+
         model.add(layers.Input(shape=self.data_shape))
 
         model.add(layers.Lambda(lambda x: tf.pad(x, [[0, 0], [0, 0], [12, 12], [12, 12]], constant_values=-1)))        
@@ -2114,3 +2142,269 @@ class MCVAE(tf.keras.Model):
 
     def set_name(self, name):
         self.__name__ = name
+
+class MCGAN(BaseModel):
+    def __init__(self, data_shape, noise_dim, feat_dim=1, checkpoint_dir=None, checkpoint_prefix=None, reload_ckpt=False):
+        #print("Data shape is: {}".format(data_shape))
+        self.feat_dim = feat_dim
+        super(MCGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+        self.global_seed = 5
+        self.initializer = glorot_normal(seed=self.global_seed)
+        self.out_dir = "./MCGAN/"
+
+        self.conv_disc = self.make_conv_disc(tf.keras.Sequential())
+        self.man_disc = self.make_manual_model()
+        self.discriminator = self.fuse_models()
+
+        self.generator = self.make_generator_model()
+
+    def make_conv_disc(self, model):
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(1024, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Flatten())
+
+        model.add(
+            layers.Dense(128, use_bias=True, kernel_initializer=self.initializer, bias_initializer=self.initializer))
+        model.add(layers.Dropout(self.disc_dropout))
+        model.add(layers.LeakyReLU())
+
+        return model
+
+    def make_manual_model(self):
+        model = keras.Sequential()
+        """
+        model.add(layers.Dense(20, activation='relu', input_shape=(self.feat_dim,), trainable=True))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+        model.add(layers.Dense(15, activation='relu', trainable=True))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+        
+        """
+        model.add(layers.Dense(3, activation='relu', trainable=True, input_shape=(self.feat_dim, )))
+        model.add(layers.BatchNormalization(momentum=0.8, trainable=True))
+        model.add(layers.Dropout(self.disc_dropout, trainable=True))
+
+
+        model.add(layers.Dense(1, trainable=True))
+
+        #model.load_weights(os.path.join("./saved_models", "scoring_" + 'default_score_predictor'))
+        return model
+
+    def fuse_models(self):
+        combined = layers.concatenate([self.conv_disc.output, self.man_disc.output])
+        z = layers.Dense(1, use_bias=True)(combined)
+
+        return models.Model(inputs=[self.conv_disc.input, self.man_disc.input], outputs=z)
+
+    def make_generator_model(self):
+        model = keras.Sequential()
+
+        model.add(layers.Dense(4 * 4 * 1024, use_bias=False, input_shape=(self.noise_dim + self.feat_dim,)))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Reshape((4, 4, 1024)))
+
+        model.add(layers.Conv2DTranspose(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(1, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.Activation("tanh"))
+
+        return model
+
+    def save_nets(self):
+        self.discriminator.save_weights(os.path.join(self.out_dir, "discriminator_weights"))
+        self.generator.save_weights(os.path.join(self.out_dir, "generator_weights"))
+
+    def load_nets(self):
+        self.discriminator.load_weights(os.path.join(self.out_dir, "discriminator_weights"))
+        self.generator.load_weights(os.path.join(self.out_dir, "generator_weights"))
+
+    def discriminator_loss(self, real_output, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        real_loss = tf.reduce_mean(tf.math.squared_difference(real_output, label))
+        fake_loss = tf.reduce_mean(tf.math.squared_difference(fake_output, 1.0 - label))
+        total_loss = real_loss + fake_loss
+        return total_loss
+
+    def generator_loss(self, fake_output, flip=False):
+        label = 0.0 if flip else 1.0
+        return tf.reduce_mean(tf.math.squared_difference(fake_output, label))
+
+
+class CDCGAN(BaseModel):
+    def __init__(self, data_shape, noise_dim, feat_dim=1, checkpoint_dir=None, checkpoint_prefix=None,
+                 reload_ckpt=False):
+        # print("Data shape is: {}".format(data_shape))
+        self.feat_dim = feat_dim
+        super(CDCGAN, self).__init__(data_shape, noise_dim, checkpoint_dir, checkpoint_prefix, reload_ckpt)
+        self.global_seed = 5
+        self.initializer = glorot_normal(seed=self.global_seed)
+        self.out_dir = "./MCGAN/"
+
+
+    def make_discriminator_model(self):
+        model = tf.keras.Sequential()
+        model.add(layers.Input(shape=self.data_shape))
+
+        model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(tf.keras.layers.Dropout(rate=0.4))
+        model.add(layers.LeakyReLU())
+
+        model.add(layers.Conv2D(1, (4, 4), strides=(1, 1), padding='valid', use_bias=True))
+        model.add(tf.keras.layers.Activation("sigmoid"))
+
+        return model
+
+
+    def make_generator_model(self):
+        model = keras.Sequential()
+
+        model.add(tf.keras.layers.Input(shape=(self.noise_dim+self.feat_dim,)))
+        """
+        model.add(layers.Conv2DTranspose(512, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+        """
+
+        model.add(layers.Dense(units=512*4*4, use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+        model.add(tf.keras.layers.Reshape(target_shape=(4, 4, 512)))
+
+        model.add(layers.Conv2DTranspose(256, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.BatchNormalization(momentum=0.8))
+        model.add(layers.ReLU())
+
+        model.add(layers.Conv2DTranspose(1, (4, 4), strides=(2, 2), padding='same', use_bias=True))
+        model.add(layers.Activation("tanh"))
+
+        return model
+
+    def save_nets(self, path=None):
+        dir = path if path is not None else self.out_dir
+        self.discriminator.save_weights(os.path.join(dir, "discriminator_weights"))
+        self.generator.save_weights(os.path.join(dir, "generator_weights"))
+
+    def load_nets(self, path=None):
+        self.discriminator.load_weights(os.path.join(self.out_dir, "discriminator_weights"))
+        self.generator.load_weights(os.path.join(self.out_dir, "generator_weights"))
+
+class DAE(CVAE):
+    def __init__(self, latent_dim, data_shape=(1000, 1000, 1),learning_rate=1e-3, name="default_vae_name"):
+        super(CVAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.scoring = None
+        self.__name__ = name
+        self.data_shape = data_shape
+
+        self.inference_net = self.make_encoder()
+        self.generative_net = self.make_decoder()
+
+    def make_decoder(self):
+        model = tf.keras.Sequential(
+            [
+                tf.keras.layers.InputLayer(input_shape=(self.latent_dim,)),
+                tf.keras.layers.Dense(units=256, activation='relu'),
+                tf.keras.layers.Dense(units=40*40*32, activation='relu'),
+                tf.keras.layers.Reshape(target_shape=(40, 40, 32)),
+                tf.keras.layers.Conv2DTranspose(
+                  filters=32,
+                  kernel_size=10,
+                  strides=(5, 5),
+                  padding="same",
+                  activation='relu'),
+                tf.keras.layers.Conv2DTranspose(
+                  filters=1,
+                  kernel_size=20,
+                  strides=(5, 5),
+                  padding="same",
+                  activation='linear') # no activation
+            ]
+        )
+        return model
+
+    def make_encoder(self):
+        dropout_rate = 0.0
+        model =  tf.keras.Sequential(
+            [
+              tf.keras.layers.InputLayer(input_shape=(1000, 1000, 1)),
+              tf.keras.layers.Conv2D(
+                  filters=32, kernel_size=20, strides=(5, 5), activation='relu', padding="same"),
+              tf.keras.layers.Conv2D(
+                  filters=32, kernel_size=10, strides=(5, 5), activation='relu', padding="same"),
+              tf.keras.layers.Flatten(),
+              # No activation
+              tf.keras.layers.Dense(units=256, activation='relu'),
+              tf.keras.layers.Dense(self.latent_dim)
+            ]
+        )
+
+        return model
+
+    def compute_loss(self, x):
+        z = self.encode(x)
+        x_logit = self.decode(z)
+        cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=x)
+        logpx_z = tf.reduce_mean(tf.reduce_sum(cross_ent, axis=[1, 2, 3]), axis=0)
+
+        return logpx_z
+
+    def encode(self, x):
+        return self.inference_net(x)
+
+    def random_recon_and_show(self, X):
+        i = tf.expand_dims(X[np.random.choice(X.shape[0])], axis=0)
+        z = self.encode(i)
+        i = self.decode(z, apply_sigmoid=True)
+        plt.figure(figsize=(10, 10))
+        plt.imshow(tf.squeeze(i), cmap="gray")
+        plt.show()
