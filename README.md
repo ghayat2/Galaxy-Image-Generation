@@ -6,7 +6,7 @@
 ## Authors
 - Gabriel Hayat
 - Mounir Amrani
-- Hidde Lycklama à Nijeholt
+- Philipe Andreu
 - Emilien Pilloud 
 
 ## Baselines
