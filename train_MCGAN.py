@@ -70,8 +70,8 @@ FIG_SIZE = 20 # in inches
 
 # paths
 DATA_ROOT="./data"
-DATA_ROOT="/home/emilien/Documents/ETH/FS2019/CIL/projects/04/cosmology_aux_data_170429"
-DATA_ROOT="./cosmology_aux_data_170429"
+#DATA_ROOT="/home/emilien/Documents/ETH/FS2019/CIL/projects/04/cosmology_aux_data_170429"
+#DATA_ROOT="./cosmology_aux_data_170429"
 
 CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
@@ -241,7 +241,7 @@ with tf.Session(config=config) as sess:
     id_to_label = labels.to_dict(orient="index")
     id_to_label = {k: v[1] for k, v in id_to_label.items()}
 
-    labeled_images_path = os.path.join(DATA_ROOT, "labeled/1/")
+    labeled_images_path = os.path.join(DATA_ROOT, "labeled_split/1/")
     labeled_images_path = pathlib.Path(labeled_images_path)
     onlyFiles = [f for f in os.listdir(labeled_images_path) if
                  (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
