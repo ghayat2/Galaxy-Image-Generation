@@ -1,33 +1,28 @@
 import random
 import os
 import numpy as np
-import sklearn as sk
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
 import random
-import imageio
 import pathlib
 from tqdm import tqdm
+
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
 from keras.preprocessing import image as krs_image
 
-import os
 from sklearn import model_selection
 from sklearn.externals import joblib
 from sklearn.datasets import load_sample_image
-from sklearn.feature_extraction import image
 from skimage.feature import blob_doh, blob_log
 from skimage.exposure import histogram
 from skimage.feature import shape_index
 from skimage.measure import shannon_entropy
-from scipy import misc
+from sklearn import neural_network
 
-from skimage import color
-from skimage import io
 
 
 def custom_generator(images_list, manual_dict, score=True, batch_size=16):
@@ -231,16 +226,17 @@ def vae_preprocessing(image):
     """
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
-    image = image / 255.0
+    #image = image / 255.0
     return image
 
 
-def encode_scored_images(vae, generator, feature_dim=34, latent_dim=100, batch_size=16):
+def encode_scored_images(vae, generator, only_features=False, feature_dim=34, latent_dim=100, batch_size=16):
     """ Encodes every image in the generator in the latent space of the vae and saves each
     the encoded images concatenated with the features and scores to a .npy file
     :param model vae: the vae used to encode the images
     :param generator generator: the container yielding elements of size batch_size
     and containing the images to be encoded, the associated features and scores
+    :param only_features: true if the regressor must trained only on features
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     :param int batch_size: the batch size to be used
@@ -253,30 +249,41 @@ def encode_scored_images(vae, generator, feature_dim=34, latent_dim=100, batch_s
     train_data, score_data = [], []
     
     for (X_batch, features), score_batch in generator:
-      mean, logvar = vae.encode(X_batch)
-      z = vae.reparameterize(mean, logvar)      
-      z = np.reshape(np.clip(np.reshape(z, (-1)),-1e15, 1e15), (batch_size, latent_dim))
-      z = np.concatenate([z, features], axis=1)
-      train_data.append(z)
-      score_data.append(score_batch)
+        if not only_features:
+            mean, logvar = vae.encode(X_batch)
+            z = vae.reparameterize(mean, logvar)      
+            z = np.reshape(np.clip(np.reshape(z, (-1)),-1e15, 1e15), (batch_size, latent_dim))
+            z = np.concatenate([z, features], axis=1)
+            train_data.append(z)
+        else: 
+            train_data.append(features)
+        
+        score_data.append(score_batch)
       
-      if i % 50 == 0:
-        print("progression: Iteration: ", i, "time since start: ", \
+        if i % 50 == 0:
+            print("progression: Iteration: ", i, "time since start: ", \
               t.time() - start_time ," s ")
-      i = i + 1
+        i = i + 1
    
-    print("Saving latent space image representation..")
-    train_data = np.array(train_data).reshape((-1, latent_dim + feature_dim))
-    np.save("scored_images_" + str(latent_dim), train_data)
+    print("Saving computations..")
+    if not only_features:
+        train_data = np.array(train_data).reshape((-1, latent_dim + feature_dim))
+        file_name = str(os.getcwd()) + "/scored_image_"
+    else:
+        train_data = np.array(train_data).reshape((-1, feature_dim))
+        file_name = str(os.getcwd()) + "/scored_image_only_features_"
+      
+    np.save(file_name + str(latent_dim), train_data)
     score_data = np.array(score_data).reshape((-1))
     np.save("scores", score_data)
   
-def encode_query_images(vae, generator, feature_dim=34, latent_dim=100):
+def encode_query_images(vae, generator, only_features=False, feature_dim=34, latent_dim=100):
     """ Encodes every image in the generator in the latent space of the vae and saves
     the encoded images concatenated with the features to a .npy file
     :param model vae: the vae used to encode the images
     :param generator generator: the container yielding elements of size batch_size
     and containing the images to be encoded, the associated features
+    :param only_features: true if the regressor will predict only based on features    
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     :param int batch_size: the batch size to be used
@@ -288,28 +295,38 @@ def encode_query_images(vae, generator, feature_dim=34, latent_dim=100):
     i = 0
     queries = []
     for (query, features), dummy in generator:
-        mean, logvar = vae.encode(query)
-        z = vae.reparameterize(mean, logvar)  
-        z = np.concatenate([z, features], axis = 1)
-        queries.append(z)
+        if not only_features:
+            mean, logvar = vae.encode(query)
+            z = vae.reparameterize(mean, logvar)  
+            z = np.concatenate([z, features], axis = 1)
+            queries.append(z)
+        else:
+            queries.append(features)
     
-    if i %50 == 0:
-      print("iteration :", i, ", time passed", t.time() - start_time ," s,", "progression: ")
-    i+=1
+        if i %50 == 0:
+            print("iteration :", i, ", time passed", t.time() - start_time ," s")
+        i+=1
     
     print("Saving latent space image representation..")
-    queries = np.array(queries).reshape((-1, latent_dim + feature_dim))
-    np.save("query_images_" + str(latent_dim), queries)
+    if not only_features:
+        queries = np.array(queries).reshape((-1, latent_dim + feature_dim))
+        file_name = str(os.getcwd()) + "/query_image_"
+    else:
+        queries = np.array(queries).reshape((-1, feature_dim))
+        file_name = str(os.getcwd()) + "/query_image_only_features_"
 
-def train_regressor(regr, vae , generator, vae_encoded_images=False, 
+    np.save(file_name + str(latent_dim), queries)
+
+def train_regressor(regr, vae , generator, vae_encoded_images=False, only_features=False,
                    feature_dim=34, latent_dim=100, batch_size=16):
     """ Trains a regressor on the images, features and scores contained in the generator
     :param sklearn regressor regr: the regressor to be trained
     :param model vae: the vae used to encode the images in its latent space
     :param generator generator: the container yielding elements of size batch_size
     and containing the images to be encoded, the associated features and scores
-    :param bool vae_encoded_images: true if .npy files for the encoded images and scores 
+    :param bool vae_encoded_images: true if .npy files for the encoded images, features and scores 
     already exists
+    :param only_features: true if the regressor must trained only on features
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     :param int batch_size: the batch size to be used
@@ -318,9 +335,12 @@ def train_regressor(regr, vae , generator, vae_encoded_images=False,
     """
   
     if not vae_encoded_images:
-        encode_scored_images(vae, generator, feature_dim=feature_dim, latent_dim=latent_dim, batch_size=batch_size)
+        encode_scored_images(vae, generator, only_features=only_features, 
+                             feature_dim=feature_dim, latent_dim=latent_dim, batch_size=batch_size)
+     
+    file_name = str(os.getcwd()) +  "/scored_image_" if not only_features else str(os.getcwd()) + "/scored_image_only_features_"
     
-    train_data = np.load("scored_images_" + str(latent_dim) + ".npy")
+    train_data = np.load(file_name + str(latent_dim) + ".npy")
     score_data = np.load("scores.npy")
   
     print("Finished encoding: training data", np.shape(train_data), "score_data:", np.shape(score_data))
@@ -329,7 +349,7 @@ def train_regressor(regr, vae , generator, vae_encoded_images=False,
         
     return regr
               
-def predict(vae, regr, generator, query_numbers, vae_encoded_images=False, feature_dim=34, latent_dim=100):
+def predict(vae, regr, generator, query_numbers, vae_encoded_images=False, only_features=False, feature_dim=34, latent_dim=100):
     """Produces a .csv file containing the predictions of the regressor of the scores associated 
     with the images and features in the generator
     :param model vae: the vae used to encode the images in its latent space
@@ -340,12 +360,14 @@ def predict(vae, regr, generator, query_numbers, vae_encoded_images=False, featu
     in the same order
     :param bool vae_encoded_images: true if .npy files for the encoded images
     already exists
+    :param only_features: true if the regressor must predict only based on features
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     """
     
     predictions = make_predictions(vae, regr, generator, 
-                                   vae_encoded_images=vae_encoded_images, feature_dim=feature_dim, latent_dim=latent_dim)
+                                   vae_encoded_images=vae_encoded_images, only_features=only_features, 
+                                   feature_dim=feature_dim, latent_dim=latent_dim)
     predictions = np.clip(predictions, a_min=0, a_max=8)
     
     predictions = np.array(predictions).reshape((-1, 1))
@@ -358,7 +380,7 @@ def predict(vae, regr, generator, query_numbers, vae_encoded_images=False, featu
     np.savetxt("predictions.csv", indexed_predictions, header='Id,Predicted', delimiter=",", fmt='%d, %f', comments="")
         
         
-def make_predictions(regr, vae, generator, vae_encoded_images=False, feature_dim=34, latent_dim=100):
+def make_predictions(regr, vae, generator, vae_encoded_images=False, only_features=False, feature_dim=34, latent_dim=100):
     """ Returns an array containing the predicted scores of the images yielded 
     by the generator
     :param sklearn regressor regr: the regressor used to make predictions
@@ -367,23 +389,26 @@ def make_predictions(regr, vae, generator, vae_encoded_images=False, feature_dim
     and containing the images to be encoded and the associated features
     :param bool vae_encoded_images: true if .npy files for the encoded images
     already exists
+    :param only_features: true if the regressor must predict only based on features    
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     """
      
     if not vae_encoded_images:
-        encode_query_images(vae, generator, feature_dim=feature_dim, latent_dim=latent_dim)
-           
-    queries = np.load("query_images_" + str(latent_dim)+ ".npy")
+        encode_query_images(vae, generator, only_features=only_features, 
+                            feature_dim=feature_dim, latent_dim=latent_dim)
+    
+    file_name = str(os.getcwd()) + "/query_image_" if not only_features else str(os.getcwd()) + "/query_image_only_features_"
+
+    queries = np.load(file_name + str(latent_dim)+ ".npy")
     predictions = np.array(regr.predict(queries))
     print("Finished predicting: predictions", np.shape(predictions))
         
     return predictions
   
 def predict_with_regressor(vae, regr_type, scored_feature_generator, query_feature_generator,
-                           sorted_queries, vae_encoded_images=False, feature_dim=34, 
-                           latent_dim=100, batch_size=16,
-                           random_state=10, data_path="./Regressor/"):
+                           sorted_queries, vae_encoded_images=False, only_features=False, feature_dim=34, 
+                           latent_dim=100, batch_size=16, random_state=10, data_path="./Regressor/"):
     
     """ main function called from main.py to create a .csv file containing the predictions
     of the regressor on the query images
@@ -397,27 +422,28 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
     in the right order
     :param bool vae_encoded_images: true if .npy files for the encoded images
     already exists
+    :param only_features: true if the regressor must predict only based on features    
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
     :param int batch_size: the batch size to be used
     :param int random_state: the number of random states to used in the case of 
     a random forest regressor
-    :param str data_path: the path to which the model of the regressor will be saved 
-    :raises: NameError exception
+    :param str data_path: the path to which the model of the regressor will be saved  
     """
     if regr_type == "Random Forest": 
       
       base_model = RandomForestRegressor(criterion="mae", max_features=None, oob_score=True,
     												random_state = random_state) 
-      regr = model_selection.GridSearchCV(base_model, {"n_estimators": [5, 10, 50, 100]},
+      regr = model_selection.GridSearchCV(base_model, {"n_estimators": [50, 100], "max_depth": [16, 32]},
                                           verbose=5, scoring='neg_mean_absolute_error') 
     
     elif regr_type == "Ridge":
       
       base_model = linear_model.Ridge()
-      regr = model_selection.GridSearchCV(base_model, {"alpha": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100, 1000]}, verbose=5
-                                                       , scoring= 'neg_mean_absolute_error' )      
-    elif regr_type == "MLP" :            
+      regr = model_selection.GridSearchCV(base_model, {"alpha": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100, 1000]}, verbose=5, scoring= 'neg_mean_absolute_error' )      
+    
+    elif regr_type == "MLP" :
+            
       base_model = neural_network.MLPRegressor()
       regr = model_selection.GridSearchCV(base_model, param_grid={
       'learning_rate_init': [0.05, 0.01, 0.005, 0.001],
@@ -425,15 +451,17 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
       "hidden_layer_sizes": [100, 500, 1000],
       'power_t': [0.5, 0.2, 0.8],
       "activation" : ["identity", "logistic", "tanh", "relu"]})
-    else :
+    else:
       raise NameError("Unknown regressor type !")
     
     print("--Training regressor--")
-    regr = train_regressor(regr, vae, scored_feature_generator, vae_encoded_images=vae_encoded_images, feature_dim=feature_dim,
-                                         batch_size=batch_size, latent_dim=latent_dim)
+    regr = train_regressor(regr, vae, scored_feature_generator, vae_encoded_images=vae_encoded_images, 
+                           only_features=only_features, feature_dim=feature_dim,
+                           batch_size=batch_size, latent_dim=latent_dim)
     
     print("--Creating prediction.csv file--")
-    predict(regr, vae, query_feature_generator, sorted_queries, vae_encoded_images=vae_encoded_images, feature_dim=feature_dim, latent_dim=latent_dim)
+    predict(regr, vae, query_feature_generator, sorted_queries, vae_encoded_images=vae_encoded_images, 
+            only_features=only_features, feature_dim=feature_dim, latent_dim=latent_dim)
           
     if(not os.path.isdir(data_path)):
       os.mkdir(data_path)
