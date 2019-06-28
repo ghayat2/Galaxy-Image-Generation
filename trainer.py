@@ -155,15 +155,15 @@ class Trainer:
                 #print("Epoch: {}, Batch: {}, Step: {}, Gen_loss: {}, Disc_loss: {}".format(epoch, b, step, gen_loss, disc_loss))
                 # gen_loss, disc_1_loss, disc_2_loss = self.d2gan_train_step(batch, batch_size)
                 b += 1
-                if step % self.generate_every == 0:
-                    display.clear_output(wait=False)
-                    if gen_imgs:
-                        self.generate_and_save_images(seed, "step", nb = step, show=True)
+                # if step % self.generate_every == 0:
+                #     display.clear_output(wait=False)
+                #     if gen_imgs:
+                #         self.generate_and_save_images(seed, "step", nb = step, show=True)
                 step += 1
                 if(b >= steps_per_epoch):
                     break
             if gen_imgs:
-                self.generate_and_save_images(seed, "epoch", nb = epoch, show=True)
+                self.generate_and_save_images(seed, "epoch", nb = epoch, show=True, vmin=-1)
 
             # Save the model every N epochs
             # NOTE: each checkpoint can be 400+ MB
@@ -176,6 +176,7 @@ class Trainer:
         # Generate after the final epoch
         display.clear_output(wait=False)
         self.generate_and_save_images(seed, "epoch", nb = epochs)
+
 
     def vaegan_train(self, batch_size, seed, epochs=1, steps_per_epoch=2, save_every=15, batch_processing_fct=None,
                      gen_imgs=True, save_ckpt=False):
@@ -326,8 +327,11 @@ class Trainer:
 
     def labeling(self, labeler, X_train, y_train, X_val, y_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
         labeler.labeler.fit(x=X_train, y=y_train, batch_size=batch_size, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=(X_val, y_val), validation_steps=val_steps)
+    
+    def autoencoding(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=1000):
+        self.model.autoencoder.fit_generator(X_train, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch, validation_data=X_val, validation_steps=val_steps)
 
-    def score_feats(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=100):
+    def score_feats(self, X_train, X_val, batch_size=16, epochs=100, steps_per_epoch=1000, val_steps=1000):
         self.model.scorer.fit_generator(X_train, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=self.model.score_callbacks, validation_data=X_val, validation_steps=100, use_multiprocessing=True, verbose=1)
 
 
@@ -437,6 +441,8 @@ class Trainer:
             if epoch % self.generate_every == 0:
                 loss = tf.keras.metrics.Mean()
                 c = 0
+                for test_batch, labels in train_gen:
+                    loss(vae.compute_loss(test_batch[0], test_batch[1]))
                 for test_batch, labels in self.train_dataset_labeled:
                     loss(vae.compute_loss(test_batch))
                     if c > steps_per_epoch:
@@ -456,7 +462,7 @@ class Trainer:
 
     def mcgan_train_step(self, images, feats, batch_size):
         noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
-                                                          # to discriminator (i,e batch_size)
+        # to discriminator (i,e batch_size)
 
         #images = tf.expand_dims(images, 3)
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
@@ -580,8 +586,6 @@ class Trainer:
         # Generate after the final epoch
         display.clear_output(wait=False)
         self.generate_and_save_images(seed, "epoch", nb=epochs)
-
-
 
     def vprint(self, msg):
         if self.verbose:

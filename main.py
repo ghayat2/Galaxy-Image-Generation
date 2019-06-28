@@ -28,7 +28,7 @@ def del_all_flags(FLAGS):
 del_all_flags(tf.flags.FLAGS)
 
 ## REGRESSOR PROPERTIES ##
-tf.flags.DEFINE_string("regressor_type", "Random Forest", """specifies the type of regressor that will betrained on the VAE latent space 
+tf.flags.DEFINE_string("regressor_type", None, """specifies the type of regressor that will betrained on the VAE latent space 
                       and will be used to make predictionson the query image dataset
                       Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP""")
 tf.flags.DEFINE_bool("vae_encoded_images", False, "True if the images of scored and query dataset were previously encoded by the vae model")
@@ -197,7 +197,6 @@ def main():
     manual_query_dict = dict(zip(manual_query_ids, manual_query_feats))
 
     image_score_list = [os.path.join(scored_images_path, str(i) + ".png") for i in manual_score_ids]
-
     scored_feature_generator = utils.custom_generator(image_score_list, manual_score_dict)
 
     image_query_list = [os.path.join(query_images_path, str(i) + ".png") for i in manual_query_ids]
@@ -244,9 +243,12 @@ def main():
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2))]
     )
 
+
+    """
     trainer.cgan_train(batch_size, input, galaxy_generator_64, other_generator_64,
                        epochs=1, steps_per_epoch_galaxy=1000/batch_size, steps_per_epoch_other=200/batch_size,
                        save_every=15, batch_processing_fct=resizer, gen_imgs=True)
+    """
 
 if __name__ == '__main__':
     main()

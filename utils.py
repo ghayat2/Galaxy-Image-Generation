@@ -6,6 +6,8 @@ from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
 import random
+import pathlib
+from tqdm import tqdm
 
 from keras.optimizers import Adam
 from keras.models import Sequential
@@ -76,6 +78,34 @@ def gan_preprocessing(image):
     return image
 
 
+def custom_generator2(images_list, manual_dict, batch_size=16):
+    """
+    Generator that yields the images along with their hand-crafted features
+    """
+    i = 0
+    while True:
+        batch = {'images': [], 'manual': []}
+        for b in range(batch_size):
+            if i == len(images_list):
+                i = 0
+                random.shuffle(images_list)
+            # Read image from list and convert to array
+            image_path = images_list[i]
+            image_name = int(os.path.basename(image_path).replace('.png', ''))
+            image = krs_image.load_img(image_path, target_size=(1000, 1000), color_mode='grayscale')
+            image = gan_preprocessing(krs_image.img_to_array(image))
+
+            manual_features = manual_dict[image_name][20:21]
+
+            batch['images'].append(image)
+            batch['manual'].append(manual_features)
+            i += 1
+
+        batch['images'] = np.array(batch['images'])
+        batch['manual'] = np.array(batch['manual'])
+
+        yield batch['images'], batch['manual']
+
 def get_hand_crafted(one_image):
     """ Extracts various features out of the given image
     :param array one_image: the image from which features are extracted
@@ -84,7 +114,7 @@ def get_hand_crafted(one_image):
     """
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
-    blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=30, threshold=0.05)
+    blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=5, threshold=0.05)
     shape_ind = shape_index(one_image)
     shape_hist = np.histogram(shape_ind, range=(-1, 1), bins=9)
     shan_ent = shannon_entropy(one_image)
@@ -93,6 +123,90 @@ def get_hand_crafted(one_image):
     variance_val = np.var(one_image)
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val]])
     return features
+
+def features_summary(image_set, decode=True, return_ids=True):
+    features = []
+    ids = []
+    for image in tqdm(image_set):
+        if return_ids:
+            ids.append(int(str(image).split("/")[-1].split(".")[0].split("_")[-1]))
+        if decode:
+            image = color.rgb2gray(io.imread(image))
+            image = vanilla_preprocessing(image)
+        assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
+        features.append(get_hand_crafted(image))
+    features = np.array(features)
+
+    # Compute mean and variance of the features
+    mean_features = np.mean(np.copy(features), axis=0)
+    var_features = np.var(np.copy(features), axis=0)
+
+    return features, mean_features, var_features, np.array(ids)
+
+def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_imgs=None):
+    """
+    Extract manual features from images contained in dir and saves them in the out_directory
+    """
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
+    if not os.path.isdir(os.path.join(out_dir, prefix)):
+        os.mkdir(os.path.join(out_dir, prefix))
+
+    all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
+    if max_imgs and len(all_images) > max_imgs:
+        all_images = all_images[:max_imgs]
+    features, means, vars, ids = features_summary(all_images, True)
+    np.savetxt(os.path.join(out_dir, prefix, "features_{}.gz".format(prefix)), features)
+    np.savetxt(os.path.join(out_dir, prefix,  "means_{}.gz".format(prefix)), means)
+    np.savetxt(os.path.join(out_dir, prefix,  "vars_{}.gz".format(prefix)), vars)
+    np.savetxt(os.path.join(out_dir, prefix,  "ids_{}.gz".format(prefix)), ids)
+
+
+def heatmap(images_set, decode=False, shape=(1000, 1000)):
+    """
+    Given an image set, summarized it into a mean image
+    :param decode: weather the image needs to be decoded and pre-processed
+    :param shape: input shape
+    :return: the mean image
+    """
+    sum = np.zeros(shape)
+    for image in images_set:
+        if decode:
+            image = color.rgb2gray(io.imread(image))
+            image = vanilla_preprocessing(image)
+
+        assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
+        sum += image
+    sum /= len(images_set)
+    return sum
+
+def knn_diversity_stats(training_set, generated_imgs):
+    """
+    Find the k=3 nearest neighnors of an image in the training set and
+    returns the average distance
+    """
+    knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
+    knn.fit(training_set)
+
+    dists, idxs = knn.neighbors(generated_imgs)
+    return np.average(dists)
+
+def make_max_pooling_resizer():
+    """
+    Keras resizer for resizing 1000x1000 images into 64x64 max_pooled images
+    """
+    resizer = tf.keras.Sequential(
+        [tf.keras.layers.Lambda(lambda x: x + 1),
+         tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
+         tf.keras.layers.Lambda(lambda x: x - 1),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+         tf.keras.layers.Reshape(target_shape=(64, 64, 1))]
+    )
+    return resizer
+
 
 def vanilla_preprocessing(image):
     """ Normalizes the image by cliping pixels to value [0,1]
@@ -351,5 +465,6 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
           
     if(not os.path.isdir(data_path)):
       os.mkdir(data_path)
-        
-    joblib.dump(regr, data_path + regr_type)   
+
+
+    joblib.dump(regr, data_path + regr_type)
