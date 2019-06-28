@@ -9,7 +9,7 @@ import time as t
 import random
 import imageio
 import pathlib
-
+from tqdm import tqdm
 from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers.core import Dense
@@ -129,9 +129,12 @@ def get_hand_crafted(one_image):
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val]])
     return features
 
-def features_summary(image_set, decode=False):
+def features_summary(image_set, decode=True, return_ids=True):
     features = []
-    for image in image_set:
+    ids = []
+    for image in tqdm(image_set):
+        if return_ids:
+            ids.append(int(str(image).split("/")[-1].split(".")[0].split("_")[-1]))
         if decode:
             image = color.rgb2gray(io.imread(image))
             image = vanilla_preprocessing(image)
@@ -143,17 +146,25 @@ def features_summary(image_set, decode=False):
     mean_features = np.mean(np.copy(features), axis=0)
     var_features = np.var(np.copy(features), axis=0)
 
-    return features, mean_features, var_features
+    return features, mean_features, var_features, np.array(ids)
 
-def extract_and_save_features(image_dir, prefix):
+def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_imgs=None):
     """
-    Extract manual features from images contained in dir and saves them in the current directory
+    Extract manual features from images contained in dir and saves them in the out_directory
     """
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
+    if not os.path.isdir(os.path.join(out_dir, prefix)):
+        os.mkdir(os.path.join(out_dir, prefix))
+
     all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
-    features, means, vars = features_summary(all_images, True)
-    np.savetxt(prefix + "_features.gz", features)
-    np.savetxt(prefix + "_features_means.gz", means)
-    np.savetxt(prefix + "_vars.gz", vars)
+    if max_imgs and len(all_images) > max_imgs:
+        all_images = all_images[:max_imgs]
+    features, means, vars, ids = features_summary(all_images, True)
+    np.savetxt(os.path.join(out_dir, prefix, "features_{}.gz".format(prefix)), features)
+    np.savetxt(os.path.join(out_dir, prefix,  "means_{}.gz".format(prefix)), means)
+    np.savetxt(os.path.join(out_dir, prefix,  "vars_{}.gz".format(prefix)), vars)
+    np.savetxt(os.path.join(out_dir, prefix,  "ids_{}.gz".format(prefix)), ids)
 
 
 def heatmap(images_set, decode=False, shape=(1000, 1000)):
@@ -166,7 +177,7 @@ def heatmap(images_set, decode=False, shape=(1000, 1000)):
     sum = np.zeros(shape)
     for image in images_set:
         if decode:
-            image = np.array(io.imread(image), dtype=np.float)
+            image = color.rgb2gray(io.imread(image))
             image = vanilla_preprocessing(image)
 
         assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
