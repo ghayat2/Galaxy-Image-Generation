@@ -428,7 +428,6 @@ class Trainer:
             self.dprint(f"epoch: {epoch}")
             start_time = time.time()
             b = 0
-            for batch, labels in train_gen:
             for batch, labels in self.train_dataset_labeled:
                 if batch_processing_fct is not None:
                     batch = batch_processing_fct(batch)
@@ -455,14 +454,6 @@ class Trainer:
                                                                 elbo,
                                                                 end_time - start_time))
                 if show_sample:
-                    for test_batch, labels in train_gen:
-                        curr_im = test_batch[0][0:1]
-                        curr_man = test_batch[1][0:1]
-                        vae.random_recon_and_show(curr_im, curr_man)
-                        break
-                    # vae.sample_and_show()
-        self.vprint(f"VAE trained for {epochs} epochs")
-
                     for test_batch, labels in self.train_dataset_labeled:
                         vae.random_recon_and_show(test_batch)
                         break
@@ -471,7 +462,7 @@ class Trainer:
 
     def mcgan_train_step(self, images, feats, batch_size):
         noise = tf.random.normal([batch_size, self.model.noise_dim]) # number of generated images equal to number of real images provided
-                                                          # to discriminator (i,e batch_size)
+        # to discriminator (i,e batch_size)
 
         #images = tf.expand_dims(images, 3)
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:

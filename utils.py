@@ -114,7 +114,7 @@ def get_hand_crafted(one_image):
     """
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
-    blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=30, threshold=0.05)
+    blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=5, threshold=0.05)
     shape_ind = shape_index(one_image)
     shape_hist = np.histogram(shape_ind, range=(-1, 1), bins=9)
     shan_ent = shannon_entropy(one_image)
