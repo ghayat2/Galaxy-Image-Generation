@@ -9,6 +9,7 @@ import time as t
 import random
 import pathlib
 from tqdm import tqdm
+import xgboost as xgb
 
 from keras.optimizers import Adam
 from keras.models import Sequential
@@ -414,7 +415,7 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
     """ main function called from main.py to create a .csv file containing the predictions
     of the regressor on the query images
     :param model vae: the vae used to encode the images in its latent space
-    :param str regr_type: the type of sklearn regressor to used (Options: Random Forest, Ridge, MLP)
+    :param str regr_type: the type of sklearn regressor to used (Options: Random Forest, Ridge, MLP, Boost)
     :param generator scored_feature_generator: the container yielding elements of size batch_size
     and containing the images to be encoded, the associated features and the scores
     :param generator query_feature_generator: the container yielding elements of size batch_size
@@ -452,6 +453,13 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
       "hidden_layer_sizes": [100, 500, 1000],
       'power_t': [0.5, 0.2, 0.8],
       "activation" : ["identity", "logistic", "tanh", "relu"]})
+    
+    elif regr_type == "Boost":
+        
+      base_model = xgb.XGBRegressor()
+      regr = model_selection.GridSearchCV(base_model, {"colsample_bytree":[1.0],"min_child_weight":[1.0,1.2],
+                            'max_depth': [3,8, 16], 'n_estimators': [500,1000]}, verbose=1)
+    
     else:
       raise NameError("Unknown regressor type !")
     
@@ -497,4 +505,24 @@ def create_labeled_folders(data_path):
     for file, label in all_pairs:
         print(os.path.join(data_path, file))
         print(os.path.join(data_path, "{}".format(int(label)), file))
-        os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png'))
+        os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
+        
+def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
+    base_dir = os.path.dirname(in_df[path_col].values[0])
+    print('## Ignore next message from keras, values are replaced anyways')
+    df_gen = img_data_gen.flow_from_directory(base_dir, 
+                                     class_mode = 'sparse',
+                                     batch_size=batch_size,
+                                     target_size=(1000, 1000),
+                                     subset=subset,
+                                     color_mode='grayscale',
+                                    **dflow_args)
+    df_gen.filenames = in_df[path_col].values
+    df_gen._filepaths = df_gen.filenames
+    df_gen.classes = np.stack(in_df[y_col].values)
+    df_gen.samples = in_df.shape[0]
+    df_gen.n = in_df.shape[0]
+    df_gen.directory = '' # since we have the full path
+    df_gen._set_index_array()        
+    print('Reinserting dataframe: {} images'.format(in_df.shape[0]))
+    return df_gen

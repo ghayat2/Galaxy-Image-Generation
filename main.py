@@ -30,7 +30,7 @@ del_all_flags(tf.flags.FLAGS)
 ## REGRESSOR PROPERTIES ##
 tf.flags.DEFINE_string("regressor_type", None, """specifies the type of regressor that will betrained on the VAE latent space 
                       and will be used to make predictionson the query image dataset
-                      Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP""")
+                      Options: None (default: Use different model to output predictions), Random Forest, Ridge, MLP, Boost""")
 tf.flags.DEFINE_bool("vae_encoded_images", False, "True if the images of scored and query dataset were previously encoded by the vae model")
 tf.flags.DEFINE_bool("only_features", False, "Train the regressor only on manually crafted features")
 tf.flags.DEFINE_integer("feature_dim", 34, "Number of manually crafted features")
@@ -38,56 +38,6 @@ tf.flags.DEFINE_integer("latent_dim", 100, "The dimension of the latent space of
 
 FLAGS = tf.flags.FLAGS
 FLAGS(sys.argv)
-
-def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
-    base_dir = os.path.dirname(in_df[path_col].values[0])
-    print('## Ignore next message from keras, values are replaced anyways')
-    df_gen = img_data_gen.flow_from_directory(base_dir, 
-                                     class_mode = 'sparse',
-                                     batch_size=batch_size,
-                                     target_size=(1000, 1000),
-                                     subset=subset,
-                                     color_mode='grayscale',
-                                    **dflow_args)
-    df_gen.filenames = in_df[path_col].values
-    df_gen._filepaths = df_gen.filenames
-    df_gen.classes = np.stack(in_df[y_col].values)
-    df_gen.samples = in_df.shape[0]
-    df_gen.n = in_df.shape[0]
-    df_gen.directory = '' # since we have the full path
-    df_gen._set_index_array()        
-    print('Reinserting dataframe: {} images'.format(in_df.shape[0]))
-    return df_gen
-
-def create_labeled_folders(data_path):
-    """Creates two folders within the labeled folder of the cosmology_aux_data_170429 folder,
-    separating images associated to a label of 0 and of 1
-    :param str data_path: Containing the path of the cosmology_aux_data_170429 folder
-    """
-    name = "labeled"
-    labels_path = os.path.join(data_path, name + ".csv")
-    labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
-    id_to_label = labels.to_dict(orient="index")
-    id_to_label = {k: v[1] for k, v in id_to_label.items()}
-
-    labeled_images_path = os.path.join(data_path, name)
-    labeled_images_path = pathlib.Path(labeled_images_path)
-    onlyFiles = [f for f in os.listdir(labeled_images_path) if (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
-    all_indexes = [item.split('.')[0] for item in onlyFiles]
-    all_indexes = filter(None, all_indexes)
-    all_pairs = [[item, id_to_label[int(item)]] for item in all_indexes]
-
-    # Add if does not exist
-    if(~os.path.isdir(os.path.join(data_path, name, '0'))):
-        os.mkdir(os.path.join(data_path, name, '0'))
-    if(~os.path.isdir(os.path.join(data_path, name, '1'))):
-        os.mkdir(os.path.join(data_path, name, '1'))
-
-    for file, label in all_pairs:
-        print(os.path.join(data_path, file))
-        print(os.path.join(data_path, "{}".format(int(label)), file))
-        os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
-
 
 def main():
     """ The main method of our project takes care of running our model and/or 
@@ -98,7 +48,7 @@ def main():
     data_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), os.pardir, 'cosmology_aux_data_170429/'))
     tf.compat.v1.global_variables_initializer()
     #Uncomment to create folders for labeled data
-    #create_labeled_folders(data_path)
+    #utils.create_labeled_folders(data_path)
 
     ### ------------------- ###
 
@@ -156,8 +106,8 @@ def main():
     scored_df_train = pd.DataFrame(all_pairs_train, columns=['Path', 'Value'])
     scored_df_val = pd.DataFrame(all_pairs_val, columns=['Path', 'Value'])
 
-    scored_generator_train = flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
-    scored_generator_val = flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
+    scored_generator_train = utils.flow_from_dataframe(scored_datagen_train, scored_df_train, 'Path', 'Value', batch_size=batch_size, subset='training')
+    scored_generator_val = utils.flow_from_dataframe(scored_datagen_val, scored_df_val, 'Path', 'Value', batch_size=batch_size, subset='validation')
 
     ## Preprocessing data to create generators interating through the query image dataset ###
     
