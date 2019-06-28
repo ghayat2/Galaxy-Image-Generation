@@ -84,10 +84,10 @@ with tf.Session(config=config) as sess:
     images_ids = [path.split("/")[-1].split(".")[0] for path in all_paths]
     scores = np.empty([nb_images])
     
-    print("Restoring latest model from {}\n".format(CHECKPOINTS_PATH))
+    print("Restoring latest model from {}".format(CHECKPOINTS_PATH))
     saver = tf.train.Saver()
     latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINTS_PATH)
-    print("Latest checkpoint: {}".format(latest_checkpoint))
+    print("Latest checkpoint: {}\n".format(latest_checkpoint))
     saver.restore(sess, latest_checkpoint)
 
 #    sys.exit(0)

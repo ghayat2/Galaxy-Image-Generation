@@ -64,6 +64,25 @@ if os.path.exists(CLUSTER_DATA_ROOT):
 LOG_DIR = os.path.join("./LOG_COMBINED", CURR_TIMESTAMP)
 GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples")
 
+class Logger(object):  # logger to log output to both terminal and file
+    def __init__(self, log_dir):
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        self.terminal = sys.stdout
+        self.log = open(os.path.join(log_dir, "output"), "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)  
+
+    def flush(self):
+        self.log.flush()
+        self.terminal.flush()
+        pass    
+
+sys.stdout = Logger(LOG_DIR)
+
 # printing parameters
 print("\n")
 print("Run infos:")

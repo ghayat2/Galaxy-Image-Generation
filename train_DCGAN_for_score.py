@@ -20,12 +20,12 @@ tf.random.set_random_seed(global_seed)
 np.random.seed(global_seed)
 
 parser = ArgumentParser()
-parser.add_argument('-ne', '--num_epochs', type = int, default = 200, help = 'number of training epochs')
+parser.add_argument('-ne', '--num_epochs', type = int, default = 100, help = 'number of training epochs')
 parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
 parser.add_argument('-lr', '--learning_rate', type = float, default = 1e-3, help = 'learning rate for the optimizer')
 parser.add_argument('-b1', '--beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer')
 parser.add_argument('-b2', '--beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer')
-parser.add_argument('-vp', '--valid_precent', type = float, default = 0.1, help = 'percentage of the data to use for validation')
+parser.add_argument('-vp', '--valid_precent', type = float, default = 0.01, help = 'percentage of the data to use for validation')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-vdf', '--valid_iter_freq', type = int, default = 250, help = 'number of iterations between validation steps')
@@ -221,7 +221,7 @@ with tf.Session(config=config) as sess:
     
 #    print(sess.run(discr_vars[0])[0])
 
-    print("Train start ...")
+    print("Train start at {} ...".format(timestamp()))
     sys.stdout.flush()
     NUM_SAMPLES = nb_train
     NUM_VALID_SAMPLES = nb_valid
@@ -280,7 +280,7 @@ with tf.Session(config=config) as sess:
     
     global_step_val = sess.run(global_step) # get the global step value
     
-    print("Training Done. Saving model ...")
+    print("Training Done at {}. Saving model ...".format(timestamp()))
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
     

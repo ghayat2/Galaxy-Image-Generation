@@ -10,6 +10,7 @@ from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
+import patoolib
 
 global_seed=5
 
@@ -18,10 +19,14 @@ np.random.seed(global_seed)
 
 parser = ArgumentParser()
 parser.add_argument('-ne', '--num_epochs', type = int, default = 500, help = 'number of training epochs')
-parser.add_argument('-bs', '--batch_size', type = int, default = 32, help = 'size of training batch')
+parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
 parser.add_argument('-d_lr', '--disc_learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer of discriminator')
 parser.add_argument('-g_lr', '--gen_learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer of generator')
-parser.add_argument('-n_dim', '--noise_dim', type = int, default = 100, help = 'the dimension of the noise input to the generator')
+parser.add_argument('-d_b1', '--disc_beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer of discriminator')
+parser.add_argument('-d_b2', '--disc_beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer of discriminator')
+parser.add_argument('-g_b1', '--gen_beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer of generator')
+parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer of generator')
+parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -29,12 +34,14 @@ parser.add_argument('-svf', '--save_iter_freq', type = int, default = 1000, help
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
-#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
 
 def timestamp():
     return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
+
+def create_zip_code_files(output_file, submission_files):
+    patoolib.create_archive(output_file, submission_files)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -43,6 +50,10 @@ BATCH_SIZE=args.batch_size
 BATCHES_TO_PREFETCH=args.batches_to_prefetch
 G_LR = args.gen_learning_rate # learning rate for generator
 D_LR = args.disc_learning_rate # learning rate for discriminator
+G_BETA1 = args.gen_beta_1
+G_BETA2 = args.gen_beta_2
+D_BETA1 = args.disc_beta_1
+D_BETA2 = args.disc_beta_2
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
 SAMPLE_ITER_FREQ = args.sample_iter_freq
@@ -51,7 +62,6 @@ CONTINUE_TRAINING = args.continue_training
 C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
 FIG_SIZE = 20 # in inches
-#RUNNING_ON_COLAB = args.colab
 
 # paths
 DATA_ROOT="./data"
@@ -65,6 +75,25 @@ if CONTINUE_TRAINING: # continue training from last training experiment
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
 
+class Logger(object):  # logger to log output to both terminal and file
+    def __init__(self, log_dir):
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        self.terminal = sys.stdout
+        self.log = open(os.path.join(log_dir, "output"), "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)  
+
+    def flush(self):
+        self.log.flush()
+        self.terminal.flush()
+        pass    
+
+sys.stdout = Logger(LOG_DIR)
+
 # printing parameters
 print("\n")
 print("Run infos:")
@@ -72,6 +101,10 @@ print("    NUM_EPOCHS: {}".format(NUM_EPOCHS))
 print("    BATCH_SIZE: {}".format(BATCH_SIZE))
 print("    LEARNING_RATE_D: {}".format(D_LR))
 print("    LEARNING_RATE_G: {}".format(G_LR))
+print("    BETA1_D: {}".format(D_BETA1))
+print("    BETA2_D: {}".format(D_BETA2))
+print("    BETA1_G: {}".format(G_BETA1))
+print("    BETA2_G: {}".format(G_BETA2))
 print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
 print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
@@ -83,6 +116,16 @@ print("    CONTINUE_TRAINING: {}".format(CONTINUE_TRAINING))
 print("\n")
 sys.stdout.flush()
 
+files = ["data.py",
+         "layers.py",
+         "DCGAN.py",
+         "train_DCGAN.py"
+         ]
+         
+if not CONTINUE_TRAINING:
+    create_zip_code_files(os.path.join(LOG_DIR, "code.zip"), files)
+
+#sys.exit(0)
 # remove warning messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -128,9 +171,9 @@ with tf.Session(config=config) as sess:
     print("Train_op ...")
     sys.stdout.flush()
     gen_vars = model.generator_vars()
-    gen_train_op, gen_global_step = model.train_op(gen_loss, G_LR, beta1=0.9, beta2=0.999, var_list=gen_vars, scope="generator")
+    gen_train_op, gen_global_step = model.train_op(gen_loss, G_LR, beta1=G_BETA1, beta2=G_BETA2, var_list=gen_vars, scope="generator")
     discr_vars = model.discriminator_vars()
-    discr_train_op, discr_global_step = model.train_op(discr_loss, D_LR, beta1=0.9, beta2=0.999, var_list=discr_vars, scope="discriminator")
+    discr_train_op, discr_global_step = model.train_op(discr_loss, D_LR, beta1=D_BETA1, beta2=D_BETA2, var_list=discr_vars, scope="discriminator")
     
 #    sys.exit(0)
     
@@ -172,7 +215,7 @@ with tf.Session(config=config) as sess:
         tf.global_variables_initializer().run()
     
     
-    print("Train start ...")
+    print("Train start at {} ...".format(timestamp()))
     NUM_SAMPLES = nb_reals
     sys.stdout.flush()
     with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
@@ -236,7 +279,7 @@ with tf.Session(config=config) as sess:
                 
                 writer.add_summary(summary, global_step_val)
                 
-    print("Training Done. Saving model ...")
+    print("Training Done at {}. Saving model ...".format(timestamp()))
     global_step_val = sess.run(gen_global_step) # get the global step value
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
