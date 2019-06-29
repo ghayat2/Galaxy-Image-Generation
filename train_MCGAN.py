@@ -35,6 +35,7 @@ parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
+
 #parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
@@ -140,6 +141,9 @@ with tf.Session(config=config) as sess:
     # data
     # Create generator / might be temporary
     utils.create_labeled_folders(DATA_ROOT)
+    if (not os.path.isdir(os.path.join(DATA_ROOT, 'features'))) or (not os.path.isfile(os.path.join(DATA_ROOT, 'features', 'labeled_feats.gz'))) or (not os.path.isfile(os.path.join(DATA_ROOT, 'features', 'labeled_feats_ids.gz'))):
+        utils.extract_and_save_features(image_dir=os.path.join(DATA_ROOT, 'labeled'), prefix='labeled', out_dir=os.path.join(DATA_ROOT, 'features'))
+
     manual_feats = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats.gz'))
     manual_ids = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats_ids.gz')).astype(int)
 
