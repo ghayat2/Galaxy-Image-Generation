@@ -22,6 +22,7 @@ parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 
 parser.add_argument('-to_gen', '--to_generate', type = int, default = 100, help = 'the number of samples to generate')
 parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, help = 'number of stacks')
 parser.add_argument('-m', '--margin', type = float, default = 0.25, help = 'margin to add to the mean scores of training galaxies')
+parser.add_argument('-us', '--use_scorer', help = 'whether to use the scorer to filter the generated images by score', action="store_true")
 
 args = parser.parse_args()
 
@@ -37,6 +38,7 @@ NOISE_DIM=args.noise_dim
 TO_GENERATE = args.to_generate
 NB_STACKS=args.nb_stacks
 MARGIN = args.margin
+USE_SCORER=args.use_scorer
 
 # DCGAN paths
 list_of_files = glob.glob('./LOG_DCGAN/*')
@@ -94,6 +96,7 @@ print("    LOG_DIR_SCORER: {}".format(LOG_DIR_SCORER))
 print("    GENERATED_SAMPLES_DIR: {}".format(GENERATED_SAMPLES_DIR))
 print("    TO_GENERATE: {}".format(TO_GENERATE))
 print("    MARGIN: {}".format(MARGIN))
+print("    USE_SCORER: {}".format(USE_SCORER))
 print("\n")
 sys.stdout.flush()
 
@@ -144,50 +147,52 @@ with srm_graph.as_default():
     
 #sys.exit(0)
 
-scorer_graph = tf.Graph()
-scorer_sess = tf.Session(graph=scorer_graph, config=config)
-with scorer_graph.as_default():
+if USE_SCORER:
+    scorer_graph = tf.Graph()
+    scorer_sess = tf.Session(graph=scorer_graph, config=config)
+    with scorer_graph.as_default():
 
-    # data
-    galaxy_im, _, nb_galaxies, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=1, batches_to_prefetch=2, all_data=False)
-    
-    # DCGAN Scorer model
-    print("Building DCGAN Scorer model ...")
-    sys.stdout.flush()
-    im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1, 1000, 1000])
-    model1 = DCGAN()
-    _, ops = model1.discriminator_model(inp=im_pl, training=False, resize=True) # get discriminator output
+        # data
+        galaxy_im, _, nb_galaxies, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=1, batches_to_prefetch=2, all_data=False)
+        
+        # DCGAN Scorer model
+        print("Building DCGAN Scorer model ...")
+        sys.stdout.flush()
+        im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, 1, 1000, 1000])
+        model1 = DCGAN()
+        _, ops = model1.discriminator_model(inp=im_pl, training=False, resize=True) # get discriminator output
 
-    flat = ops["flat"]
-    model2 = Scorer_head()
-    scores_pred = model2.scorer_head_model(features=flat, training=False)
-    
-    print("Restoring latest model from {}".format(CHECKPOINTS_PATH_SCORER))
-    saver = tf.train.Saver()
-    latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINTS_PATH_SCORER)
-    print("Latest checkpoint: {}\n".format(latest_checkpoint))
-    saver.restore(scorer_sess, latest_checkpoint)
-    
-#sys.exit(0)
+        flat = ops["flat"]
+        model2 = Scorer_head()
+        scores_pred = model2.scorer_head_model(features=flat, training=False)
+        
+        print("Restoring latest model from {}".format(CHECKPOINTS_PATH_SCORER))
+        saver = tf.train.Saver()
+        latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINTS_PATH_SCORER)
+        print("Latest checkpoint: {}\n".format(latest_checkpoint))
+        saver.restore(scorer_sess, latest_checkpoint)
 
-print("Scoring training galaxy images")
-galaxies_scores = []
+#    sys.exit(0)
 
-with trange(nb_galaxies) as t:
-    for i in t:
-        im_val = scorer_sess.run(galaxy_im)
-        score = scorer_sess.run(scores_pred, {im_pl: im_val})
-        galaxies_scores.append(score[0,0])
-    
-galaxies_scores = np.array(galaxies_scores)
-median_score = np.median(galaxies_scores)
-mean_score = np.mean(galaxies_scores)
-print("Median score: {}".format(median_score))
-print("Mean score: {}".format(mean_score))
+    print("Scoring training galaxy images")
+    galaxies_scores = []
 
-threshold = mean_score + MARGIN
+    with trange(nb_galaxies) as t:
+        for i in t:
+            im_val = scorer_sess.run(galaxy_im)
+            score = scorer_sess.run(scores_pred, {im_pl: im_val})
+            galaxies_scores.append(score[0,0])
+        
+    galaxies_scores = np.array(galaxies_scores)
+    median_score = np.median(galaxies_scores)
+    mean_score = np.mean(galaxies_scores)
+    print("Median score: {}".format(median_score))
+    print("Mean score: {}".format(mean_score))
 
-print("Filtering images having score less than {}".format(threshold))
+    threshold = mean_score + MARGIN
+
+    print("Filtering images having score less than {}".format(threshold))
+
 #sys.exit(0)
 
 if not os.path.exists(GENERATED_SAMPLES_DIR):
@@ -207,15 +212,16 @@ while counter < TO_GENERATE:
     
 #    print(last_output.shape)
 
-    scorer_input = (last_output*2.0)-1 # renormalize to [-1, 1] to feed to scorer model
-    
-    score = scorer_sess.run(scores_pred, {im_pl: scorer_input})[0, 0]
-    
-    if score < threshold:
-        print("Filtering image with score", score)
-        continue
-    
-    print("Keeping image with score {}", score)
+    if USE_SCORER:
+        scorer_input = (last_output*2.0)-1 # renormalize to [-1, 1] to feed to scorer model
+        
+        score = scorer_sess.run(scores_pred, {im_pl: scorer_input})[0, 0]
+        
+        if score < threshold:
+            print("Filtering image with score", score)
+            continue
+        
+        print("Keeping image with score {}", score)
 
     img = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
     #--------------------------------------------------------
@@ -228,16 +234,18 @@ while counter < TO_GENERATE:
     image = Image.fromarray(img)
     filename = "img_{}".format(counter)
     image.save(os.path.join(GENERATED_SAMPLES_DIR, filename+".png"))
-
-    generated_images_scores.append(score)
-    generated_images_names.append(filename)
-    counter+=1
     
-df = pd.DataFrame(data={'Id': generated_images_names, 'Score': generated_images_scores})
+    if USE_SCORER:
+        generated_images_scores.append(score)
+        generated_images_names.append(filename)
+    counter+=1
 
-scores_file = os.path.join(LOG_DIR, "gen_images_scores.csv")
-df.to_csv(scores_file, index=False)
-print("Saved generated images scores at {}".format(scores_file))
+if USE_SCORER:
+    df = pd.DataFrame(data={'Id': generated_images_names, 'Score': generated_images_scores})
+
+    scores_file = os.path.join(LOG_DIR, "gen_images_scores.csv")
+    df.to_csv(scores_file, index=False)
+    print("Saved generated images scores at {}".format(scores_file))
     
     
     

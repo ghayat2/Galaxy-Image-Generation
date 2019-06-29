@@ -33,13 +33,13 @@ from skimage import color, io
 
 # ------------------------------------------------------------------ CUSTOM DATA GENERATORS --------------------------------------------------------------------------
 
-def custom_generator(images_list, manual_dict, do_score=True, batch_size=16):
+def custom_generator(images_list, manual_dict, features_dim, do_score=True, batch_size=16):
     """ Returns an numpy array of size batch_size containing the decoded images,
     the features associated with these images and their scores.
     
     :param array image_list: An array containing the full path of the images to be sorted below
     :param dict manual_dict: A dictionary associating the id of an image to 
-    its features ([:34]) and its score ([34])
+    its features (positions [0:features_dim]) and its score (at position features_dim)
     :param bool score: Wether the images are scored or not
     :param int batch_size: The batch_size to use
     :rtype: Numpy array
@@ -56,9 +56,9 @@ def custom_generator(images_list, manual_dict, do_score=True, batch_size=16):
             image = krs_image.load_img(image_path, target_size=(1000, 1000), color_mode='grayscale')
             image = gan_preprocessing(krs_image.img_to_array(image))
 
-            manual_features = manual_dict[image_name][:34]
+            manual_features = manual_dict[image_name][:features_dim]
 
-            score = manual_dict[image_name][34] if do_score else 0
+            score = manual_dict[image_name][features_dim] if do_score else 0
 
             batch['images'].append(image)
             batch['manual'].append(manual_features)

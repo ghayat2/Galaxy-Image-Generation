@@ -25,7 +25,7 @@ parser = ArgumentParser()
 parser.add_argument('-rt', '--regressor_type', type = str, default = None, choices=["Random_Forest", "Ridge", "MLP", "Boost"], 
                         help = 'type of regressor trained on the VAE latent space and used to make predictionson the query image dataset')
 parser.add_argument('-only_f', '--only_features', help = 'whether to train the regressor only on manually crafted features', action="store_true")   
-parser.add_argument('-f_dim', '--feature_dim', type = int, default = 34, help = 'Number of manually crafted features')
+parser.add_argument('-f_dim', '--feature_dim', type = int, default = 38, help = 'Number of manually crafted features')
 parser.add_argument('-lat_dim', '--latent_dim', type = int, default = 100, help = 'The dimension of the latent space of the vae')
 parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch for VAE')
 parser.add_argument('-vr', '--val_ratio', type = float, default = 0.1, help = 'percentage of the data to use for validation')
@@ -92,8 +92,8 @@ def main():
     ### image features need to be included in the folder given by the following path ###
     
     feature_path = os.path.join(DATA_ROOT, "features/")
-    manual_score_feats = np.loadtxt(feature_path + 'scoring_feats.gz')
-    manual_score_ids = np.loadtxt(feature_path + 'scoring_feats_ids.gz').astype(int)
+    manual_score_feats = np.loadtxt(feature_path + 'scored_feats.gz')
+    manual_score_ids = np.loadtxt(feature_path + 'scored_feats_ids.gz').astype(int)
     manual_query_feats = np.loadtxt(feature_path + 'query_feats.gz')
     manual_query_ids = np.loadtxt(feature_path + 'query_feats_ids.gz').astype(int)
 
@@ -107,10 +107,10 @@ def main():
     manual_query_dict = dict(zip(manual_query_ids, manual_query_feats))
 
     image_score_list = [os.path.join(DATA_ROOT, "scored", str(i) + ".png") for i in manual_score_ids]
-    scored_feature_generator = utils.custom_generator(image_score_list, manual_score_dict)
+    scored_feature_generator = utils.custom_generator(image_score_list, manual_score_dict, FEATURES_DIM)
 
     image_query_list = [os.path.join(DATA_ROOT, "query", str(i) + ".png") for i in manual_query_ids]
-    query_feature_generator = utils.custom_generator(image_query_list, manual_query_dict, do_score= False, batch_size=1)
+    query_feature_generator = utils.custom_generator(image_query_list, manual_query_dict, FEATURES_DIM, do_score= False, batch_size=1)
 
     print("Data generators have been created")
     
