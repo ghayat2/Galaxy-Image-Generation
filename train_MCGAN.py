@@ -71,7 +71,7 @@ FIG_SIZE = 20 # in inches
 # paths
 DATA_ROOT="./data"
 
-CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
+CLUSTER_DATA_ROOT="./cosmology_aux_data_170429"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
 LOG_DIR=os.path.join(".", "LOG_MCGAN", CURR_TIMESTAMP)
@@ -184,14 +184,14 @@ with tf.Session(config=config) as sess:
     sys.stdout.flush()
     model= MCGAN()
     fake_im, _ = model.generator_model(noise=noise_pl, feats=feats_pl, training=training_pl) # get fake images from generator
-    fake_out_D, _ = model.discriminator_model(inp=fake_im, feats=feats_pl, training=training_pl) # get discriminator output on fake images
-    real_out_D, _ = model.discriminator_model(inp=im_pl, feats=feats_pl, training=training_pl, reuse=True, resize=True) # get discriminator output on real images
+    fake_out_D, _ = model.discriminator_model(inp=fake_im, feats=feats_pl, training=training_pl, minibatch=True) # get discriminator output on fake images
+    real_out_D, _ = model.discriminator_model(inp=im_pl, feats=feats_pl, training=training_pl, reuse=True, resize=True, minibatch=True) # get discriminator output on real images
     
     # losses
     print("Losses ...")
     sys.stdout.flush()
     gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
-    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, 
+    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, label_smoothing=True, 
                                       fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
                                       real_labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
 

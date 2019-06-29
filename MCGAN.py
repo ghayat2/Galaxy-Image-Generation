@@ -40,7 +40,7 @@ class MCGAN:
         # i,e get the subgraph
         return gen_out, list_ops
 
-    def discriminator_model(self, inp, feats, training, reuse=False, resize=False):  # construct the graph of the discriminator
+    def discriminator_model(self, inp, feats, training, reuse=False, resize=False, minibatch=False):  # construct the graph of the discriminator
         a = time.time()
         with tf.variable_scope("discriminator",
                                reuse=reuse):  # define variable scope to easily retrieve vars of the discriminator
@@ -63,7 +63,12 @@ class MCGAN:
                                             padding="same", use_bias=True, alpha=0.3)  # shape=(batch_size, 1024, 4, 4)
             flat = tf.reshape(conv4, [-1, 1024 * 4 * 4])
 
-            dense1 = layers.dense_layer(flat, 128, use_bias=True)
+            if(minibatch):
+                minibatched = layers.minibatch(flat)
+                dense1 = layers.dense_layer(minibatched, 128, use_bias=True)
+            else:
+                dense1 = layers.dense_layer(flat, 128, use_bias=True)
+            
             drop1 = layers.dropout_layer(dense1, training, dropout_rate=0.3)
             LRU1 = layers.leaky_relu_layer(drop1, alpha=0.3)
 
@@ -92,15 +97,25 @@ class MCGAN:
         discr_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="discriminator")
         return discr_vars
 
-    def generator_loss(self, fake_out, labels):
+    def generator_loss(self, fake_out, labels, label_smoothing=False):
         with tf.name_scope("generator_loss"):
-            loss_gen = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=fake_out))
+            if(label_smoothing):
+                loss_gen = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_out))
+            else:
+                loss_gen = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=fake_out))
         return loss_gen
 
-    def discriminator_loss(self, fake_out, real_out, fake_labels, real_labels):
+    def discriminator_loss(self, fake_out, real_out, fake_labels, real_labels, label_smoothing=False):
         with tf.name_scope("discriminator_loss"):
-            fake_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=fake_labels, logits=fake_out)
-            real_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=real_labels, logits=real_out)
+            if(label_smoothing):
+                expand_real = tf.expand_dims(real_labels, 1)
+                smoothed_fakes = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([0.0, 1.0]))
+                smoothed_reals = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([0.9, 0.1]))
+                fake_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_fakes, logits=tf.reshape(fake_out, [-1, 2]))
+                real_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_reals, logits=tf.reshape(real_out, [-1, 2]))
+            else:
+                fake_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=fake_labels, logits=fake_out)
+                real_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=real_labels, logits=real_out)
             total_loss = tf.reduce_mean(fake_loss + real_loss)
         return total_loss
 
