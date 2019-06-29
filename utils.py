@@ -515,13 +515,8 @@ def create_labeled_folders(data_root):
 
     print("Copying files to folders labeled_split/0 and labeled_split/1")
     for file, label in all_pairs:
-<<<<<<< HEAD
         copyfile(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_new_path, "{}".format(int(label)), file + '.png'))
     print("Done.")
-=======
-        print(os.path.join(data_path, file))
-        print(os.path.join(data_path, "{}".format(int(label)), file))
-        os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png')) 
         
 def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, subset='training', **dflow_args):
     base_dir = os.path.dirname(in_df[path_col].values[0])
@@ -542,4 +537,3 @@ def flow_from_dataframe(img_data_gen, in_df, path_col, y_col, batch_size=16, sub
     df_gen._set_index_array()        
     print('Reinserting dataframe: {} images'.format(in_df.shape[0]))
     return df_gen
->>>>>>> 38de2d0983335173589995bd03c06141d9cd283f
