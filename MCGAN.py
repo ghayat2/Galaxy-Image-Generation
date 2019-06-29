@@ -64,7 +64,7 @@ class MCGAN:
             flat = tf.reshape(conv4, [-1, 1024 * 4 * 4])
 
             if(minibatch):
-                minibatched = layers.minibatch(flat)
+                minibatched = layers.minibatch(flat, num_kernels=5, kernel_dim=3)
                 dense1 = layers.dense_layer(minibatched, 128, use_bias=True)
             else:
                 dense1 = layers.dense_layer(flat, 128, use_bias=True)
@@ -100,10 +100,8 @@ class MCGAN:
     def generator_loss(self, fake_out, labels, label_smoothing=False):
         with tf.name_scope("generator_loss"):
             if(label_smoothing):
-                expand_real = tf.expand_dims(labels, 1)
-                smoothed_labels = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([1.0, 0.0]))
-                smoothed_fake = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([fake_out, 1.0-fake_out]))
-                loss_gen = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_labels, logits=smoothed_fake))
+                smoothed_labels = tf.constant([[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0]])
+                loss_gen = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_labels, logits=fake_out))
             else:
                 loss_gen = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=fake_out))
         return loss_gen
@@ -111,13 +109,10 @@ class MCGAN:
     def discriminator_loss(self, fake_out, real_out, fake_labels, real_labels, label_smoothing=False):
         with tf.name_scope("discriminator_loss"):
             if(label_smoothing):
-                expand_real = tf.expand_dims(real_labels, 1)
-                smoothed_fakes = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([0.0, 1.0]))
-                smoothed_reals = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([0.9, 0.1]))
-                smoothed_fake_out = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([fake_out, 1.0-fake_out]))
-                smoothed_real_out = tf.math.multiply(tf.to_float(tf.concat([expand_real, expand_real], axis=1)), tf.convert_to_tensor([real_out, 1.0-real_out]))
-                fake_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_fakes, logits=smoothed_fake_out)
-                real_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_reals, logits=smoothed_real_out)
+                smoothed_fakes = tf.constant([[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0]])
+                smoothed_reals = tf.constant([[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1]])
+                fake_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_fakes, logits=fake_out)
+                real_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_reals, logits=real_out)
             else:
                 fake_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=fake_labels, logits=fake_out)
                 real_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=real_labels, logits=real_out)
