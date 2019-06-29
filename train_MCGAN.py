@@ -140,8 +140,8 @@ with tf.Session(config=config) as sess:
     # data
     # Create generator / might be temporary
     utils.create_labeled_folders(DATA_ROOT)
-    manual_feats = np.loadtxt(os.path.join(DATA_ROOT, 'labeled_feats.gz'))
-    manual_ids = np.loadtxt(os.path.join(DATA_ROOT, 'labeled_feats_ids.gz')).astype(int)
+    manual_feats = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats.gz'))
+    manual_ids = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats_ids.gz')).astype(int)
 
     manual_dict = dict(zip(manual_ids, manual_feats))
 
