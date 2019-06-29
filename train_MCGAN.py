@@ -195,7 +195,7 @@ with tf.Session(config=config) as sess:
     print("Losses ...")
     sys.stdout.flush()
     gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
-    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, label_smoothing=True, 
+    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, label_smoothing=False, 
                                       fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
                                       real_labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
 
