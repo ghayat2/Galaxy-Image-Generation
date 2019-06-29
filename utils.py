@@ -145,17 +145,17 @@ def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_
     """
     if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
-    if not os.path.isdir(os.path.join(out_dir, prefix)):
-        os.mkdir(os.path.join(out_dir, prefix))
+    # if not os.path.isdir(os.path.join(out_dir, prefix)):
+    #     os.mkdir(os.path.join(out_dir, prefix))
 
     all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
     if max_imgs and len(all_images) > max_imgs:
         all_images = all_images[:max_imgs]
     features, means, vars, ids = features_summary(all_images, True)
-    np.savetxt(os.path.join(out_dir, prefix, "features_{}.gz".format(prefix)), features)
-    np.savetxt(os.path.join(out_dir, prefix,  "means_{}.gz".format(prefix)), means)
-    np.savetxt(os.path.join(out_dir, prefix,  "vars_{}.gz".format(prefix)), vars)
-    np.savetxt(os.path.join(out_dir, prefix,  "ids_{}.gz".format(prefix)), ids)
+    np.savetxt(os.path.join(out_dir, "{}_feats.gz".format(prefix)), features)
+    np.savetxt(os.path.join(out_dir, "means_{}.gz".format(prefix)), means)
+    np.savetxt(os.path.join(out_dir, "vars_{}.gz".format(prefix)), vars)
+    np.savetxt(os.path.join(out_dir, "{}_feats_ids.gz".format(prefix)), ids)
 
 
 # ------------------------------------------------------------------ EXPERIMENTS --------------------------------------------------------------------------
