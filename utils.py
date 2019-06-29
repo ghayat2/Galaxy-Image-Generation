@@ -294,12 +294,10 @@ def encode_query_images(vae, generator, save_dir, only_features=False, feature_d
     """ Encodes every image in the generator in the latent space of the vae and saves
     the encoded images concatenated with the features to a .npy file
     :param model vae: the vae used to encode the images
-    :param generator generator: the container yielding elements of size batch_size
-    and containing the images to be encoded, the associated features
+    :param generator generator: the container yielding elements one by one
     :param only_features: true if the regressor will predict only based on features    
     :param int feature_dim: the number of features
     :param int latent_dim: the dimension of the vae latent space
-    :param int batch_size: the batch size to be used
     """
     start_time = t.time()
     
@@ -378,7 +376,7 @@ def predict(vae, regr, generator, save_root, query_numbers, only_features=False,
     with the images and features in the generator
     :param model vae: the vae used to encode the images in its latent space
     :param sklearn regressor regr: the regressor used to make predictions
-    :param generator generator: the container yielding elements of size batch_size
+    :param generator generator: the container yielding elements one by one
     and containing the images to be encoded and the associated features
     :param query_numbers: contains the ids of the images yielded by the generator 
     in the same order
@@ -412,7 +410,7 @@ def make_predictions(regr, vae, generator, save_root, only_features=False, featu
     by the generator
     :param sklearn regressor regr: the regressor used to make predictions
     :param model vae: the vae used to encode the images in its latent space
-    :param generator generator: the container yielding elements of size batch_size
+    :param generator generator: the container yielding elements one by one
     and containing the images to be encoded and the associated features
     :param only_features: true if the regressor must predict only based on features    
     :param int feature_dim: the number of features

@@ -27,7 +27,7 @@ parser.add_argument('-rt', '--regressor_type', type = str, default = None, choic
 parser.add_argument('-only_f', '--only_features', help = 'whether to train the regressor only on manually crafted features', action="store_true")   
 parser.add_argument('-f_dim', '--feature_dim', type = int, default = 34, help = 'Number of manually crafted features')
 parser.add_argument('-lat_dim', '--latent_dim', type = int, default = 100, help = 'The dimension of the latent space of the vae')
-parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
+parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch for VAE')
 parser.add_argument('-vr', '--val_ratio', type = float, default = 0.1, help = 'percentage of the data to use for validation')
 
 args = parser.parse_args()
@@ -71,9 +71,13 @@ def main():
 #    sys.exit(0)
 
     vae = CVAE(LATENT_DIM)
-#    vae.load_nets()
-#    inf_vae = tf.keras.models.clone_model(vae.inference_net)
-#    print(inf_vae.summary())
+    if not ONLY_FEATURES: # skip training VAE if using only manually extracted features for training score regressor
+    
+        # -----TODO: add code for training VAE before loading checkpoint ----------
+        
+        vae.load_nets()
+        inf_vae = tf.keras.models.clone_model(vae.inference_net)
+        print(inf_vae.summary())
 
     ## Preprocessing data to create generators iterating through the query image dataset ###
     
@@ -115,7 +119,7 @@ def main():
     if REGRESSOR_TYPE is not None:
         utils.predict_with_regressor(vae, REGRESSOR_TYPE, scored_feature_generator, 
                                      query_feature_generator, sorted_queries, 
-                                     only_features=ONLY_FEATURES, feature_dim=FEATURES_DIM, latent_dim=LATENT_DIM)
+                                     only_features=ONLY_FEATURES, feature_dim=FEATURES_DIM, latent_dim=LATENT_DIM, save_root=os.path.join("./Regressor", REGRESSOR_TYPE))
     
     print("End at {} ...".format(timestamp()))
     
