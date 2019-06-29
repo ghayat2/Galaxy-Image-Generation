@@ -2,15 +2,16 @@ import random
 import os
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from sklearn import linear_model, neural_network
 import tensorflow as tf
 import time as t
 import random
 import pathlib
+import pywt
+import xgboost as xgb
+import skimage
+
 from shutil import copyfile
 from tqdm import tqdm
-import xgboost as xgb
 
 from keras.optimizers import Adam
 from keras.models import Sequential
@@ -25,6 +26,9 @@ from skimage.exposure import histogram
 from skimage.feature import shape_index
 from skimage.measure import shannon_entropy
 from sklearn import neural_network
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import linear_model, neural_network
+from skimage import color, io
 
 
 
@@ -113,7 +117,7 @@ def get_hand_crafted(one_image):
     """ Extracts various features out of the given image
     :param array one_image: the image from which features are extracted
     :return: the features associated with this image
-    :rtype: Numpy array of size (34, 1)
+    :rtype: Numpy array of size (34, 1) (38, 1)
     """
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
@@ -124,7 +128,8 @@ def get_hand_crafted(one_image):
     max_val = one_image.max()
     min_val = one_image.min()
     variance_val = np.var(one_image)
-    features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val]])
+    wavelet_approx = pywt.wavedec2(one_image, 'haar')[0].flatten()
+    features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val], wavelet_approx])
     return features
 
 def features_summary(image_set, decode=True, return_ids=True):

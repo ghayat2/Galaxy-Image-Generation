@@ -198,6 +198,15 @@ def batch_norm_layer_mcgan(inp, training, momentum=0.99, epsilon=0.001):
         return tf.layers.batch_normalization(inputs=inp, axis=1, momentum=momentum, epsilon=epsilon,
                                              training=training)
 
+def minibatch(inp, num_kernels=5, kernel_dim=3):
+    with tf.name_scope("minibatch"):
+        x = dense_layer(inp, num_kernels * kernel_dim, True)
+        activation = tf.reshape(x, (-1, num_kernels, kernel_dim))
+        diffs = tf.expand_dims(activation, 3) - \
+            tf.expand_dims(tf.transpose(activation, [1, 2, 0]), 0)
+        abs_diffs = tf.reduce_sum(tf.abs(diffs), 2)
+        minibatch_features = tf.reduce_sum(tf.exp(-abs_diffs), 2)
+        return tf.concat([inp, minibatch_features], axis=1)
     
     
     
