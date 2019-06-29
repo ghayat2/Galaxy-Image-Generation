@@ -4,7 +4,6 @@ import sys, os, glob, gc
 import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from data import create_dataloader_train_labeled
 from MCGAN import MCGAN
 from tqdm import trange
 from PIL import Image
@@ -12,6 +11,7 @@ import datetime, time
 import utils, pathlib, patoolib
 import pandas as pd
 from argparse import ArgumentParser
+
 
 global_seed=5
 
@@ -70,8 +70,6 @@ FIG_SIZE = 20 # in inches
 
 # paths
 DATA_ROOT="./data"
-#DATA_ROOT="/home/emilien/Documents/ETH/FS2019/CIL/projects/04/cosmology_aux_data_170429"
-#DATA_ROOT="./cosmology_aux_data_170429"
 
 CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
@@ -121,7 +119,7 @@ print("    CONTINUE_TRAINING: {}".format(CONTINUE_TRAINING))
 print("\n")
 sys.stdout.flush()
 
-files = ["data.py",
+files = ["utils.py",
          "layers.py",
          "MCGAN.py",
          "train_MCGAN.py"
@@ -140,9 +138,32 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    #train_ds, nb_images = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=True)
-    #real_im, label = train_ds # unzip
+    # Create generator / might be temporary
+    utils.create_labeled_folders(DATA_ROOT)
+    manual_feats = np.loadtxt(os.path.join(DATA_ROOT, 'labeled_feats.gz'))
+    manual_ids = np.loadtxt(os.path.join(DATA_ROOT, 'labeled_feats_ids.gz')).astype(int)
 
+    manual_dict = dict(zip(manual_ids, manual_feats))
+
+    labeled_path = os.path.join(DATA_ROOT, "labeled.csv")
+    labels = pd.read_csv(labeled_path, index_col=0, skiprows=1, header=None)
+    id_to_label = labels.to_dict(orient="index")
+    id_to_label = {k: v[1] for k, v in id_to_label.items()}
+
+    labeled_images_path = os.path.join(DATA_ROOT, "labeled_split/1/")
+    labeled_images_path = pathlib.Path(labeled_images_path)
+    onlyFiles = [f for f in os.listdir(labeled_images_path) if
+                 (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
+
+    all_indexes = [item.split('.')[0] for item in onlyFiles]
+    all_indexes = filter(None, all_indexes)
+    all_pairs = [[os.path.join(labeled_images_path, item) + '.png', id_to_label[int(item)]] for item in all_indexes]
+
+    X_train = np.array(all_pairs)[:, 0]
+    data_generator = utils.custom_generator2(X_train, manual_dict, batch_size=BATCH_SIZE)
+
+    NUM_SAMPLES = len(all_pairs)
+    
     # define noise and test data
     noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
 
@@ -225,36 +246,6 @@ with tf.Session(config=config) as sess:
         tf.global_variables_initializer().run()
 
     print("Train start at {} ...".format(timestamp()))
-    # Create generator / might be temporary
-
-    manual_feats = np.loadtxt('labeled_feats.gz')
-    manual_ids = np.loadtxt('labeled_feats_ids.gz').astype(int)
-
-    manual_dict = dict(zip(manual_ids, manual_feats))
-
-    # print(manual_feats[0])
-    # print(manual_ids[0])
-    # print(manual_dict[manual_ids[0]])
-
-    labeled_path = os.path.join(DATA_ROOT, "labeled.csv")
-    labels = pd.read_csv(labeled_path, index_col=0, skiprows=1, header=None)
-    id_to_label = labels.to_dict(orient="index")
-    id_to_label = {k: v[1] for k, v in id_to_label.items()}
-
-    labeled_images_path = os.path.join(DATA_ROOT, "labeled_split/1/")
-    labeled_images_path = pathlib.Path(labeled_images_path)
-    onlyFiles = [f for f in os.listdir(labeled_images_path) if
-                 (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
-
-    all_indexes = [item.split('.')[0] for item in onlyFiles]
-    all_indexes = filter(None, all_indexes)
-    all_pairs = [[os.path.join(labeled_images_path, item) + '.png', id_to_label[int(item)]] for item in all_indexes]
-
-    X_train = np.array(all_pairs)[:, 0]
-    data_generator = utils.custom_generator2(X_train, manual_dict, batch_size=BATCH_SIZE)
-
-    NUM_SAMPLES = len(all_pairs)
-
     sys.stdout.flush()
     with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
         for i in t:  # for each step

@@ -58,9 +58,9 @@ class MCGAN:
                                             padding="same", use_bias=True,
                                             alpha=0.3)  # shape=(batch_size, 256, 16, 16)
             conv3 = layers.conv_block_mcgan(conv2, training, momentum=0.8, out_channels=512, filter_size=(4, 4), strides=(2, 2),
-                                            padding="same", use_bias=True, alpha=0.2)  # shape=(batch_size, 512, 8, 8)
+                                            padding="same", use_bias=True, alpha=0.3)  # shape=(batch_size, 512, 8, 8)
             conv4 = layers.conv_block_mcgan(conv3, training, momentum=0.8, out_channels=1024, filter_size=(4, 4), strides=(2, 2),
-                                            padding="same", use_bias=True, alpha=0.2)  # shape=(batch_size, 1024, 4, 4)
+                                            padding="same", use_bias=True, alpha=0.3)  # shape=(batch_size, 1024, 4, 4)
             flat = tf.reshape(conv4, [-1, 1024 * 4 * 4])
 
             dense1 = layers.dense_layer(flat, 128, use_bias=True)

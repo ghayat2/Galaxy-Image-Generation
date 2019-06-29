@@ -8,6 +8,7 @@ import tensorflow as tf
 import time as t
 import random
 import pathlib
+from shutil import copyfile
 from tqdm import tqdm
 
 from keras.optimizers import Adam
@@ -470,31 +471,41 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
 
     joblib.dump(regr, data_path + regr_type)
 
-def create_labeled_folders(data_path):
-    """Creates two folders within the labeled folder of the cosmology_aux_data_170429 folder,
+def create_labeled_folders(data_root):
+    """Creates two folders within the labeled folder of the data_root folder,
     separating images associated to a label of 0 and of 1
-    :param str data_path: Containing the path of the cosmology_aux_data_170429 folder
+    
+    param str data_root: Path of the folder containing labeled and scored folders and csv files
     """
-    name = "labeled"
-    labels_path = os.path.join(data_path, name + ".csv")
+    labeled_images_new_path = os.path.join(data_root, "labeled_split")
+    if not os.path.exists(labeled_images_new_path):
+        os.makedirs(labeled_images_new_path)
+    else:
+        print("\nDirectory labeled_split exists, nothing to do ...")
+        return
+    
+    print("\nSplitting data labeled 0/1 to 2 folders labeled_split/0 and labeled_split/1")
+    
+    labels_path = os.path.join(data_root, "labeled.csv")
     labels = pd.read_csv(labels_path, index_col=0, skiprows=1, header=None)
     id_to_label = labels.to_dict(orient="index")
     id_to_label = {k: v[1] for k, v in id_to_label.items()}
 
-    labeled_images_path = os.path.join(data_path, name)
+    labeled_images_path = os.path.join(data_root, "labeled")
     labeled_images_path = pathlib.Path(labeled_images_path)
     onlyFiles = [f for f in os.listdir(labeled_images_path) if (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
     all_indexes = [item.split('.')[0] for item in onlyFiles]
     all_indexes = filter(None, all_indexes)
     all_pairs = [[item, id_to_label[int(item)]] for item in all_indexes]
 
+    
     # Add if does not exist
-    if(~os.path.isdir(os.path.join(data_path, name, '0'))):
-        os.mkdir(os.path.join(data_path, name, '0'))
-    if(~os.path.isdir(os.path.join(data_path, name, '1'))):
-        os.mkdir(os.path.join(data_path, name, '1'))
+    if(~os.path.isdir(os.path.join(labeled_images_new_path, '0'))):
+        os.mkdir(os.path.join(labeled_images_new_path, '0'))
+    if(~os.path.isdir(os.path.join(labeled_images_new_path, '1'))):
+        os.mkdir(os.path.join(labeled_images_new_path, '1'))
 
+    print("Copying files to folders labeled_split/0 and labeled_split/1")
     for file, label in all_pairs:
-        print(os.path.join(data_path, file))
-        print(os.path.join(data_path, "{}".format(int(label)), file))
-        os.rename(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_path, "{}".format(int(label)), file + '.png'))
+        copyfile(os.path.join(labeled_images_path, file + '.png'), os.path.join(labeled_images_new_path, "{}".format(int(label)), file + '.png'))
+    print("Done.")
