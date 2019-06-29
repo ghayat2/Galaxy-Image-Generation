@@ -22,7 +22,9 @@ parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 
 parser.add_argument('-to_gen', '--to_generate', type = int, default = 100, help = 'the number of samples to generate')
 parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, help = 'number of stacks')
 parser.add_argument('-m', '--margin', type = float, default = 0.25, help = 'margin to add to the mean scores of training galaxies')
-parser.add_argument('-us', '--use_scorer', help = 'whether to use the scorer to filter the generated images by score', action="store_true")
+parser.add_argument('-t', '--threshold', type = float, default = 3.0, help = 'threshold score for generated galaxies')
+parser.add_argument('-ust', '--use_scorer_threshold', help = 'whether to use the scorer with a threshold to filter the generated images by score', action="store_true")
+parser.add_argument('-usm', '--use_scorer_margin', help = 'whether to use the scorer with a margin on the mean training score to filter the generated images by score', action="store_true")
 
 args = parser.parse_args()
 
@@ -38,7 +40,12 @@ NOISE_DIM=args.noise_dim
 TO_GENERATE = args.to_generate
 NB_STACKS=args.nb_stacks
 MARGIN = args.margin
-USE_SCORER=args.use_scorer
+THRESHOLD=args.threshold
+USE_SCORER_THRES = args.use_scorer_threshold
+USE_SCORER_MARGIN = args.use_scorer_margin
+if USE_SCORER_THRES and USE_SCORER_MARGIN: # if both set, prefer threshold scoring
+    USE_SCORER_MARGIN=False
+USE_SCORER=USE_SCORER_THRES or USE_SCORER_MARGIN
 
 # DCGAN paths
 list_of_files = glob.glob('./LOG_DCGAN/*')
@@ -96,7 +103,10 @@ print("    LOG_DIR_SCORER: {}".format(LOG_DIR_SCORER))
 print("    GENERATED_SAMPLES_DIR: {}".format(GENERATED_SAMPLES_DIR))
 print("    TO_GENERATE: {}".format(TO_GENERATE))
 print("    MARGIN: {}".format(MARGIN))
+print("    THRESHOLD: {}".format(THRESHOLD))
 print("    USE_SCORER: {}".format(USE_SCORER))
+print("    USE_SCORER_THRES: {}".format(USE_SCORER_THRES))
+print("    USE_SCORER_MARGIN: {}".format(USE_SCORER_MARGIN))
 print("\n")
 sys.stdout.flush()
 
@@ -173,23 +183,25 @@ if USE_SCORER:
         saver.restore(scorer_sess, latest_checkpoint)
 
 #    sys.exit(0)
+    if USE_SCORER_MARGIN:
+        print("Scoring training galaxy images")
+        galaxies_scores = []
 
-    print("Scoring training galaxy images")
-    galaxies_scores = []
+        with trange(nb_galaxies) as t:
+            for i in t:
+                im_val = scorer_sess.run(galaxy_im)
+                score = scorer_sess.run(scores_pred, {im_pl: im_val})
+                galaxies_scores.append(score[0,0])
+            
+        galaxies_scores = np.array(galaxies_scores)
+        median_score = np.median(galaxies_scores)
+        mean_score = np.mean(galaxies_scores)
+        print("Median score: {}".format(median_score))
+        print("Mean score: {}".format(mean_score))
 
-    with trange(nb_galaxies) as t:
-        for i in t:
-            im_val = scorer_sess.run(galaxy_im)
-            score = scorer_sess.run(scores_pred, {im_pl: im_val})
-            galaxies_scores.append(score[0,0])
-        
-    galaxies_scores = np.array(galaxies_scores)
-    median_score = np.median(galaxies_scores)
-    mean_score = np.mean(galaxies_scores)
-    print("Median score: {}".format(median_score))
-    print("Mean score: {}".format(mean_score))
-
-    threshold = mean_score + MARGIN
+        threshold = mean_score + MARGIN
+    else:
+        threshold = THRESHOLD
 
     print("Filtering images having score less than {}".format(threshold))
 

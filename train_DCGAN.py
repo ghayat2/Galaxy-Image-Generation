@@ -22,9 +22,9 @@ parser.add_argument('-ne', '--num_epochs', type = int, default = 500, help = 'nu
 parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
 parser.add_argument('-d_lr', '--disc_learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer of discriminator')
 parser.add_argument('-g_lr', '--gen_learning_rate', type = float, default = 2e-4, help = 'learning rate for the optimizer of generator')
-parser.add_argument('-d_b1', '--disc_beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer of discriminator')
+parser.add_argument('-d_b1', '--disc_beta_1', type = float, default = 0.9, help = 'beta 1 for the optimizer of discriminator')
 parser.add_argument('-d_b2', '--disc_beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer of discriminator')
-parser.add_argument('-g_b1', '--gen_beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer of generator')
+parser.add_argument('-g_b1', '--gen_beta_1', type = float, default = 0.9, help = 'beta 1 for the optimizer of generator')
 parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer of generator')
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 
