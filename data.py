@@ -160,7 +160,39 @@ def create_dataloader_query(data_root, batches_to_prefetch=20):
     full_ds = full_ds.make_one_shot_iterator().get_next() # convert to iterator
     
     return full_ds, all_files, len(all_files)
+
+def create_dataloader_train_mcgan(data_root, batch_size, batches_to_prefetch=20, shuffle=True):
+    print("Reading images paths ...")
+    labels2paths = read_labels2paths(data_root)
+    fake_images = labels2paths[0.0] # paths to non-galaxies
+    real_images = labels2paths[1.0] # paths to galaxies
+    
+    manual_feats = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats.gz'))
+    manual_ids = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats_ids.gz')).astype(int)
+
+    manual_dict = dict(zip(manual_ids, manual_feats))
+    
+    ids = [int(path.split("/")[-1].split(".")[0]) for path in real_images]
+    feats = np.array([manual_dict[id][20] for id in ids]).reshape([-1, 1])
+
+    print("Creating Datasets ...")
+    train_ds = tf.data.Dataset.from_tensor_slices((real_images, feats))
+    
+    if shuffle:
+        print("Shuffling data ...")
+        train_ds = train_ds.shuffle(buffer_size=len(real_images), seed=global_seed)
         
+    print("Mapping Data...")
+    train_ds = train_ds.map(load_and_preprocess_image_label)
+    
+    print("Batching Data...")
+    train_ds = train_ds.repeat() # repeat dataset indefinitely
+    train_ds = train_ds.batch(batch_size, drop_remainder=True).prefetch(batches_to_prefetch) # batch data (dropping remainder) and prefetch batches
+    
+    train_ds = train_ds.make_one_shot_iterator().get_next() # convert to iterator
+    
+    return train_ds, len(real_images)
+
 #batch_size = 1
 #real_im, fake_im, nb_reals, nb_fakes = create_dataloader_train_labeled("./data", batch_size=batch_size, batches_to_prefetch=1, all_data=False)
 
@@ -230,7 +262,7 @@ def create_dataloader_query(data_root, batches_to_prefetch=20):
 #print(create_dataloader_query(data_root="./data", batches_to_prefetch=20))
 
 
-
+#print(create_dataloader_train_mcgan(data_root="./data", batch_size=16, batches_to_prefetch=2, shuffle=True))
 
 
 

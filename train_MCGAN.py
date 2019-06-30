@@ -5,10 +5,11 @@ import matplotlib as mpl
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 from MCGAN import MCGAN
+from data import create_dataloader_train_mcgan
 from tqdm import trange
 from PIL import Image
 import datetime, time
-import utils, pathlib, patoolib
+import pathlib, patoolib
 import pandas as pd
 from argparse import ArgumentParser
 
@@ -30,8 +31,8 @@ parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
-parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 200, help = 'number of iterations between sampling steps')
-parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help = 'number of iterations between saving model checkpoints')
+parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
+parser.add_argument('-svf', '--save_iter_freq', type = int, default = 1000, help = 'number of iterations between saving model checkpoints')
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
@@ -109,6 +110,10 @@ print("    NUM_EPOCHS: {}".format(NUM_EPOCHS))
 print("    BATCH_SIZE: {}".format(BATCH_SIZE))
 print("    LEARNING_RATE_D: {}".format(D_LR))
 print("    LEARNING_RATE_G: {}".format(G_LR))
+print("    BETA1_D: {}".format(D_BETA1))
+print("    BETA2_D: {}".format(D_BETA2))
+print("    BETA1_G: {}".format(G_BETA1))
+print("    BETA2_G: {}".format(G_BETA2))
 print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
 print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
@@ -120,7 +125,7 @@ print("    CONTINUE_TRAINING: {}".format(CONTINUE_TRAINING))
 print("\n")
 sys.stdout.flush()
 
-files = ["utils.py",
+files = ["data.py",
          "layers.py",
          "MCGAN.py",
          "train_MCGAN.py"
@@ -139,34 +144,10 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    # Create generator / might be temporary
-    utils.create_labeled_folders(DATA_ROOT)
-    if (not os.path.isdir(os.path.join(DATA_ROOT, 'features'))) or (not os.path.isfile(os.path.join(DATA_ROOT, 'features', 'labeled_feats.gz'))) or (not os.path.isfile(os.path.join(DATA_ROOT, 'features', 'labeled_feats_ids.gz'))):
-        utils.extract_and_save_features(image_dir=os.path.join(DATA_ROOT, 'labeled'), prefix='labeled', out_dir=os.path.join(DATA_ROOT, 'features'))
+    train_ds, nb_images = create_dataloader_train_mcgan(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, shuffle=True)
+    im, feats = train_ds
 
-    manual_feats = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats.gz'))
-    manual_ids = np.loadtxt(os.path.join(DATA_ROOT, 'features', 'labeled_feats_ids.gz')).astype(int)
-
-    manual_dict = dict(zip(manual_ids, manual_feats))
-
-    labeled_path = os.path.join(DATA_ROOT, "labeled.csv")
-    labels = pd.read_csv(labeled_path, index_col=0, skiprows=1, header=None)
-    id_to_label = labels.to_dict(orient="index")
-    id_to_label = {k: v[1] for k, v in id_to_label.items()}
-
-    labeled_images_path = os.path.join(DATA_ROOT, "labeled_split/1/")
-    labeled_images_path = pathlib.Path(labeled_images_path)
-    onlyFiles = [f for f in os.listdir(labeled_images_path) if
-                 (os.path.isfile(os.path.join(labeled_images_path, f)) and (f != None))]
-
-    all_indexes = [item.split('.')[0] for item in onlyFiles]
-    all_indexes = filter(None, all_indexes)
-    all_pairs = [[os.path.join(labeled_images_path, item) + '.png', id_to_label[int(item)]] for item in all_indexes]
-
-    X_train = np.array(all_pairs)[:, 0]
-    data_generator = utils.custom_generator2(X_train, manual_dict, batch_size=BATCH_SIZE)
-
-    NUM_SAMPLES = len(all_pairs)
+    NUM_SAMPLES = nb_images
     
     # define noise and test data
     noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
@@ -260,9 +241,7 @@ with tf.Session(config=config) as sess:
             t.set_postfix(epoch=epoch_cur, iter_percent="%d %%" % (iter_cur / float(NUM_SAMPLES) * 100))
 
             if (i + 1) % LOG_ITER_FREQ == 0:
-                noise_val = sess.run(noise)
-                im_val, feats_val = next(data_generator)
-                im_val = im_val.transpose(0, 3, 1, 2)
+                im_val, feats_val, noise_val = sess.run([im, feats, noise])
 
                 feed_dict_train = {training_pl: True, im_pl: im_val, feats_pl:feats_val, noise_pl: noise_val}  # feed dict for training
 
@@ -277,9 +256,7 @@ with tf.Session(config=config) as sess:
                 writer.add_summary(summary, global_step_val)
 
             else:
-                noise_val = sess.run(noise)
-                im_val, feats_val = next(data_generator)
-                im_val = im_val.transpose(0, 3, 1, 2)
+                im_val, feats_val, noise_val = sess.run([im, feats, noise])
 
                 feed_dict_train = {training_pl: True, im_pl: im_val, feats_pl: feats_val,
                                    noise_pl: noise_val}  # feed dict for training

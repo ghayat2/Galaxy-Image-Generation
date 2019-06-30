@@ -23,7 +23,7 @@ parser = ArgumentParser()
 parser.add_argument('-ne', '--num_epochs', type = int, default = 100, help = 'number of training epochs')
 parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'size of training batch')
 parser.add_argument('-lr', '--learning_rate', type = float, default = 1e-3, help = 'learning rate for the optimizer')
-parser.add_argument('-b1', '--beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer')
+parser.add_argument('-b1', '--beta_1', type = float, default = 0.9, help = 'beta 1 for the optimizer')
 parser.add_argument('-b2', '--beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer')
 parser.add_argument('-vp', '--valid_precent', type = float, default = 0.01, help = 'percentage of the data to use for validation')
 
