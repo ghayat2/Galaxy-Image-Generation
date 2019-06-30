@@ -346,20 +346,21 @@ def train_regressor(regr, vae, generator, save_root, only_features=False,
     """
   
     train_data_dir = os.path.join(save_root, "train_data")
+    if only_features:
+        filename = os.path.join(train_data_dir, "scored_image_only_features.npy")
+    else:
+        filename = os.path.join(train_data_dir, "scored_image_{}.npy".format(latent_dim))
     
-    if not os.path.exists(train_data_dir): # if directory exists, then skip data encoding
+    if not os.path.exists(train_data_dir): # if directory doesn't exist, create dir
         os.makedirs(train_data_dir)
+        
+    if not os.path.exists(filename): # if training data file doesn't exist, then encode data
         print("\nCreating training data and saving at {}".format(train_data_dir))
         encode_scored_images(vae, generator, train_data_dir, only_features=only_features, 
                              feature_dim=feature_dim, latent_dim=latent_dim, batch_size=batch_size)
         print("Done.")
     else:
-        print("Training data dir exists, skipping data encoding.")
-        
-    if only_features:
-        filename = os.path.join(train_data_dir, "scored_image_only_features.npy")
-    else:
-        filename = os.path.join(train_data_dir, "scored_image_{}.npy".format(latent_dim))
+        print("Training data dir and training data exist, skipping data encoding.")
     
     # load training data
     train_data = np.load(filename)
@@ -418,17 +419,21 @@ def make_predictions(regr, vae, generator, save_root, only_features=False, featu
     """
     pred_data_dir = os.path.join(save_root, "pred_data")
     
-    if not os.path.exists(pred_data_dir): # if directory exists, then skip data encoding
-        os.makedirs(pred_data_dir)
-        encode_query_images(vae, generator, pred_data_dir, only_features=only_features, 
-                            feature_dim=feature_dim, latent_dim=latent_dim)
-    else:
-        print("Predictions data dir exists, skipping data encoding.")
-    
     if only_features:
         filename = os.path.join(pred_data_dir, "query_image_only_features.npy")
     else:
         filename = os.path.join(pred_data_dir, "query_image_{}.npy".format(latent_dim))
+    
+    if not os.path.exists(pred_data_dir): # if directory doesn't exist, create dir
+        os.makedirs(pred_data_dir)
+    
+    if not os.path.exists(filename): # if prediction data file doesn't, then encode data
+        encode_query_images(vae, generator, pred_data_dir, only_features=only_features, 
+                            feature_dim=feature_dim, latent_dim=latent_dim)
+    else:
+        print("Predictions data dir and prediction data exist, skipping data encoding.")
+    
+    
 
     # load features for prediction
     queries = np.load(filename)
@@ -466,7 +471,7 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
       base_model = RandomForestRegressor(criterion="mae", max_features=None, oob_score=True,
     												random_state = random_state) 
       regr = model_selection.GridSearchCV(base_model, {"n_estimators": [50, 100], "max_depth": [16, 32]},
-                                          verbose=5, scoring='neg_mean_absolute_error') 
+                                          verbose=5, scoring='neg_mean_absolute_error', n_jobs=-1) 
     
     elif regr_type == "Ridge":
       
@@ -475,13 +480,13 @@ def predict_with_regressor(vae, regr_type, scored_feature_generator, query_featu
     
     elif regr_type == "MLP" :
             
-      base_model = neural_network.MLPRegressor()
+      base_model = neural_network.MLPRegressor(verbose=True)
       regr = model_selection.GridSearchCV(base_model, param_grid={
       'learning_rate_init': [0.05, 0.01, 0.005, 0.001],
       "alpha": [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10, 100, 1000], 
       "hidden_layer_sizes": [100, 500, 1000],
       'power_t': [0.5, 0.2, 0.8],
-      "activation" : ["identity", "logistic", "tanh", "relu"]})
+      "activation" : ["identity", "logistic", "tanh", "relu"]}, verbose=5, n_jobs=-1)
     
     elif regr_type == "Boost":
       base_model = xgb.XGBRegressor()
