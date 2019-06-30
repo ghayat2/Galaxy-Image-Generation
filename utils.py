@@ -34,13 +34,13 @@ from skimage import color, io
 # ------------------------------------------------------------------ CUSTOM DATA GENERATORS --------------------------------------------------------------------------
 
 def custom_generator(images_list, manual_dict, features_dim, do_score=True, batch_size=16):
-    """ Returns an numpy array of size batch_size containing the decoded images,
-    the features associated with these images and their scores.
+    """ Returns a numpy array of size batch_size containing the decoded images,
+    the associated features and their scores.
     
-    :param array image_list: An array containing the full path of the images to be sorted below
+    :param array image_list: An array containing the full path of the images to be sorted under
     :param dict manual_dict: A dictionary associating the id of an image to 
     its features (positions [0:features_dim]) and its score (at position features_dim)
-    :param bool score: Wether the images are scored or not
+    :param bool score: Whether the images are scored or not
     :param int batch_size: The batch_size to use
     :rtype: Numpy array
     """
@@ -103,9 +103,9 @@ def custom_generator2(images_list, manual_dict, batch_size=16):
 # ------------------------------------------------------------------ FEATURES EXTRACTION --------------------------------------------------------------------------
 def get_hand_crafted(one_image):
     """ Extracts various features out of the given image
-    :param array one_image: the image from which features are extracted
+    :param array one_image: the image from which features are to be extracted
     :return: the features associated with this image
-    :rtype: Numpy array of size (34, 1) (38, 1)
+    :rtype: Numpy array of size (38, 1)
     """
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
@@ -121,6 +121,13 @@ def get_hand_crafted(one_image):
     return features
 
 def features_summary(image_set, decode=True, return_ids=True):
+    """ Extracts various features out of the given image
+    :param array image_set: the image set to extract the summary of
+    :param bool decode: whether the images need to be decoded or not
+    :param bool return_ids: whether we wish to have the ids be part of the output
+    :return: the summary associated with the images
+    :rtype: Tuple of Numpy arrays
+    """
     features = []
     ids = []
     for image in tqdm(image_set):
@@ -141,12 +148,14 @@ def features_summary(image_set, decode=True, return_ids=True):
 
 def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_imgs=None):
     """
-    Extract manual features from images contained in dir and saves them in the out_directory
+    Extract manual features and summaries from images contained in dir and saves them in the out_directory
+    :param str image_dir: the directory containing the images
+    :param str prefix: the set of images to process (labeled, scored or query)
+    :param str out_dir: the directory where the extracted features and summaries should be saved
+    :param int max_imgs: defines the max number of images to consider, consider all if set to None
     """
     if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
-    # if not os.path.isdir(os.path.join(out_dir, prefix)):
-    #     os.mkdir(os.path.join(out_dir, prefix))
 
     all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
     if max_imgs and len(all_images) > max_imgs:
@@ -163,6 +172,7 @@ def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_
 def heatmap(images_set, decode=False, shape=(1000, 1000)):
     """
     Given an image set, summarized it into a mean image
+    :param array images_set: the images to extract the heat map from
     :param decode: weather the image needs to be decoded and pre-processed
     :param shape: input shape
     :return: the mean image
@@ -182,6 +192,8 @@ def knn_diversity_stats(training_set, generated_imgs):
     """
     Find the k=3 nearest neighnors of an image in the training set and
     returns the average distance
+    :param array training_set: the training set of images according to which we will find the nearest neighbours
+    :param array generated_imgs: the images whose nearest neighbours we wish to find
     """
     knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
     knn.fit(training_set)
@@ -192,6 +204,7 @@ def knn_diversity_stats(training_set, generated_imgs):
 def make_max_pooling_resizer():
     """
     Keras resizer for resizing 1000x1000 images into 64x64 max_pooled images
+    :return: the (Keras) resizer
     """
     resizer = tf.keras.Sequential(
         [tf.keras.layers.Lambda(lambda x: x + 1),
@@ -208,10 +221,10 @@ def make_max_pooling_resizer():
 # ------------------------------------------------------------------ IMAGE PREPROCESSING --------------------------------------------------------------------------
 
 def vanilla_preprocessing(image):
-    """ Normalizes the image by cliping pixels to value [0,1]
-    :param array image: image to be processed
-    :return : processed image
-    :rtype: numpy array
+    """ Normalizes the image to [0,1]
+    :param array image: the image to be processed
+    :return: the processed image
+    :rtype: Numpy array
     """
     image = image / 255.0
     return image
@@ -221,7 +234,7 @@ def vae_preprocessing(image):
     """Returns a random permutation of the argument image
     :param array image: subject image
     :return: rotated image
-    :rtype: numpy array
+    :rtype: Numpy array
     """
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
@@ -229,11 +242,11 @@ def vae_preprocessing(image):
     return image
     
 def gan_preprocessing(image):
-    """Processes the image by cliiping each pixel to value in range [-1, 1] and
-    taking a random rotation
+    """Processes the image by normalizing to [-1, 1] and
+    applying a random rotation increment of 90 degree rotations
     :param array image: the image to be processed
     :return: the processed image
-    :rtype : a numpy array
+    :rtype : a Numpy array
     """
     rint = random.randint(1, 4)
     image = np.rot90(image, rint)
@@ -245,7 +258,7 @@ def gan_preprocessing(image):
 
 def encode_scored_images(vae, generator, save_dir, only_features=False, feature_dim=34, latent_dim=100, batch_size=16):
     """ Encodes every image in the generator in the latent space of the vae and saves each
-    the encoded images concatenated with the features and scores to a .npy file
+    the encoded images, concatenated with the features and scores, to a .npy file
     :param model vae: the vae used to encode the images
     :param generator generator: the container yielding elements of size batch_size
     and containing the images to be encoded, the associated features and scores
