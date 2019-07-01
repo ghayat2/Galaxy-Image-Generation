@@ -162,8 +162,8 @@ def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_
         all_images = all_images[:max_imgs]
     features, means, vars, ids = features_summary(all_images, True)
     np.savetxt(os.path.join(out_dir, "{}_feats.gz".format(prefix)), features)
-    np.savetxt(os.path.join(out_dir, "means_{}.gz".format(prefix)), means)
-    np.savetxt(os.path.join(out_dir, "vars_{}.gz".format(prefix)), vars)
+    np.savetxt(os.path.join(out_dir, "{}_means.gz".format(prefix)), means)
+    np.savetxt(os.path.join(out_dir, "{}_vars.gz".format(prefix)), vars)
     np.savetxt(os.path.join(out_dir, "{}_feats_ids.gz".format(prefix)), ids)
 
 

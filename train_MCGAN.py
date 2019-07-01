@@ -58,6 +58,8 @@ G_BETA1 = args.gen_beta_1
 G_BETA2 = args.gen_beta_2
 D_BETA1 = args.disc_beta_1
 D_BETA2 = args.disc_beta_2
+USE_MINIBATCH=True
+USE_LABEL_SMOOTHING=True
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
@@ -169,14 +171,14 @@ with tf.Session(config=config) as sess:
     sys.stdout.flush()
     model= MCGAN()
     fake_im, _ = model.generator_model(noise=noise_pl, feats=feats_pl, training=training_pl) # get fake images from generator
-    fake_out_D, _ = model.discriminator_model(inp=fake_im, feats=feats_pl, training=training_pl, minibatch=True) # get discriminator output on fake images
-    real_out_D, _ = model.discriminator_model(inp=im_pl, feats=feats_pl, training=training_pl, reuse=True, resize=True, minibatch=True) # get discriminator output on real images
+    fake_out_D, _ = model.discriminator_model(inp=fake_im, feats=feats_pl, training=training_pl, minibatch=USE_MINIBATCH) # get discriminator output on fake images
+    real_out_D, _ = model.discriminator_model(inp=im_pl, feats=feats_pl, training=training_pl, reuse=True, resize=True, minibatch=USE_MINIBATCH) # get discriminator output on real images
     
     # losses
     print("Losses ...")
     sys.stdout.flush()
-    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32), label_smoothing=True)
-    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, label_smoothing=True, 
+    gen_loss = model.generator_loss(fake_out=fake_out_D, labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32), label_smoothing=USE_LABEL_SMOOTHING)
+    discr_loss = model.discriminator_loss(fake_out=fake_out_D, real_out=real_out_D, label_smoothing=USE_LABEL_SMOOTHING, 
                                       fake_labels=tf.zeros(shape=[BATCH_SIZE], dtype=tf.int32), 
                                       real_labels=tf.ones(shape=[BATCH_SIZE], dtype=tf.int32))
 
