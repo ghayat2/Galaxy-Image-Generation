@@ -1,17 +1,22 @@
 # EGMP - Galaxy Image Generation
 
 ## Prerequisites
-- Python version 3.6
-- Tensorflow 1.13 (https://www.tensorflow.org/versions/r1.13/api_docs/python/tf)
-- scikit-image / skimage (https://scikit-image.org/)
-- scikit-learn / sklearn (https://scikit-learn.org/stable/)
+- argparse (https://docs.python.org/3/library/argparse.html)
+- Matplotlib (https://matplotlib.org/)
 - NumPy (https://www.numpy.org/)
 - Pandas (https://pandas.pydata.org/)
-- seaborn (https://seaborn.pydata.org/)
-- PyWavelets / pywt (https://pywavelets.readthedocs.io/en/latest/)
-- Matplotlib (https://matplotlib.org/)
-- tqdm (https://github.com/tqdm/tqdm)
+- pathlib (https://docs.python.org/3/library/pathlib.html)
+- patool (https://wummel.github.io/patool/)
 - Pillow (https://pillow.readthedocs.io/en/stable/)
+- Python version 3.6 (https://www.python.org/downloads/release/python-360/)
+- PyWavelets / pywt (https://pywavelets.readthedocs.io/en/latest/)
+- scikit-image / skimage (https://scikit-image.org/)
+- scikit-learn / sklearn (https://scikit-learn.org/stable/)
+- seaborn (https://seaborn.pydata.org/)
+- Tensorflow 1.13 (https://www.tensorflow.org/versions/r1.13/api_docs/python/tf)
+- tqdm (https://github.com/tqdm/tqdm)
+- xgboost (https://xgboost.readthedocs.io/en/latest/python/python_intro.html)
+
 
 ## Authors
 - Gabriel Hayat
@@ -21,28 +26,73 @@
 
 | File | Description
 | :--- | :----------
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
-| [StyleGAN] | Main folder.
+| baseline\_patches.py |
+| baseline\_score\_regressor\_test.py | 
+| baseline\_score\_regressor.py | 
+| DCGAN\_Scorer.py | 
+| DCGAN.py | Deep Convolutoinal Generative Adversarial Network
+| downsample.py | Downsamples 1000x1000 images to 64x64 resolution
+| extract\_features.py |
+| generate\_feats.py | 
+| install\_python\_dependencies.sh | Executable to install all dependencies
+| layers.py | Layers used to build the Models
+| MCGAN.py | Manual Feature Conditionned Generative Adversarial Network
+| run\_experiments.py | 
+| StackedSRM.py | Stacked SuperResolution Model
+| test\_DCGAN\_scorer.py | 
+| test\_DCGAN\_SRM\_Scorer.py | Generation file for the DCGAN with scorer filtering
+| train\_DCGAN\_for\_score.py | 
+| train\_DCGAN.py | Training File for the DCGAN
+| train\_MCGAN.py | Training File for the MCGAN
+| train\_stackedSRM.py | Training File for the Stacked SRM
+| utils.py | Utility functions
+| data | Data folder.
+| &boxvr;&nbsp; labeled | Labeled Image Directory
+| &boxvr;&nbsp; scored | Scored Image Directory
+| &boxvr;&nbsp; query | Query Image Directory
+| &boxvr;&nbsp; labeled.csv | Labeled Images' Labels
+| &boxvr;&nbsp; scored.csv | Scored Images' Scores
+
+## Preparing datasets for training
+
+The entire cosmology\_aux\_data\_170429 dataset should be be put into a directory called 'data/' as detailed above. Then, one should proceed and generate the 38 manual features for all the images in the dataset as follows:
+
+```
+> python generate_feats.py 
+```
+
+This will generate a new folder called "features" in which one will find The feature files, and id files in order to map them to the image they are from:
+
+| File | Description
+| :--- | :----------
+| data | Data folder.
+| &boxur;&nbsp; features | Features folder.
+| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats.gz | Labeled Features
+| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats\_ids.gz | Labeled Features ID Correspondences
+| &ensp;&ensp; &boxvr;&nbsp; scored\_feats.gz | Scored Features
+| &ensp;&ensp; &boxvr;&nbsp; scored\_feats\_ids.gz | Scored Features ID Correspondences
+| &ensp;&ensp; &boxvr;&nbsp; query\_feats.gz | Query Features
+| &ensp;&ensp; &boxur;&nbsp; query\_feats\_ids.gz | Query Features ID Correspondences
 
 ## Baselines
 
-### 1) Manual Feature Regressors
+### A) Image Generation
+
+### B) Image Scoring
+
+#### 1) Manual Feature Regressors
 
 In order to train the Regressors based on manually extracted features, one should run the following command: 
 
-`python3 baseline_score_regressor.py --regressor_type=`
+`python3 baseline_score_regressor.py --regressor_type=reg_name`
+
+Replace reg_name with one of the following for different regressors:
+
+| Argument | Description
+| :--- | :----------
+| Boost | XGBoost Regressor
+| Ridge | Ridge Regressor
+| Random_Forest | Random Forest Regressor
 
 ### 1) XGBoost Regressor on manually generated features
 
