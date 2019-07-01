@@ -61,12 +61,6 @@ def main():
 
     print("Start at {} ...".format(timestamp()))
 
-
-#    query_dir_list = glob.glob(os.path.join(DATA_ROOT, "query", "*"))
-#    only_files = [file_path for file_path in query_dir_list if (os.path.isfile(file_path)]
-#    all_indexes = [int(item.split('/')[-1].split('.')[0]) for item in only_files]
-#    sorted_queries = np.sort(all_indexes)
-
     if not os.path.exists(FEATURES_DIR):
         print("FEATURES_DIR: {} not found".format(FEATURES_DIR))
         sys.exit(-1)
@@ -91,8 +85,6 @@ def main():
     nb_feats_query = query_feats.shape[1]
     assert nb_feats_query == nb_feats_scored
     
-#    FEATURES_DIM=nb_feats_query
-    
     print("\nShape manual scored features", scored_feats.shape)
     print("Shape scores", scored_scores.shape)
     print("Shape manual scored ids", scored_ids.shape)
@@ -100,19 +92,7 @@ def main():
     print("Shape manual query features", query_feats.shape)
     print("Shape manual query ids", query_ids.shape)
 
-
-#    scored_dict = dict(zip(scored_ids, scored_feats))
-#    query_dict = dict(zip(query_ids, query_feats))
-
-#    image_score_list = [os.path.join(DATA_ROOT, "scored", str(i) + ".png") for i in scored_ids]
-#    scored_feature_generator = utils.custom_generator(image_score_list, manual_score_dict, FEATURES_DIM)
-
-#    image_query_list = [os.path.join(DATA_ROOT, "query", str(i) + ".png") for i in manual_query_ids]
-#    query_feature_generator = utils.custom_generator(image_query_list, manual_query_dict, FEATURES_DIM, do_score= False, batch_size=1)
-
-#    print("Data generators have been created")
-
-    #    sys.exit(0)
+#    sys.exit(0)
 
     if REGRESSOR_TYPE is not None:
         regr = get_regressor(REGRESSOR_TYPE)
