@@ -1,7 +1,17 @@
-# CIL-Galaxies
-## Specs
-* Python version 3.6
-* Tensorflow 2.0.0-beta1
+# EGMP - Galaxy Image Generation
+
+## Prerequisites
+- Python version 3.6
+- Tensorflow 1.13 (https://www.tensorflow.org/versions/r1.13/api_docs/python/tf)
+- scikit-image / skimage (https://scikit-image.org/)
+- scikit-learn / sklearn (https://scikit-learn.org/stable/)
+- NumPy (https://www.numpy.org/)
+- Pandas (https://pandas.pydata.org/)
+- seaborn (https://seaborn.pydata.org/)
+- PyWavelets / pywt (https://pywavelets.readthedocs.io/en/latest/)
+- Matplotlib (https://matplotlib.org/)
+- tqdm (https://github.com/tqdm/tqdm)
+- Pillow (https://pillow.readthedocs.io/en/stable/)
 
 ## Authors
 - Gabriel Hayat
@@ -9,7 +19,31 @@
 - Philipe Andreu
 - Emilien Pilloud 
 
+| File | Description
+| :--- | :----------
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+| [StyleGAN] | Main folder.
+
 ## Baselines
+
+### 1) Manual Feature Regressors
+
+In order to train the Regressors based on manually extracted features, one should run the following command: 
+
+`python3 baseline_score_regressor.py --regressor_type=`
+
 ### 1) XGBoost Regressor on manually generated features
 
 
