@@ -132,7 +132,7 @@ def features_summary(image_set, decode=True, return_ids=True):
     ids = []
     for image in tqdm(image_set):
         if return_ids:
-            ids.append(int(str(image).split("/")[-1].split(".")[0].split("_")[-1]))
+            ids.append(int(str(image).split("/")[-1].split(".")[0]))
         if decode:
             image = color.rgb2gray(io.imread(image))
             image = image / 255.0
