@@ -122,7 +122,7 @@ def get_hand_crafted(one_image):
 
 def features_summary(image_set, decode=True, return_ids=True):
     """ Extracts various features out of the given image
-    :param array image_set: the image set to extract the summary of
+    :param array image_set: the list of paths to images used to extract the summary
     :param bool decode: whether the images need to be decoded or not
     :param bool return_ids: whether we wish to have the ids be part of the output
     :return: the summary associated with the images
@@ -135,7 +135,7 @@ def features_summary(image_set, decode=True, return_ids=True):
             ids.append(int(str(image).split("/")[-1].split(".")[0].split("_")[-1]))
         if decode:
             image = color.rgb2gray(io.imread(image))
-            image = vanilla_preprocessing(image)
+            image = image / 255.0
         assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
         features.append(get_hand_crafted(image))
     features = np.array(features)
@@ -146,25 +146,17 @@ def features_summary(image_set, decode=True, return_ids=True):
 
     return features, mean_features, var_features, np.array(ids)
 
-def extract_and_save_features(image_dir, prefix, out_dir="manual_features", max_imgs=None):
+def extract_and_save_features(image_dir, max_imgs=None):
     """
     Extract manual features and summaries from images contained in dir and saves them in the out_directory
     :param str image_dir: the directory containing the images
-    :param str prefix: the set of images to process (labeled, scored or query)
-    :param str out_dir: the directory where the extracted features and summaries should be saved
     :param int max_imgs: defines the max number of images to consider, consider all if set to None
     """
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
-
     all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
     if max_imgs and len(all_images) > max_imgs:
         all_images = all_images[:max_imgs]
-    features, means, vars, ids = features_summary(all_images, True)
-    np.savetxt(os.path.join(out_dir, "{}_feats.gz".format(prefix)), features)
-    np.savetxt(os.path.join(out_dir, "{}_means.gz".format(prefix)), means)
-    np.savetxt(os.path.join(out_dir, "{}_vars.gz".format(prefix)), vars)
-    np.savetxt(os.path.join(out_dir, "{}_feats_ids.gz".format(prefix)), ids)
+    features, means, vars, ids = features_summary(all_images)
+    return features, means, vars, ids
 
 
 # ------------------------------------------------------------------ EXPERIMENTS --------------------------------------------------------------------------

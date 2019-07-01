@@ -1,5 +1,6 @@
 import utils
 import os, sys, glob
+import numpy as np
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
@@ -28,6 +29,10 @@ print("    FEATURES_DIR: {}".format(FEATURES_DIR))
 if not os.path.exists(FEATURES_DIR):
     os.makedirs(FEATURES_DIR)
     
+LABELED_DIR = os.path.join(DATA_ROOT, 'labeled')
+SCORED_DIR = os.path.join(DATA_ROOT, 'scored')
+QUERY_DIR = os.path.join(DATA_ROOT, 'query')
+    
 LABELED_FEATS_PATH = os.path.join(FEATURES_DIR, 'labeled_feats.gz')
 LABELED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'labeled_feats_ids.gz')
 
@@ -37,21 +42,40 @@ SCORED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'scored_feats_ids.gz')
 QUERY_FEATS_PATH = os.path.join(FEATURES_DIR, 'query_feats.gz')
 QUERY_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'query_feats_ids.gz')
 
+def save_feats(out_dir, features, ids, prefix):
+    np.savetxt(os.path.join(out_dir, "{}_feats.gz".format(prefix)), features)
+    np.savetxt(os.path.join(out_dir, "{}_feats_ids.gz".format(prefix)), ids)
+
+# Start
+
+# Generate features for labeled images
 print("\n")
 if GEN_LABELED and (not os.path.exists(LABELED_FEATS_PATH) or not os.path.exists(LABELED_FEATS_IDS_PATH)):
-    utils.extract_and_save_features(image_dir=os.path.join(DATA_ROOT, 'labeled'), prefix='labeled', out_dir=FEATURES_DIR)
+    features, _, _, ids = utils.extract_and_save_features(image_dir=LABELED_DIR)
+    save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='labeled')
 elif GEN_LABELED:
     print("Found labeled set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
 
+# Generate features for scored images
 print("\n")
 if GEN_SCORED and (not os.path.exists(SCORED_FEATS_PATH) or not os.path.exists(SCORED_FEATS_IDS_PATH)):
-    utils.extract_and_save_features(image_dir=os.path.join(DATA_ROOT, 'scored'), prefix='scored', out_dir=FEATURES_DIR)
+    features, _, _, ids = utils.extract_and_save_features(image_dir=SCORED_DIR)
+    # read the scores to be include them in the saved features file
+    scores = np.genfromtxt(os.path.join(DATA_ROOT, "scored.csv"), delimiter=",", skip_header=1)
+    scores_dict = dict(zip(scores[:,0], scores[:,1]))
+    scores_ordered = np.array([scores_dict[id] for id in ids]).reshape([-1, 1]) # get the scores per id in the same order as in ids
+    
+    features = np.concatenate([features, scores_ordered], axis=1) # add last column for scores
+
+    save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='scored')
 elif GEN_SCORED:
     print("Found scored set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
 
+# Generate features for query images
 print("\n")    
 if GEN_QUERY and (not os.path.exists(QUERY_FEATS_PATH) or not os.path.exists(QUERY_FEATS_IDS_PATH)):
-    utils.extract_and_save_features(image_dir=os.path.join(DATA_ROOT, 'query'), prefix='query', out_dir=FEATURES_DIR)
+    features, _, _, ids = utils.extract_and_save_features(image_dir=QUERY_DIR)
+    save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='query')
 elif GEN_QUERY:
     print("Found query set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
 
