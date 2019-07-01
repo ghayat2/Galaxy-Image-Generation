@@ -59,7 +59,8 @@ elif GEN_LABELED:
 # Generate features for scored images
 print("\n")
 if GEN_SCORED and (not os.path.exists(SCORED_FEATS_PATH) or not os.path.exists(SCORED_FEATS_IDS_PATH)):
-    features, _, _, ids = utils.extract_and_save_features(image_dir=SCORED_DIR)
+    features, _, _, ids = utils.extract_and_save_features(image_dir=SCORED_DIR, max_imgs=5)
+    ids = ids.astype(int) # convert id to int
     # read the scores to be include them in the saved features file
     scores = np.genfromtxt(os.path.join(DATA_ROOT, "scored.csv"), delimiter=",", skip_header=1)
     scores_dict = dict(zip(scores[:,0], scores[:,1]))
