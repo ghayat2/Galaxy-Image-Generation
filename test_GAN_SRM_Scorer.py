@@ -295,8 +295,13 @@ elif USE_SCORER: # using a baseline regressor to score images
 
 #sys.exit(0)
 
-if not os.path.exists(GENERATED_SAMPLES_DIR):
-    os.makedirs(GENERATED_SAMPLES_DIR)
+GENERATED_SAMPLES_64_DIR = os.path.join(GENERATED_SAMPLES_DIR, "64x64")
+if not os.path.exists(GENERATED_SAMPLES_64_DIR):
+    os.makedirs(GENERATED_SAMPLES_64_DIR)
+
+GENERATED_SAMPLES_1000_DIR = os.path.join(GENERATED_SAMPLES_DIR, "1000x1000")
+if not os.path.exists(GENERATED_SAMPLES_1000_DIR):
+    os.makedirs(GENERATED_SAMPLES_1000_DIR)
 
 counter = 0
 generated_images_scores = []
@@ -335,17 +340,26 @@ while counter < TO_GENERATE:
         
         print("Keeping image with score {}", score)
 
-    img = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    img_64 = (fake_im_val[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    img_1000 = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
     #--------------------------------------------------------
 #    max_val = img.max()
 #    img = ((img/max_val)*255.0).astype("uint8")
     #-------------------------------------------------------- 
     
-    print(img.shape)
-    print("min: {}, max: {}".format(img.min(), img.max()))
-    image = Image.fromarray(img)
+    print("Saving with size 64x64")
+    print(img_64.shape)
+    print("min: {}, max: {}".format(img_64.min(), img_64.max()))
+    image = Image.fromarray(img_64)
     filename = "img_{}".format(counter)
-    image.save(os.path.join(GENERATED_SAMPLES_DIR, filename+".png"))
+    image.save(os.path.join(GENERATED_SAMPLES_64_DIR, filename+".png"))
+    
+    print("Saving with size 1000x1000")
+    print(img_1000.shape)
+    print("min: {}, max: {}".format(img_1000.min(), img_1000.max()))
+    image = Image.fromarray(img_1000)
+    filename = "img_{}".format(counter)
+    image.save(os.path.join(GENERATED_SAMPLES_1000_DIR, filename+".png"))
     
     if USE_SCORER:
         generated_images_scores.append(score)
