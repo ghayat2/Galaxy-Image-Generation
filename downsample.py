@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from skimage import color, io
 from argparse import ArgumentParser
+import tensorflow as tf
 
 parser = ArgumentParser()
 parser.add_argument('-d', '--image_dir', type=str, default="./generated_images/")

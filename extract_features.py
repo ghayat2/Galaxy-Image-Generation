@@ -1,10 +1,11 @@
 import utils
 import pathlib, os
+import numpy as np
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
 parser.add_argument('-d', '--image_dir', type=str, default="./generated_images/")
-parser.add_argument('-o', '--out_dir', type=str, default="manual_features")
+parser.add_argument('-o', '--out_dir', type=str, default="./manual_features/")
 parser.add_argument('-p', '--prefix', type=str, default="")
 parser.add_argument('-I', '--struct_from_img_dir', default=False, help="If True, will assume well-structured img_dir."
                                                                    " cf. run_experiment.py")
@@ -24,9 +25,11 @@ if args.struct_from_img_dir:
             if len(os.listdir(os.path.join(args.out_dir, str(size), name))) > 0:
                 print("Feature directory for model {} with size {} is not empty. Skipping...".format(name, size))
             else:
-                utils.extract_and_save_features(os.path.join(args.image_dir, str(size), name), name,
-                                                os.path.join(args.out_dir, str(size)), args.max)
+                feats, means, vars, _ = utils.extract_features(os.path.join(args.image_dir, str(size), name), args.max)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "features.gz"), feats)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "means.gz"), means)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "vars.gz"), vars)
 else:
-    utils.extract_and_save_features(args.image_dir, args.prefix, args.out_dir)
+    utils.extract_features(args.image_dir, args.max)
 
 print("Manual Features from {} have been extracted".format(args.image_dir))
