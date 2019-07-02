@@ -1,5 +1,6 @@
 import tensorflow as tf
 import layers
+import sys
 import time
 
 global_seed = 5
@@ -100,7 +101,7 @@ class MCGAN:
     def generator_loss(self, fake_out, labels, label_smoothing=False):
         with tf.name_scope("generator_loss"):
             if(label_smoothing):
-                smoothed_labels = tf.constant([[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0],[1.0, 0.0]])
+                smoothed_labels = tf.one_hot(labels, depth=2)
                 loss_gen = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_labels, logits=fake_out))
             else:
                 loss_gen = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=fake_out))
@@ -109,8 +110,13 @@ class MCGAN:
     def discriminator_loss(self, fake_out, real_out, fake_labels, real_labels, label_smoothing=False):
         with tf.name_scope("discriminator_loss"):
             if(label_smoothing):
-                smoothed_fakes = tf.constant([[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0],[0.0, 1.0]])
-                smoothed_reals = tf.constant([[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1],[0.9, 0.1]])
+                delta = 0.3
+                perturbation = tf.reshape(tf.random.uniform(real_labels.shape, minval=-delta, maxval=delta, dtype=tf.float32, seed=global_seed), [-1, 1])
+                added_perturbation = tf.concat([perturbation, -perturbation], axis=1)
+
+                smoothed_fakes = tf.one_hot(fake_labels, depth=2)
+                smoothed_reals = tf.one_hot(real_labels, depth=2) + added_perturbation
+                
                 fake_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_fakes, logits=fake_out)
                 real_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_reals, logits=real_out)
             else:
