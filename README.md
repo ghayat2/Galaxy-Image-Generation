@@ -38,7 +38,7 @@ python3 [filename] --help
 | baseline\_score\_regressor.py | Applies different Regressor architectures to the Regression task
 | data.py | Image/Manual Feature loading and preprocessing
 | DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model
-| DCGAN.py | Deep Convolutoinal Generative Adversarial Network
+| DCGAN.py | Deep Convolutional Generative Adversarial Network
 | downsample.py | Given input images at 1000x1000 resolution, this resizes them using max pooling with appropriate padding for range \[-1, 1\].
 | extract\_features.py | Extracts manually crafted features from the provided files
 | generate\_feats.py | Generates manually crafted features from the provided images

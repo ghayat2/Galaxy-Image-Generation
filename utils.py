@@ -8,6 +8,7 @@ import pathlib
 import pywt
 #import xgboost as xgb
 import skimage
+import sklearn as sk
 
 #from shutil import copyfile
 from tqdm import tqdm
@@ -187,10 +188,46 @@ def knn_diversity_stats(training_set, generated_imgs):
     :param array generated_imgs: the images whose nearest neighbours we wish to find
     """
     knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
-    knn.fit(training_set)
+    knn.fit(training_set, y=np.zeros(shape=(len(training_set),)))
 
-    dists, idxs = knn.neighbors(generated_imgs)
+    dists, idxs = knn.kneighbors(generated_imgs)
     return np.average(dists)
+
+def decode_images(images_paths, size):
+    """
+    Given a list of imgs paths, decoded them and return the array
+    :param images_paths: list of paths
+    :param size: size of the imgs
+    :return: narray of shape [len(images_paths), size, size] encoded in [0,1] floats
+    """
+    images = np.empty(shape=(len(images_paths), size, size), dtype=np.float)
+    for idx, i in enumerate(images_paths):
+        decoded = io.imread(i, as_gray=True)
+        decoded = decoded.astype(np.float)
+        decoded /= 255.0
+        assert np.amax(decoded) <= 1.0 and np.amin(decoded) >= 0.0 and decoded.dtype == np.float
+        images[idx] = decoded
+    return images
+
+def leave_one_out_knn_diversity(images_paths, size):
+    """
+    summarize the distance to k closest images in the sets
+    :note: put all images into memory so the number of images
+    int the set should be reasonable
+    :param images_paths: paths to the imgs
+    :param size: size of the imgs
+    :returns a tuple (mean, std, min, max) of the distances
+    """
+    loo = sk.model_selection.LeaveOneOut()
+    images = decode_images(images_paths, size)
+    images = np.reshape(images, [len(images), -1]) # Flatten for sklearn [#samples, #features] framework
+    dists = []
+    for train_idx, test_idx in tqdm(loo.split(images)):
+        train = images[train_idx]
+        test = images[test_idx]
+        d = knn_diversity_stats(train, test)
+        dists.append(d)
+    return np.average(dists), np.std(dists), np.amin(dists), np.amax(dists)
 
 def make_max_pooling_resizer():
     """
