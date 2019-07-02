@@ -9,10 +9,12 @@ import tensorflow as tf
 parser = ArgumentParser()
 parser.add_argument('-d', '--image_dir', type=str, default="./generated_images/")
 parser.add_argument('-o', '--out_dir', type=str, default="./downsampled")
+parser.add_argument('-v', '--vmin', type=int, default="0 if imgs in [0,1] range, -1 if images in [-1,1]")
+
 
 args = parser.parse_args()
 
-resizer = utils.make_max_pooling_resizer()
+resizer = utils.make_max_pooling_resizer(args.vmin)
 
 if not os.path.isdir(args.out_dir):
     os.mkdir(args.out_dir)

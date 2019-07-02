@@ -22,13 +22,13 @@ if args.struct_from_img_dir:
             print("Extracting features for {} of size {}".format(name, size))
             if not os.path.isdir(os.path.join(args.out_dir, str(size), name)):
                 os.makedirs(os.path.join(args.out_dir, str(size), name))
-            if len(os.listdir(os.path.join(args.out_dir, str(size), name))) > 0:
+            if len(os.listdir(os.path.join(args.out_dir, str(size), name))) > 0 and not args.force:
                 print("Feature directory for model {} with size {} is not empty. Skipping...".format(name, size))
             else:
                 feats, means, vars, _ = utils.extract_features(os.path.join(args.image_dir, str(size), name), args.max)
-                np.savetxt(os.path.join(args.out_dir, str(size), name, "features.gz"), feats)
-                np.savetxt(os.path.join(args.out_dir, str(size), name, "means.gz"), means)
-                np.savetxt(os.path.join(args.out_dir, str(size), name, "vars.gz"), vars)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "features_{}.gz".format(name)), feats)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "means_{}.gz".format(name)), means)
+                np.savetxt(os.path.join(args.out_dir, str(size), name, "vars_{}.gz".format(name)), vars)
 else:
     utils.extract_features(args.image_dir, args.max)
 
