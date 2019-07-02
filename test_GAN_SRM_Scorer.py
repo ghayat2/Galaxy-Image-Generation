@@ -250,7 +250,7 @@ if USE_SCORER and SCORER == "DCGAN_Scorer":
     print("Filtering images having score less than {}".format(threshold))
     
 elif USE_SCORER: # using a baseline regressor to score images
-    labels2paths = read_labels2paths(data_root="./data")
+    labels2paths = read_labels2paths(data_root=DATA_ROOT)
     galaxies_images_paths = labels2paths[1.0] # paths to galaxies
     
     CHECKPOINTS_FILE = os.path.join("./Regressor", SCORER, "checkpoints", SCORER+".ckpt")

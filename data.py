@@ -11,6 +11,8 @@ global_seed=5 # for reproducibilty
 def preprocess_image(image):
     image = tf.image.decode_png(image, channels=1) # grayscale images => 1 channel
     image = tf.cast(image,tf.float32) / 128. - 1
+    rotation = tf.random.uniform([1], minval=0, maxval=3, dtype=tf.dtypes.int32)
+    image = tf.image.rot90(image, k=rotation[0])
     image = tf.transpose(a=image, perm=[2, 0, 1]) # images are read in channels_last format, so convert to channels_first format for performance on GPU
     return image
 
