@@ -83,7 +83,7 @@ class DCGAN:
                 added_perturbation = tf.concat([perturbation, -perturbation], axis=1)
 
                 smoothed_fakes = tf.one_hot(fake_labels, depth=2)
-                smoothed_reals = tf.one_hot(real_labels, depth=2) + added_perturbation
+                smoothed_reals = tf.clip_by_value(tf.one_hot(real_labels, depth=2) + added_perturbation, 0.0, 1.0)
                 
                 fake_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_fakes, logits=fake_out)
                 real_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=smoothed_reals, logits=real_out)
