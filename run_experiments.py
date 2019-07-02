@@ -109,20 +109,23 @@ if args.heatmaps or args.all:
 if args.knn or args.all:
     with open(os.path.join(args.out_dir, "knn_results.txt"), "w+") as out:
         for size in [64]:
-            out.write("Images of size {}x{}\n".format(size, size))
-            if not os.path.isdir(os.path.join(args.out_dir, str(size))):
-                os.mkdir(os.path.join(args.out_dir, str(size)))
-            all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
-                          if os.path.isdir(model)]
-            all_models_name = [str(name).split('/')[-1] for name in all_models]
-            for model_name in all_models_name:
-                if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
-                    os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-                image_set = [image for image in pathlib.Path(os.path.join(args.image_dir, str(size), model_name)).glob("*")]
-                stats = utils.leave_one_out_knn_diversity(image_set, size)
-                print("KNN stats for model {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})".format(model_name, *stats))
-                out.write("KNN stats for model {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})\n".format(model_name, *stats))
-            print("KNN stats computed for size {}".format(size))
+            for k in [1, 3, 5]:
+                out.write("Images of size {}x{}\n".format(size, size))
+                if not os.path.isdir(os.path.join(args.out_dir, str(size))):
+                    os.mkdir(os.path.join(args.out_dir, str(size)))
+                all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
+                              if os.path.isdir(model)]
+                all_models_name = [str(name).split('/')[-1] for name in all_models]
+                for model_name in all_models_name:
+                    if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
+                        os.mkdir(os.path.join(args.out_dir, str(size), model_name))
+                    image_set = [image for image in pathlib.Path(os.path.join(args.image_dir, str(size), model_name)).glob("*")]
+                    stats = utils.leave_one_out_knn_diversity(image_set, size, k)
+                    print("KNN stats for model {} with k = {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})"
+                          .format(model_name, k, *stats))
+                    out.write("KNN stats for model {} with k = {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})\n"
+                              .format(model_name, k, *stats))
+                print("KNN stats computed for size {}".format(size))
 
 # Experiences on features
 # Plot and save the box_plots and distplots
@@ -178,7 +181,7 @@ if args.feats or args.all:
         for model_name in all_models_name:
             if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
                 os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-            features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "features_{}.gz".format(model_name)))
+            features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "features.gz".format(model_name)))
             for f in range(features.shape[1]):
                 f = int(f)
                 feat = features[:, f:f+1]

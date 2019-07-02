@@ -172,22 +172,21 @@ def heatmap(images_set, decode=False, shape=(1000, 1000)):
     sum = np.zeros(shape)
     for image in images_set:
         if decode:
-            image = color.rgb2gray(io.imread(image))
-            image = image / 255.0
-
+            image = io.imread(image, as_gray=True)
+        image = image / 255.0
         assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
         sum += image
     sum /= len(images_set)
     return sum
 
-def knn_diversity_stats(training_set, generated_imgs):
+def knn_diversity_stats(training_set, generated_imgs, k=3):
     """
     Find the k=3 nearest neighnors of an image in the training set and
     returns the average distance
     :param array training_set: the training set of images according to which we will find the nearest neighbours
     :param array generated_imgs: the images whose nearest neighbours we wish to find
     """
-    knn = sk.neighbors.NearestNeighbors(n_neighbors=3)
+    knn = sk.neighbors.NearestNeighbors(n_neighbors=k)
     knn.fit(training_set, y=np.zeros(shape=(len(training_set),)))
 
     dists, idxs = knn.kneighbors(generated_imgs)
@@ -209,7 +208,7 @@ def decode_images(images_paths, size):
         images[idx] = decoded
     return images
 
-def leave_one_out_knn_diversity(images_paths, size):
+def leave_one_out_knn_diversity(images_paths, size, k=3):
     """
     summarize the distance to k closest images in the sets
     :note: put all images into memory so the number of images
@@ -225,19 +224,19 @@ def leave_one_out_knn_diversity(images_paths, size):
     for train_idx, test_idx in tqdm(loo.split(images)):
         train = images[train_idx]
         test = images[test_idx]
-        d = knn_diversity_stats(train, test)
+        d = knn_diversity_stats(train, test, k)
         dists.append(d)
     return np.average(dists), np.std(dists), np.amin(dists), np.amax(dists)
 
-def make_max_pooling_resizer():
+def make_max_pooling_resizer(vmin=-1):
     """
     Keras resizer for resizing 1000x1000 images into 64x64 max_pooled images
     :return: the (Keras) resizer
     """
     resizer = tf.keras.Sequential(
-        [tf.keras.layers.Lambda(lambda x: x + 1),
+        [tf.keras.layers.Lambda(lambda x: x - vmin),
          tf.keras.layers.ZeroPadding2D(padding=(12, 12)),
-         tf.keras.layers.Lambda(lambda x: x - 1),
+         tf.keras.layers.Lambda(lambda x: x + vmin),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
          tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
@@ -245,6 +244,8 @@ def make_max_pooling_resizer():
          tf.keras.layers.Reshape(target_shape=(64, 64, 1))]
     )
     return resizer
+
+
 
 ## ------------------------------------------------------------------ IMAGE PREPROCESSING --------------------------------------------------------------------------
 
