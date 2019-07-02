@@ -66,11 +66,11 @@ def main():
         sys.exit(-1)
     
     if not os.path.exists(SCORED_FEATS_PATH) or not os.path.exists(SCORED_FEATS_IDS_PATH):
-        print("Scored dataset features {} or ids {} not found, please run generate_feats.py ...".format(SCORED_FEATS_PATH, SCORED_FEATS_IDS_PATH))
+        print("Scored dataset features '{}' or ids '{}' not found, please run generate_feats.py ...".format(SCORED_FEATS_PATH, SCORED_FEATS_IDS_PATH))
         sys.exit(-1)
         
     if not os.path.exists(QUERY_FEATS_PATH) or not os.path.exists(QUERY_FEATS_IDS_PATH):
-        print("Scored dataset features {} or ids {} not found, please run generate_feats.py ...".format(QUERY_FEATS_PATH, QUERY_FEATS_IDS_PATH))
+        print("Scored dataset features '{}' or ids '{}' not found, please run generate_feats.py ...".format(QUERY_FEATS_PATH, QUERY_FEATS_IDS_PATH))
         sys.exit(-1)
 
     scored_feats_with_scores = np.loadtxt(SCORED_FEATS_PATH)

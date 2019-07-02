@@ -33,7 +33,7 @@ if not os.path.exists(IMAGES_DIR):
     print("IMAGES DIR: {} not found".format(IMAGES_DIR))
     sys.exit(-1)
 
-if not os.path.exists(REGRESSOR_DIR) or not os.path.exists(CHECKPOINTS_DIR) or not os.path.exists(CHECKPOINTS_FILE):
+if not os.path.exists(CHECKPOINTS_FILE):
     print("Checkpoint file not found. Please run 'python3 baseline_score_regressor.py -rt {}' to train score regressor".format(REGRESSOR_TYPE))
     sys.exit(-1)
     
@@ -42,7 +42,7 @@ if len(glob.glob(os.path.join(IMAGES_DIR, "*"))) == 0:
     sys.exit(0)
 
 print("Extracting features for images...")
-features, _, _, ids = utils.extract_and_save_features(image_dir=IMAGES_DIR)
+features, _, _, ids = utils.extract_features(image_dir=IMAGES_DIR)
 
 regr = joblib.load(CHECKPOINTS_FILE)
 

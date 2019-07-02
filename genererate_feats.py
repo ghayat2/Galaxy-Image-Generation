@@ -51,7 +51,8 @@ def save_feats(out_dir, features, ids, prefix):
 # Generate features for labeled images
 print("\n")
 if GEN_LABELED and (not os.path.exists(LABELED_FEATS_PATH) or not os.path.exists(LABELED_FEATS_IDS_PATH)):
-    features, _, _, ids = utils.extract_and_save_features(image_dir=LABELED_DIR)
+    features, _, _, ids = utils.extract_features(image_dir=LABELED_DIR)
+    ids = ids.astype(int) # convert id to int
     save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='labeled')
 elif GEN_LABELED:
     print("Found labeled set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
@@ -59,7 +60,7 @@ elif GEN_LABELED:
 # Generate features for scored images
 print("\n")
 if GEN_SCORED and (not os.path.exists(SCORED_FEATS_PATH) or not os.path.exists(SCORED_FEATS_IDS_PATH)):
-    features, _, _, ids = utils.extract_and_save_features(image_dir=SCORED_DIR, max_imgs=5)
+    features, _, _, ids = utils.extract_features(image_dir=SCORED_DIR, max_imgs=5)
     ids = ids.astype(int) # convert id to int
     # read the scores to be include them in the saved features file
     scores = np.genfromtxt(os.path.join(DATA_ROOT, "scored.csv"), delimiter=",", skip_header=1)
@@ -75,7 +76,8 @@ elif GEN_SCORED:
 # Generate features for query images
 print("\n")    
 if GEN_QUERY and (not os.path.exists(QUERY_FEATS_PATH) or not os.path.exists(QUERY_FEATS_IDS_PATH)):
-    features, _, _, ids = utils.extract_and_save_features(image_dir=QUERY_DIR)
+    features, _, _, ids = utils.extract_features(image_dir=QUERY_DIR)
+    ids = ids.astype(int) # convert id to int
     save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='query')
 elif GEN_QUERY:
     print("Found query set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))

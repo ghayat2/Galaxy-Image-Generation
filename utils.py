@@ -145,7 +145,7 @@ def features_summary(image_set, decode=True, return_ids=True):
 
     return features, mean_features, var_features, np.array(ids)
 
-def extract_and_save_features(image_dir, max_imgs=None):
+def extract_features(image_dir, max_imgs=None):
     """
     Extract manual features and summaries from images contained in dir and saves them in the out_directory
     :param str image_dir: the directory containing the images
