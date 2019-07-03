@@ -135,7 +135,7 @@ def blobs_summary(image_paths):
     """
     centers = set()
     n_blobs = []
-    for path in image_paths:
+    for path in tqdm(image_paths):
         image = io.imread(path, as_gray=True)
         blobs = blob_log(image, max_sigma=2.5, min_sigma=1.5, num_sigma=5, threshold=0.05)
         n_blobs += [len(blobs)]

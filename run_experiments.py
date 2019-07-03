@@ -119,19 +119,23 @@ if LEGEND is not None:
 sns.set()
 
 if BLOBS:
-    for size in [64, 1000]:
-        if not os.path.isdir(os.path.join(OUT_DIR, str(size))):
-            os.mkdir(os.path.join(OUT_DIR, str(size)))
-        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                      if os.path.isdir(model)]
-        all_models_name = [str(name).split('/')[-1] for name in all_models]
-        for model_name in all_models_name:
-            if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
-                os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
-            image_set = [image for image in pathlib.Path(os.path.join(IMAGES_DIR, str(size), model_name)).glob("*")]
-            d_centers, mean_n_blobs, std_n_blobs = utils.blobs_summary(image_set)
-            print((d_centers, mean_n_blobs, std_n_blobs))
-        print("Blobs statistics done for size {}".format(size))
+    print("\n")
+    with open(os.path.join(OUT_DIR, "blob_results.txt"), "w+") as out:
+        for size in [64, 1000]:
+            out.write("Images of size {}x{}\n".format(size, size))
+            for model_name in all_models_name:
+                model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
+                if not os.path.exists(model_in_dir):
+                    print("Images of size {} not found for model {}\n".format(size, model_name))
+                    continue
+                model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
+                if not os.path.isdir(model_out_dir):
+                    os.makedirs(model_out_dir)
+                image_set = [image for image in glob.glob(os.path.join(model_in_dir, "*"))]
+                d_centers, mean_n_blobs, std_n_blobs = utils.blobs_summary(image_set)
+                print("Blobs stats for model {}: (d_centers, mean_n_blobs, std_n_blobs) = ({}, {}, {})\n".format(model_name, d_centers, mean_n_blobs, std_n_blobs))
+                out.write("Blobs stats for model {}: (d_centers, mean_n_blobs, std_n_blobs) = ({}, {}, {})\n".format(model_name, d_centers, mean_n_blobs, std_n_blobs))
+            print("Blobs statistics done for size {}\n".format(size))
 
 if HEATMAPS:
     print("\n")
@@ -139,7 +143,7 @@ if HEATMAPS:
         for model_name in all_models_name:
             model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
             if not os.path.exists(model_in_dir):
-                print("Images of size {} not found".format(size))
+                print("Images of size {} not found for model {}".format(size, model_name))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
@@ -163,7 +167,7 @@ if KNN:
                 for model_name in all_models_name:
                     model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
                     if not os.path.exists(model_in_dir):
-                        print("Images of size {} not found".format(size))
+                        print("Images of size {} not found for model {}".format(size, model_name))
                         continue
                     model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
                     if not os.path.isdir(model_out_dir):
@@ -183,7 +187,7 @@ if BOX:
         for model_name in all_models_name:
             model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input directory
             if not os.path.exists(model_in_dir):
-                print("Features for images of size {} not found".format(size))
+                print("Features for images of size {} not found for model {}".format(size, model_name))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
@@ -236,7 +240,7 @@ if FEATS:
         for model_name in all_models_name:
             model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input dir
             if not os.path.exists(model_in_dir):
-                print("Features for images of size {} not found".format(size))
+                print("Features for images of size {} not found for model {}".format(size, model_name))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
