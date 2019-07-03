@@ -376,12 +376,13 @@ while counter < TO_GENERATE:
 #    img = ((img/max_val)*255.0).astype("uint8")
     #-------------------------------------------------------- 
     
-    print("Saving with size 64x64")
-    print(img_64.shape)
-    print("min: {}, max: {}".format(img_64.min(), img_64.max()))
-    image = Image.fromarray(img_64)
-    filename = "img_{}".format(counter)
-    image.save(os.path.join(GENERATED_SAMPLES_64_DIR, filename+".png"))
+    if(GENERATOR != "FullresGAN"):
+        print("Saving with size 64x64")
+        print(img_64.shape)
+        print("min: {}, max: {}".format(img_64.min(), img_64.max()))
+        image = Image.fromarray(img_64)
+        filename = "img_{}".format(counter)
+        image.save(os.path.join(GENERATED_SAMPLES_64_DIR, filename+".png"))
     
     print("Saving with size 1000x1000")
     print(img_1000.shape)

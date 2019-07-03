@@ -53,7 +53,7 @@ if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
     
 LOG_DIR = os.path.join("./LOG_PATCHES", CURR_TIMESTAMP)
-GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples")
+GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples", "1000")
 
 class Logger(object):  # logger to log output to both terminal and file
     def __init__(self, log_dir):
