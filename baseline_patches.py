@@ -4,7 +4,7 @@ from tqdm import trange
 from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
-import layers, data
+import data
 import patoolib
 
 global_seed=5
