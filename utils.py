@@ -120,6 +120,22 @@ def get_hand_crafted(one_image):
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val], wavelet_approx])
     return features
 
+def blobs_summary(image_paths):
+    """
+    Compute some statistics on the blobs on the images
+    :param image_paths: paths to the images
+    :return: number of distinct centers, mean of the number of blobs per image, std of the number of blobs per image
+    """
+    centers = set()
+    n_blobs = []
+    for path in image_paths:
+        image = io.imread(path, as_gray=True)
+        blobs = blob_log(image, max_sigma=2.5, min_sigma=1.5, num_sigma=5, threshold=0.05)
+        n_blobs += [len(blobs)]
+        for x, y, sigma in blobs:
+            centers.add((x, y))
+    return len(centers), np.mean(n_blobs), np.std(n_blobs)
+
 def features_summary(image_set, decode=True, return_ids=True, resize=False):
     """ Extracts various features out of the given image
     :param array image_set: the list of paths to images used to extract the summary

@@ -14,6 +14,8 @@ parser.add_argument('-f', '--feats_dir', type=str, default="./manual_features/")
 parser.add_argument('-hm', '--heatmaps', help = '', action="store_true")
 parser.add_argument('-knn', '--k_nearest_neighbors', help = '', action="store_true")
 parser.add_argument('-box', '--box_plot', help = '', action="store_true")
+parser.add_argument('-blobs', '--blobs', help = '', action="store_true")
+
 parser.add_argument('-feats', '--features', help = '', action="store_true")
 parser.add_argument('-all', '--all_experiments', help = 'To enable all experiments at once', action="store_true")
 
@@ -35,6 +37,7 @@ HEATMAPS = args.heatmaps or ALL
 KNN = args.k_nearest_neighbors or ALL
 BOX = args.box_plot or ALL
 FEATS = args.features or ALL
+BLOBS = args.blobs or ALL
 
 
 BOX_FEATS = args.box_features
@@ -47,10 +50,9 @@ print("    HEATMAPS: {}".format(HEATMAPS))
 print("    KNN: {}".format(KNN))
 print("    BOX: {}".format(BOX))
 print("    FEATS: {}".format(FEATS))
+print("    BLOBS: {}".format(BLOBS))
 print("    BOX_FEATS: {}".format(BOX_FEATS))
 print("    LEGEND: {}".format(LEGEND))
-
-sys.exit(0)
 
 # the generated images structure should be:
 # generated_images/
@@ -112,6 +114,21 @@ if LEGEND is not None:
 
 # run the heatmaps and save them in their respective directory
 sns.set()
+
+if BLOBS:
+    for size in [64, 1000]:
+        if not os.path.isdir(os.path.join(OUT_DIR, str(size))):
+            os.mkdir(os.path.join(OUT_DIR, str(size)))
+        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
+                      if os.path.isdir(model)]
+        all_models_name = [str(name).split('/')[-1] for name in all_models]
+        for model_name in all_models_name:
+            if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
+                os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
+            image_set = [image for image in pathlib.Path(os.path.join(IMAGES_DIR, str(size), model_name)).glob("*")]
+            d_centers, mean_n_blobs, std_n_blobs = utils.blobs_summary(image_set)
+            print((d_centers, mean_n_blobs, std_n_blobs))
+        print("Blobs statistics done for size {}".format(size))
 
 if HEATMAPS:
     for size in [64, 1000]:
