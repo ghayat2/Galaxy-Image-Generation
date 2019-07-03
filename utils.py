@@ -107,6 +107,13 @@ def get_hand_crafted(one_image):
     :return: the features associated with this image
     :rtype: Numpy array of size (38, 1)
     """
+    #Select wavelet decomposition level so as to have the
+    #same number of approximation coefficients
+    if(one_image.shape[0] == 1000):
+        wavedec_level = 9
+    elif(one_image.shape[0] == 64):
+        wavedec_level = 5
+
     hist = histogram(one_image, nbins=20, normalize=True)
     features = hist[0]
     blob_lo = blob_log(one_image, max_sigma=2.5, min_sigma=1.5, num_sigma=5, threshold=0.05)
@@ -116,7 +123,7 @@ def get_hand_crafted(one_image):
     max_val = one_image.max()
     min_val = one_image.min()
     variance_val = np.var(one_image)
-    wavelet_approx = pywt.wavedec2(one_image, 'haar')[0].flatten()
+    wavelet_approx = pywt.wavedec2(one_image, 'haar', level=wavedec_level)[0].flatten()
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val], wavelet_approx])
     return features
 
