@@ -107,6 +107,8 @@ def get_hand_crafted(one_image):
     :return: the features associated with this image
     :rtype: Numpy array of size (38, 1)
     """
+    #Select wavelet decomposition level so as to have the
+    #same number of approximation coefficients
     if(one_image.shape[0] == 1000):
         wavedec_level = 9
     elif(one_image.shape[0] == 64):
