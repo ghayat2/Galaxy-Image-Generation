@@ -108,7 +108,7 @@ for size in [64, 1000]:
     for model_name in all_models_name:
         if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
             os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "features_{}.gz".format(model_name)))
+        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "{}_feats.gz".format(model_name)))
         for f in args.box_features:
             f = int(f)
             feat = features[:, f:f+1]
@@ -130,7 +130,7 @@ for size in [64, 1000]:
 print("Boxplots and Distplots generated")
 
 # Summarize manual features statistics in a table
-n_feats = 34
+n_feats = 38
 columns = [legend[str(f)] if str(f) in legend.keys() else str(f) for f in range(n_feats)]
 index = []
 for size in [64, 1000]:
@@ -150,7 +150,7 @@ for size in [64, 1000]:
     for model_name in all_models_name:
         if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
             os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "features_{}.gz".format(model_name)))
+        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "{}_feats.gz".format(model_name)))
         for f in range(features.shape[1]):
             f = int(f)
             feat = features[:, f:f+1]

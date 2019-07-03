@@ -29,6 +29,8 @@ parser.add_argument('-d_b2', '--disc_beta_2', type = float, default = 0.999, hel
 parser.add_argument('-g_b1', '--gen_beta_1', type = float, default = 0.5, help = 'beta 1 for the optimizer of generator')
 parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help = 'beta 2 for the optimizer of generator')
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
+parser.add_argument('-mb', '--minibatch_discrimination', help = 'whether we want minibatch discrimination', action="store_true")
+parser.add_argument('-ls', '--label_smoothing', help = 'whether we want label smoothing', action="store_true")
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -58,8 +60,8 @@ G_BETA1 = args.gen_beta_1
 G_BETA2 = args.gen_beta_2
 D_BETA1 = args.disc_beta_1
 D_BETA2 = args.disc_beta_2
-USE_MINIBATCH=True
-USE_LABEL_SMOOTHING=True
+USE_MINIBATCH = args.minibatch_discrimination
+USE_LABEL_SMOOTHING = args.label_smoothing
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
