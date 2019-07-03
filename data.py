@@ -165,14 +165,18 @@ def create_dataloader_query(data_root, batches_to_prefetch=20):
     
     return full_ds, all_files, len(all_files)
 
-def create_dataloader_train_mcgan(data_root, batch_size, batches_to_prefetch=20, shuffle=True):
+def create_dataloader_train_mcgan(data_root, batch_size, batches_to_prefetch=20, shuffle=True, resize=False):
     print("Reading images paths ...")
     labels2paths = read_labels2paths(data_root)
     fake_images = labels2paths[0.0] # paths to non-galaxies
     real_images = labels2paths[1.0] # paths to galaxies
     
-    manual_feats = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats.gz'))
-    manual_ids = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats_ids.gz')).astype(int)
+    if(resize):
+        manual_feats = np.loadtxt(os.path.join(data_root, "features", 'labeled_64_feats.gz'))
+        manual_ids = np.loadtxt(os.path.join(data_root, "features", 'labeled_64_feats_ids.gz')).astype(int)
+    else:
+        manual_feats = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats.gz'))
+        manual_ids = np.loadtxt(os.path.join(data_root, "features", 'labeled_feats_ids.gz')).astype(int)
 
     manual_dict = dict(zip(manual_ids, manual_feats))
     

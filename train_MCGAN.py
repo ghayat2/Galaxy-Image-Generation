@@ -31,6 +31,7 @@ parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 parser.add_argument('-mb', '--minibatch_discrimination', help = 'whether we want minibatch discrimination', action="store_true")
 parser.add_argument('-ls', '--label_smoothing', help = 'whether we want label smoothing', action="store_true")
+parser.add_argument('-rs', '--resize', help = 'if we want to work with the 64x64 features ', action="store_true")
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -62,6 +63,7 @@ D_BETA1 = args.disc_beta_1
 D_BETA2 = args.disc_beta_2
 USE_MINIBATCH = args.minibatch_discrimination
 USE_LABEL_SMOOTHING = args.label_smoothing
+RESIZING = args.resize
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
@@ -120,6 +122,7 @@ print("    BETA1_G: {}".format(G_BETA1))
 print("    BETA2_G: {}".format(G_BETA2))
 print("    USE_MINIBATCH: {}".format(USE_MINIBATCH))
 print("    USE_LABEL_SMOOTHING: {}".format(USE_LABEL_SMOOTHING))
+print("    RESIZING: {}".format(RESIZING))
 print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    BATCHES_TO_PREFETCH: {}".format(BATCHES_TO_PREFETCH))
 print("    LOG_ITER_FREQ: {}".format(LOG_ITER_FREQ))
@@ -150,7 +153,7 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    train_ds, nb_images = create_dataloader_train_mcgan(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, shuffle=True)
+    train_ds, nb_images = create_dataloader_train_mcgan(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, shuffle=True, resize=RESIZING)
     im, feats = train_ds
 
     NUM_SAMPLES = nb_images
@@ -159,7 +162,7 @@ with tf.Session(config=config) as sess:
     noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
 
     noise_test = np.random.normal(0, 1, [BATCH_SIZE, NOISE_DIM]).astype("float32") # constant noise to see its evolution over time
-    feats_test = np.random.randint(low=1, high=20, size=[BATCH_SIZE, FEATS_DIM]) # constant list of feats for testing
+    feats_test = np.random.randint(low=1, high=10, size=[BATCH_SIZE, FEATS_DIM]) # constant list of feats for testing
     
     # define placeholders
     im_pl = tf.placeholder(dtype=tf.float32, shape=[BATCH_SIZE, C, H, W]) # placeholder for real images fed to discriminator

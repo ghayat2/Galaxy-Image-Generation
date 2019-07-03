@@ -129,6 +129,28 @@ def conv_block_dcgan(inp, training, out_channels, filter_size=1, strides=1, padd
 #        out = dropout_layer(out, training, 0.3)
     return out
 
+# FullresGAN
+def deconv_block_fullres(inp, training, out_channels, filter_size=1, strides=1, padding="same", use_bias=False):
+    with tf.name_scope("deconv_block"):
+        tmp = deconv_layer(inp, out_channels, filter_size, strides, padding, use_bias)
+        tmp = batch_norm_layer(tmp, training)
+        out = leaky_relu_layer(tmp)
+    return out
+    
+def conv_block_fullres(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.3, dropout_rate=0.3):
+    with tf.name_scope("conv_block"):
+        tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values, use_bias)
+        tmp = leaky_relu_layer(tmp, alpha)
+        out = dropout_layer(tmp, training, dropout_rate)
+    return out
+
+def dense_block_fullres(inp, training, units, use_bias=False, alpha=0.3, dropout_rate=0.3):
+    with tf.name_scope("dense_block"):
+        tmp = dense_layer(inp, units, use_bias)
+        tmp = leaky_relu_layer(tmp, alpha)
+        out = dropout_layer(tmp, training, dropout_rate)   
+    return out
+
 #SRM
 def residual_block_srm(inp, training, out_channels, pad_values, use_bias):
     with tf.name_scope("residual_block_srm"):
