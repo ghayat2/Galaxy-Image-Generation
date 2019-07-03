@@ -110,8 +110,8 @@ class MCGAN:
     def discriminator_loss(self, fake_out, real_out, fake_labels, real_labels, label_smoothing=False):
         with tf.name_scope("discriminator_loss"):
             if(label_smoothing):
-                delta = 0.3
-                perturbation = tf.reshape(tf.random.uniform(real_labels.shape, minval=-delta, maxval=delta, dtype=tf.float32, seed=global_seed), [-1, 1])
+                delta = 0.1
+                perturbation = tf.reshape(tf.constant(delta, shape=real_labels.shape), [-1, 1])
                 added_perturbation = tf.concat([perturbation, -perturbation], axis=1)
 
                 smoothed_fakes = tf.one_hot(fake_labels, depth=2)

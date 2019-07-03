@@ -11,7 +11,14 @@ parser = ArgumentParser()
 parser.add_argument('-d', '--image_dir', type=str, default="./generated_images/")
 parser.add_argument('-o', '--out_dir', type=str, default="./experiments_results/")
 parser.add_argument('-f', '--feat_dir', type=str, default="./manual_features/")
-parser.add_argument('--heatmaps', type=bool, default=True)
+parser.add_argument('--heatmaps', type=bool, default=False)
+parser.add_argument('--knn', type=bool, default=False)
+parser.add_argument('--box', type=bool, default=False)
+parser.add_argument('--feats', type=bool, default=False)
+parser.add_argument('--all', type=bool, default=False, help="Enable all experiments at once")
+
+
+
 parser.add_argument('--box_features', nargs='*', type=int, help="indices for the manual features to box_plot", required=False)
 parser.add_argument('--legend', type=str, help="path to the legend json for the manual features", required=False)
 
@@ -39,7 +46,7 @@ args = parser.parse_args()
 #
 # the features directory structure should be:
 # manual_features/
-# |
+#           |
 #           ---> 64/                # images 64x64
 #           |     |
 #           |     ---> model_1/
@@ -79,7 +86,7 @@ if args.legend is not None:
 # run the heatmaps and save them in their respective directory
 sns.set()
 
-if args.heatmaps:
+if args.heatmaps or args.all:
     for size in [64, 1000]:
         if not os.path.isdir(os.path.join(args.out_dir, str(size))):
             os.mkdir(os.path.join(args.out_dir, str(size)))
@@ -99,68 +106,92 @@ if args.heatmaps:
             plt.close()
         print("Heatmaps generated for size {}".format(size))
 
+if args.knn or args.all:
+    with open(os.path.join(args.out_dir, "knn_results.txt"), "w+") as out:
+        for size in [64]:
+            for k in [1, 3, 5]:
+                out.write("Images of size {}x{}\n".format(size, size))
+                if not os.path.isdir(os.path.join(args.out_dir, str(size))):
+                    os.mkdir(os.path.join(args.out_dir, str(size)))
+                all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
+                              if os.path.isdir(model)]
+                all_models_name = [str(name).split('/')[-1] for name in all_models]
+                for model_name in all_models_name:
+                    if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
+                        os.mkdir(os.path.join(args.out_dir, str(size), model_name))
+                    image_set = [image for image in pathlib.Path(os.path.join(args.image_dir, str(size), model_name)).glob("*")]
+                    stats = utils.leave_one_out_knn_diversity(image_set, size, k)
+                    print("KNN stats for model {} with k = {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})"
+                          .format(model_name, k, *stats))
+                    out.write("KNN stats for model {} with k = {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})\n"
+                              .format(model_name, k, *stats))
+                print("KNN stats computed for size {}".format(size))
+
+# Experiences on features
 # Plot and save the box_plots and distplots
-for size in [64, 1000]:
-    all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
-                  if os.path.isdir(model)]
-    all_models_name = [str(name).split('/')[-1] for name in all_models]
+if args.box or args.all:
+    for size in [64, 1000]:
+        all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
+                      if os.path.isdir(model)]
+        all_models_name = [str(name).split('/')[-1] for name in all_models]
 
-    for model_name in all_models_name:
-        if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
-            os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "{}_feats.gz".format(model_name)))
-        for f in args.box_features:
-            f = int(f)
-            feat = features[:, f:f+1]
-            label = legend[str(f)] if str(f) in legend.keys() else f
-            plt.boxplot(feat, labels=[label])
-            plt.savefig(os.path.join(args.out_dir, str(size), model_name,
-                                     "boxplot_{}_{}_feat{}.png".format(model_name, size, f)))
-            plt.close()
-            try:
-                sns.distplot(feat)
-                plt.title("Distribution for feature {}".format(label))
+        for model_name in all_models_name:
+            if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
+                os.mkdir(os.path.join(args.out_dir, str(size), model_name))
+            features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "features_{}.gz".format(model_name)))
+            for f in args.box_features:
+                f = int(f)
+                feat = features[:, f:f+1]
+                label = legend[str(f)] if str(f) in legend.keys() else f
+                plt.boxplot(feat, labels=[label])
                 plt.savefig(os.path.join(args.out_dir, str(size), model_name,
-                                         "distplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                                         "boxplot_{}_{}_feat{}.png".format(model_name, size, f)))
                 plt.close()
-            except np.linalg.LinAlgError:
-                print("Dist plot for {} could not be computed: the feature vector is singular".format(model_name))
+                try:
+                    sns.distplot(feat)
+                    plt.title("Distribution for feature {}".format(label))
+                    plt.savefig(os.path.join(args.out_dir, str(size), model_name,
+                                             "distplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                    plt.close()
+                except np.linalg.LinAlgError:
+                    print("Dist plot for {} could not be computed: the feature vector is singular".format(model_name))
 
 
-print("Boxplots and Distplots generated")
+    print("Boxplots and Distplots generated")
 
 # Summarize manual features statistics in a table
-n_feats = 38
-columns = [legend[str(f)] if str(f) in legend.keys() else str(f) for f in range(n_feats)]
-index = []
-for size in [64, 1000]:
-    all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
-                  if os.path.isdir(model)]
-    all_models_name = [str(name).split('/')[-1] for name in all_models]
-    for model_name in all_models_name:
-        index.append("{}_{}".format(model_name, size))
+if args.feats or args.all:
+    n_feats = 38
+    columns = [legend[str(f)] if str(f) in legend.keys() else str(f) for f in range(n_feats)]
+    index = []
+    for size in [64, 1000]:
+        all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
+                      if os.path.isdir(model)]
+        all_models_name = [str(name).split('/')[-1] for name in all_models]
+        for model_name in all_models_name:
+            index.append("{}_{}".format(model_name, size))
 
-stats_summary_mean = pd.DataFrame(index=index, columns=columns)
-stats_summary_var = pd.DataFrame(index=index, columns=columns)
+    stats_summary_mean = pd.DataFrame(index=index, columns=columns)
+    stats_summary_var = pd.DataFrame(index=index, columns=columns)
 
-for size in [64, 1000]:
-    all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
-                  if os.path.isdir(model)]
-    all_models_name = [str(name).split('/')[-1] for name in all_models]
-    for model_name in all_models_name:
-        if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
-            os.mkdir(os.path.join(args.out_dir, str(size), model_name))
-        features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "{}_feats.gz".format(model_name)))
-        for f in range(features.shape[1]):
-            f = int(f)
-            feat = features[:, f:f+1]
-            f_label = legend[str(f)] if str(f) in legend.keys() else str(f)
-            stats_summary_mean[f_label]["{}_{}".format(model_name, size)] = np.mean(feat)
-            stats_summary_var[f_label]["{}_{}".format(model_name, size)] = np.var(feat)
+    for size in [64, 1000]:
+        all_models = [model for model in pathlib.Path(os.path.join(args.image_dir, str(size))).glob("*")
+                      if os.path.isdir(model)]
+        all_models_name = [str(name).split('/')[-1] for name in all_models]
+        for model_name in all_models_name:
+            if not os.path.isdir(os.path.join(args.out_dir, str(size), model_name)):
+                os.mkdir(os.path.join(args.out_dir, str(size), model_name))
+            features = np.loadtxt(os.path.join(args.feat_dir, str(size), model_name, "{}_feats.gz".format(model_name)))
+            for f in range(features.shape[1]):
+                f = int(f)
+                feat = features[:, f:f+1]
+                f_label = legend[str(f)] if str(f) in legend.keys() else str(f)
+                stats_summary_mean[f_label]["{}_{}".format(model_name, size)] = np.mean(feat)
+                stats_summary_var[f_label]["{}_{}".format(model_name, size)] = np.var(feat)
 
-print(stats_summary_mean)
-print(stats_summary_var)
+    print(stats_summary_mean)
+    print(stats_summary_var)
 
-stats_summary_mean.to_csv(os.path.join(args.out_dir, "stats_summary_mean.csv"))
-stats_summary_var.to_csv(os.path.join(args.out_dir, "stats_summary_var.csv"))
-print("Summary tables have been created")
+    stats_summary_mean.to_csv(os.path.join(args.out_dir, "stats_summary_mean.csv"))
+    stats_summary_var.to_csv(os.path.join(args.out_dir, "stats_summary_var.csv"))
+    print("Summary tables have been created")
