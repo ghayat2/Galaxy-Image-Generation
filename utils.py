@@ -130,7 +130,7 @@ def features_summary(image_set, decode=True, return_ids=True, resize=False):
     """
     features = []
     ids = []
-    resizer = make_max_pooling_resizer()
+    resizer = make_max_pooling_resizer(vmin=0)
     for image in tqdm(image_set):
         if return_ids:
             ids.append(str(image).split("/")[-1].split(".")[0])
