@@ -36,15 +36,23 @@ if not os.path.exists(FEATURES_DIR):
 LABELED_DIR = os.path.join(DATA_ROOT, 'labeled')
 SCORED_DIR = os.path.join(DATA_ROOT, 'scored')
 QUERY_DIR = os.path.join(DATA_ROOT, 'query')
-    
-LABELED_FEATS_PATH = os.path.join(FEATURES_DIR, 'labeled_feats.gz')
-LABELED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'labeled_feats_ids.gz')
 
-SCORED_FEATS_PATH = os.path.join(FEATURES_DIR, 'scored_feats.gz')
-SCORED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'scored_feats_ids.gz')
+l_prefix = 'labeled'
+s_prefix = 'scored'
+q_prefix = 'query'
+if(RESIZING):
+    l_prefix = 'labeled_64'
+    s_prefix = 'scored_64'
+    q_prefix = 'query_64'
+        
+LABELED_FEATS_PATH = os.path.join(FEATURES_DIR, '{}_feats.gz'.format(l_prefix))
+LABELED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, '{}_feats_ids.gz'.format(l_prefix))
 
-QUERY_FEATS_PATH = os.path.join(FEATURES_DIR, 'query_feats.gz')
-QUERY_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'query_feats_ids.gz')
+SCORED_FEATS_PATH = os.path.join(FEATURES_DIR, '{}_feats.gz'.format(s_prefix))
+SCORED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'scored_feats_ids.gz'.format(s_prefix))
+
+QUERY_FEATS_PATH = os.path.join(FEATURES_DIR, '{}_feats.gz'.format(q_prefix))
+QUERY_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, '{}_feats_ids.gz'.format(q_prefix))
 
 def save_feats(out_dir, features, ids, prefix):
     np.savetxt(os.path.join(out_dir, "{}_feats.gz".format(prefix)), features)
@@ -57,9 +65,6 @@ print("\n")
 if GEN_LABELED and (not os.path.exists(LABELED_FEATS_PATH) or not os.path.exists(LABELED_FEATS_IDS_PATH)):
     features, _, _, ids = utils.extract_features(image_dir=LABELED_DIR, resize=RESIZING)
     ids = ids.astype(int) # convert id to int
-    l_prefix = 'labeled'
-    if(RESIZING):
-        l_prefix = 'labeled_64'
     save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix=l_prefix)
 elif GEN_LABELED:
     print("Found labeled set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
@@ -69,15 +74,12 @@ print("\n")
 if GEN_SCORED and (not os.path.exists(SCORED_FEATS_PATH) or not os.path.exists(SCORED_FEATS_IDS_PATH)):
     features, _, _, ids = utils.extract_features(image_dir=SCORED_DIR, resize=RESIZING)
     ids = ids.astype(int) # convert id to int
-    # read the scores to be include them in the saved features file
+    # read the scores to include them in the saved features file
     scores = np.genfromtxt(os.path.join(DATA_ROOT, "scored.csv"), delimiter=",", skip_header=1)
     scores_dict = dict(zip(scores[:,0], scores[:,1]))
     scores_ordered = np.array([scores_dict[id] for id in ids]).reshape([-1, 1]) # get the scores per id in the same order as in ids
     
     features = np.concatenate([features, scores_ordered], axis=1) # add last column for scores
-    s_prefix = 'scored'
-    if(RESIZING):
-        s_prefix = 'scored_64'
     save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix=s_prefix)
 elif GEN_SCORED:
     print("Found scored set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
@@ -87,10 +89,7 @@ print("\n")
 if GEN_QUERY and (not os.path.exists(QUERY_FEATS_PATH) or not os.path.exists(QUERY_FEATS_IDS_PATH)):
     features, _, _, ids = utils.extract_features(image_dir=QUERY_DIR, resize=RESIZING)
     ids = ids.astype(int) # convert id to int
-    q_prefix = 'query'
-    if(RESIZING):
-        q_prefix = 'query_64'
-    save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix='query')
+    save_feats(out_dir=FEATURES_DIR, features=features, ids=ids, prefix=q_prefix)
 elif GEN_QUERY:
     print("Found query set's features and ids at {}. Nothing to do.".format(FEATURES_DIR))
 

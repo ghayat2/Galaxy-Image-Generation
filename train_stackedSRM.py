@@ -13,7 +13,6 @@ from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
 import patoolib
-#import signal, shutil
 
 global_seed=5
 
@@ -41,14 +40,6 @@ def timestamp():
 
 def create_zip_code_files(output_file, submission_files):
     patoolib.create_archive(output_file, submission_files)
-    
-#def copy_stderr_to_stdout(log_dir):
-#    std_err_dir = os.path.join(log_dir, "stderr", timestamp())
-#    if not os.path.exists(std_err_dir):
-#        os.makedirs(std_err_dir)
-#    sys.stderr.flush()
-#    shutil.move("./stderr", os.path.join(std_err_dir, "stderr"))
-#    sys.exit(0)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -99,7 +90,6 @@ class Logger(object):  # logger to log output to both terminal and file
 
 logger = Logger(LOG_DIR)
 sys.stdout = logger
-#signal.signal(signal.SIGINT, lambda a, b: copy_stderr_to_stdout(LOG_DIR)) # copy stderr output to log_dir in case of keyboard interrupt
 
 l = device_lib.list_local_devices()
 gpus_list = [(device.physical_device_desc, device.memory_limit) for device in l if device.device_type == "GPU"]
@@ -220,7 +210,7 @@ with tf.Session(config=config) as sess:
         tf.global_variables_initializer().run()
     
     
-    print("Train start ...")
+    print("Train start at {} ...".format(timestamp()))
     NUM_SAMPLES = nb_reals
     NB_STEPS = int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))
     j_prev = 0
@@ -299,11 +289,10 @@ with tf.Session(config=config) as sess:
                 fig.savefig(os.path.join(SAMPLES_DIR, "img_step_{}.png".format(global_step_val))) # save image to dir
                 plt.close()
                 
-    print("Training Done. Saving model ...")
+    print("Training Done at {}. Saving model ...".format(timestamp()))
     global_step_val = sess.run(global_step) # get the global step value
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
-#    copy_stderr_to_stdout(LOG_DIR)
     
     
     
