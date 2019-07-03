@@ -120,7 +120,7 @@ def get_hand_crafted(one_image):
     features = np.concatenate([features, [blob_lo.shape[0]], shape_hist[0], [shan_ent], [max_val], [min_val], [variance_val], wavelet_approx])
     return features
 
-def features_summary(image_set, decode=True, return_ids=True):
+def features_summary(image_set, decode=True, return_ids=True, resize=False):
     """ Extracts various features out of the given image
     :param array image_set: the list of paths to images used to extract the summary
     :param bool decode: whether the images need to be decoded or not
@@ -130,12 +130,15 @@ def features_summary(image_set, decode=True, return_ids=True):
     """
     features = []
     ids = []
+    resizer = make_max_pooling_resizer()
     for image in tqdm(image_set):
         if return_ids:
             ids.append(str(image).split("/")[-1].split(".")[0])
         if decode:
             image = color.rgb2gray(io.imread(image))
             image = image / 255.0
+            if(resize):
+                image = resizer.predict(np.expand_dims(np.expand_dims(image, axis=0), axis=-1))[0, :, :, 0]
         assert np.amax(image) <= 1 and np.amin(image) >= 0 # Image must be in the same range to be compared
         features.append(get_hand_crafted(image))
     features = np.array(features)
@@ -146,7 +149,7 @@ def features_summary(image_set, decode=True, return_ids=True):
 
     return features, mean_features, var_features, np.array(ids)
 
-def extract_features(image_dir, max_imgs=None):
+def extract_features(image_dir, max_imgs=None, resize=False):
     """
     Extract manual features and summaries from images contained in dir and saves them in the out_directory
     :param str image_dir: the directory containing the images
@@ -155,7 +158,7 @@ def extract_features(image_dir, max_imgs=None):
     all_images = [str(item) for item in pathlib.Path(image_dir).glob('*')]
     if max_imgs and len(all_images) > max_imgs:
         all_images = all_images[:max_imgs]
-    features, means, vars, ids = features_summary(all_images)
+    features, means, vars, ids = features_summary(all_images, resize=resize)
     return features, means, vars, ids
 
 
