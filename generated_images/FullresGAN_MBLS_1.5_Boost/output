@@ -1,0 +1,1924 @@
+
+
+Run infos:
+    GENERATOR: FullresGAN
+    BATCH_SIZE: 1
+    NOISE_DIM: 1000
+    LOG_DIR_DCGAN: None
+    LOG_DIR_MCCGAN: None
+    LOG_DIR_FullresGAN: ./LOG_FullresGAN/2019.07.03-11:13:47
+    LOG_DIR_SRM: ./LOG_SRM/2019.06.24-09:54:42
+    LOG_DIR_DCGAN_SCORER: None
+    GENERATED_SAMPLES_DIR: ./LOG_COMBINED/2019.07.03-16:58:11/generated_samples
+    TO_GENERATE: 100
+    MARGIN: 0.25
+    THRESHOLD: 1.5
+    SCORER: Boost
+    USE_SCORER: True
+    USE_SCORER_THRES: True
+    USE_SCORER_MARGIN: False
+
+
+Building FullresGAN Generator model ...
+Built Generator model in 2.085869073867798 s
+Restoring latest model from ./LOG_FullresGAN/2019.07.03-11:13:47/checkpoints
+Latest checkpoint: ./LOG_FullresGAN/2019.07.03-11:13:47/checkpoints/model-31000
+
+Building StackedSRM model ...
+SRM Model built in 2.724367618560791 s
+Restoring latest model from ./LOG_SRM/2019.06.24-09:54:42/checkpoints
+Latest checkpoint: ./LOG_SRM/2019.06.24-09:54:42/checkpoints/model-25000
+
+Boost checkpoint file: ./Regressor/Boost/checkpoints/Boost.ckpt
+Loading Boost model ...
+[16:58:17] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.
+Filtering images having score less than 1.5
+0
+time to extract feats: 0.5557980537414551s
+time to score: 0.0617518424987793s
+Filtering image with score 0.9334533
+0
+time to extract feats: 0.5592305660247803s
+time to score: 0.0010330677032470703s
+Filtering image with score 0.6473801
+0
+time to extract feats: 0.5313055515289307s
+time to score: 0.00095367431640625s
+Filtering image with score 0.84951967
+0
+time to extract feats: 0.5551331043243408s
+time to score: 0.0010197162628173828s
+Keeping image with score {} 1.5354755
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+1
+time to extract feats: 0.5441141128540039s
+time to score: 0.0011055469512939453s
+Filtering image with score 1.1539524
+1
+time to extract feats: 0.5269577503204346s
+time to score: 0.0009162425994873047s
+Keeping image with score {} 1.5443344
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+2
+time to extract feats: 0.5437958240509033s
+time to score: 0.0009946823120117188s
+Filtering image with score 1.0032189
+2
+time to extract feats: 0.5382039546966553s
+time to score: 0.0009913444519042969s
+Filtering image with score 0.54653597
+2
+time to extract feats: 0.5343399047851562s
+time to score: 0.0012769699096679688s
+Filtering image with score 0.47529078
+2
+time to extract feats: 0.5278992652893066s
+time to score: 0.0010156631469726562s
+Filtering image with score 1.3775156
+2
+time to extract feats: 0.5403563976287842s
+time to score: 0.0010995864868164062s
+Keeping image with score {} 1.6379727
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+3
+time to extract feats: 0.5233170986175537s
+time to score: 0.0009605884552001953s
+Filtering image with score 0.9140642
+3
+time to extract feats: 0.5625853538513184s
+time to score: 0.0010342597961425781s
+Filtering image with score 0.7697575
+3
+time to extract feats: 0.522841215133667s
+time to score: 0.0010516643524169922s
+Filtering image with score -0.16690773
+3
+time to extract feats: 0.5377607345581055s
+time to score: 0.0009663105010986328s
+Filtering image with score 1.4921412
+3
+time to extract feats: 0.5265791416168213s
+time to score: 0.0009489059448242188s
+Filtering image with score 1.0083499
+3
+time to extract feats: 0.5500149726867676s
+time to score: 0.0011134147644042969s
+Keeping image with score {} 1.6549164
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+4
+time to extract feats: 0.540679931640625s
+time to score: 0.0011391639709472656s
+Keeping image with score {} 1.5923291
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+5
+time to extract feats: 0.5395348072052002s
+time to score: 0.0009760856628417969s
+Filtering image with score 1.4444354
+5
+time to extract feats: 0.547461748123169s
+time to score: 0.0009815692901611328s
+Keeping image with score {} 2.4633245
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+6
+time to extract feats: 0.5326015949249268s
+time to score: 0.00116729736328125s
+Filtering image with score -0.4413283
+6
+time to extract feats: 0.5321543216705322s
+time to score: 0.000985860824584961s
+Filtering image with score 0.18041787
+6
+time to extract feats: 0.5472474098205566s
+time to score: 0.0011022090911865234s
+Filtering image with score 0.69193256
+6
+time to extract feats: 0.5313601493835449s
+time to score: 0.0009644031524658203s
+Filtering image with score 0.7083397
+6
+time to extract feats: 0.5295398235321045s
+time to score: 0.0011577606201171875s
+Filtering image with score 0.6464588
+6
+time to extract feats: 0.542985200881958s
+time to score: 0.0009734630584716797s
+Filtering image with score 0.86857355
+6
+time to extract feats: 0.5269651412963867s
+time to score: 0.0010426044464111328s
+Filtering image with score 0.8471358
+6
+time to extract feats: 0.5477218627929688s
+time to score: 0.001062631607055664s
+Filtering image with score 0.39266136
+6
+time to extract feats: 0.5201644897460938s
+time to score: 0.0010187625885009766s
+Filtering image with score 0.21687591
+6
+time to extract feats: 0.5423583984375s
+time to score: 0.001016855239868164s
+Filtering image with score 0.4191651
+6
+time to extract feats: 0.5276427268981934s
+time to score: 0.0010123252868652344s
+Filtering image with score 1.4340732
+6
+time to extract feats: 0.5576224327087402s
+time to score: 0.0010974407196044922s
+Filtering image with score 0.3525865
+6
+time to extract feats: 0.529461145401001s
+time to score: 0.0009458065032958984s
+Filtering image with score 1.47613
+6
+time to extract feats: 0.5279598236083984s
+time to score: 0.0009605884552001953s
+Keeping image with score {} 1.6903365
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+7
+time to extract feats: 0.541670560836792s
+time to score: 0.001092672348022461s
+Filtering image with score 0.9660977
+7
+time to extract feats: 0.5236620903015137s
+time to score: 0.001018524169921875s
+Filtering image with score 1.04656
+7
+time to extract feats: 0.5339760780334473s
+time to score: 0.0010228157043457031s
+Filtering image with score 0.27975616
+7
+time to extract feats: 0.5332622528076172s
+time to score: 0.0010411739349365234s
+Filtering image with score 0.61669266
+7
+time to extract feats: 0.5283279418945312s
+time to score: 0.0011224746704101562s
+Filtering image with score 1.0529242
+7
+time to extract feats: 0.5276570320129395s
+time to score: 0.0010533332824707031s
+Filtering image with score 1.4798703
+7
+time to extract feats: 0.5298047065734863s
+time to score: 0.0010943412780761719s
+Filtering image with score 0.7935627
+7
+time to extract feats: 0.549640417098999s
+time to score: 0.0010428428649902344s
+Filtering image with score 1.4898832
+7
+time to extract feats: 0.5260965824127197s
+time to score: 0.0010421276092529297s
+Keeping image with score {} 1.5586088
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+8
+time to extract feats: 0.5209815502166748s
+time to score: 0.0009951591491699219s
+Keeping image with score {} 2.074114
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+9
+time to extract feats: 0.5475497245788574s
+time to score: 0.001108407974243164s
+Filtering image with score 0.9842671
+9
+time to extract feats: 0.5152339935302734s
+time to score: 0.0010554790496826172s
+Filtering image with score 1.3622758
+9
+time to extract feats: 0.5383281707763672s
+time to score: 0.0010905265808105469s
+Filtering image with score 0.8150735
+9
+time to extract feats: 0.5297443866729736s
+time to score: 0.0009610652923583984s
+Keeping image with score {} 1.9331052
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+10
+time to extract feats: 0.545234203338623s
+time to score: 0.0010924339294433594s
+Keeping image with score {} 2.6695504
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+11
+time to extract feats: 0.5374369621276855s
+time to score: 0.0010988712310791016s
+Keeping image with score {} 1.914939
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+12
+time to extract feats: 0.5249731540679932s
+time to score: 0.0010180473327636719s
+Filtering image with score 0.6526135
+12
+time to extract feats: 0.5351376533508301s
+time to score: 0.0010647773742675781s
+Filtering image with score 0.7276688
+12
+time to extract feats: 0.5124576091766357s
+time to score: 0.000982522964477539s
+Filtering image with score 1.0980067
+12
+time to extract feats: 0.5519869327545166s
+time to score: 0.0009670257568359375s
+Filtering image with score 0.3482625
+12
+time to extract feats: 0.5186691284179688s
+time to score: 0.0009400844573974609s
+Filtering image with score 1.2738588
+12
+time to extract feats: 0.5249967575073242s
+time to score: 0.00101470947265625s
+Filtering image with score 0.7832328
+12
+time to extract feats: 0.5266625881195068s
+time to score: 0.0009326934814453125s
+Filtering image with score 1.4739676
+12
+time to extract feats: 0.5313353538513184s
+time to score: 0.0009682178497314453s
+Filtering image with score 1.2703962
+12
+time to extract feats: 0.5138018131256104s
+time to score: 0.001064300537109375s
+Filtering image with score 1.4897903
+12
+time to extract feats: 0.5381708145141602s
+time to score: 0.0010318756103515625s
+Filtering image with score 1.1507492
+12
+time to extract feats: 0.539374589920044s
+time to score: 0.0009541511535644531s
+Filtering image with score 1.0777398
+12
+time to extract feats: 0.5497233867645264s
+time to score: 0.0011589527130126953s
+Filtering image with score 1.2339147
+12
+time to extract feats: 0.5336170196533203s
+time to score: 0.0009868144989013672s
+Filtering image with score 0.21348843
+12
+time to extract feats: 0.5432844161987305s
+time to score: 0.0010488033294677734s
+Filtering image with score 1.3607793
+12
+time to extract feats: 0.528724193572998s
+time to score: 0.0010366439819335938s
+Filtering image with score 0.6033319
+12
+time to extract feats: 0.5315718650817871s
+time to score: 0.001062631607055664s
+Keeping image with score {} 1.8662722
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+13
+time to extract feats: 0.5256857872009277s
+time to score: 0.0011432170867919922s
+Filtering image with score 0.69499487
+13
+time to extract feats: 0.5386219024658203s
+time to score: 0.0010280609130859375s
+Keeping image with score {} 1.8145362
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+14
+time to extract feats: 0.563267707824707s
+time to score: 0.0009644031524658203s
+Filtering image with score -0.31331384
+14
+time to extract feats: 0.5249288082122803s
+time to score: 0.000978708267211914s
+Keeping image with score {} 1.9277877
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+15
+time to extract feats: 0.5271286964416504s
+time to score: 0.0016777515411376953s
+Keeping image with score {} 2.138787
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+16
+time to extract feats: 0.5210871696472168s
+time to score: 0.00101470947265625s
+Filtering image with score 1.415602
+16
+time to extract feats: 0.5448057651519775s
+time to score: 0.001035451889038086s
+Filtering image with score 1.2299906
+16
+time to extract feats: 0.5289928913116455s
+time to score: 0.001020193099975586s
+Filtering image with score 0.34187758
+16
+time to extract feats: 0.5381217002868652s
+time to score: 0.0009870529174804688s
+Filtering image with score 1.1477038
+16
+time to extract feats: 0.5148389339447021s
+time to score: 0.0010237693786621094s
+Filtering image with score 0.83354545
+16
+time to extract feats: 0.5383198261260986s
+time to score: 0.0010571479797363281s
+Filtering image with score 1.247174
+16
+time to extract feats: 0.5284221172332764s
+time to score: 0.001047372817993164s
+Filtering image with score 1.216803
+16
+time to extract feats: 0.5402584075927734s
+time to score: 0.0010759830474853516s
+Keeping image with score {} 1.5290226
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+17
+time to extract feats: 0.5319762229919434s
+time to score: 0.0009448528289794922s
+Keeping image with score {} 1.5007449
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 225
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 225
+18
+time to extract feats: 0.535926103591919s
+time to score: 0.0010097026824951172s
+Filtering image with score 0.640884
+18
+time to extract feats: 0.5429689884185791s
+time to score: 0.001065969467163086s
+Filtering image with score 0.40313858
+18
+time to extract feats: 0.530963659286499s
+time to score: 0.0010809898376464844s
+Keeping image with score {} 1.9847461
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+19
+time to extract feats: 0.526118278503418s
+time to score: 0.000989675521850586s
+Filtering image with score 0.5271292
+19
+time to extract feats: 0.5382287502288818s
+time to score: 0.0010418891906738281s
+Filtering image with score 0.6660315
+19
+time to extract feats: 0.8234469890594482s
+time to score: 0.0010402202606201172s
+Keeping image with score {} 2.825657
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+20
+time to extract feats: 0.5343694686889648s
+time to score: 0.0009818077087402344s
+Filtering image with score 0.85572296
+20
+time to extract feats: 0.5607976913452148s
+time to score: 0.0010004043579101562s
+Filtering image with score 0.32760653
+20
+time to extract feats: 0.5402622222900391s
+time to score: 0.0010538101196289062s
+Filtering image with score 1.1007708
+20
+time to extract feats: 0.5487349033355713s
+time to score: 0.001211404800415039s
+Keeping image with score {} 1.8052053
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+21
+time to extract feats: 0.5376083850860596s
+time to score: 0.0010113716125488281s
+Filtering image with score 0.8003078
+21
+time to extract feats: 0.5343630313873291s
+time to score: 0.0009906291961669922s
+Filtering image with score 0.5037488
+21
+time to extract feats: 0.5304648876190186s
+time to score: 0.00104522705078125s
+Filtering image with score 1.4856914
+21
+time to extract feats: 0.5284230709075928s
+time to score: 0.0010654926300048828s
+Filtering image with score 0.6718516
+21
+time to extract feats: 0.5285799503326416s
+time to score: 0.0009899139404296875s
+Keeping image with score {} 1.9759645
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+22
+time to extract feats: 0.5288903713226318s
+time to score: 0.0010347366333007812s
+Filtering image with score 0.7133651
+22
+time to extract feats: 0.5646839141845703s
+time to score: 0.0009748935699462891s
+Filtering image with score 0.9317087
+22
+time to extract feats: 0.521106481552124s
+time to score: 0.0009753704071044922s
+Keeping image with score {} 1.6483203
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+23
+time to extract feats: 0.5436985492706299s
+time to score: 0.001031637191772461s
+Keeping image with score {} 1.5082725
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+24
+time to extract feats: 0.5427515506744385s
+time to score: 0.0009565353393554688s
+Filtering image with score 0.83013964
+24
+time to extract feats: 0.5456862449645996s
+time to score: 0.0009949207305908203s
+Keeping image with score {} 2.3119245
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+25
+time to extract feats: 0.5238440036773682s
+time to score: 0.0010275840759277344s
+Keeping image with score {} 2.171781
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+26
+time to extract feats: 0.7142429351806641s
+time to score: 0.001081705093383789s
+Filtering image with score 0.9836558
+26
+time to extract feats: 0.5520679950714111s
+time to score: 0.0010294914245605469s
+Filtering image with score 0.59170973
+26
+time to extract feats: 0.509347677230835s
+time to score: 0.0010762214660644531s
+Filtering image with score 0.595868
+26
+time to extract feats: 0.5531184673309326s
+time to score: 0.001012563705444336s
+Keeping image with score {} 2.979952
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+27
+time to extract feats: 0.5176219940185547s
+time to score: 0.0011239051818847656s
+Filtering image with score 0.4223533
+27
+time to extract feats: 0.5607380867004395s
+time to score: 0.0009608268737792969s
+Keeping image with score {} 1.5013728
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+28
+time to extract feats: 0.5151572227478027s
+time to score: 0.0009887218475341797s
+Keeping image with score {} 2.823645
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+29
+time to extract feats: 0.5245957374572754s
+time to score: 0.001039743423461914s
+Filtering image with score 1.4752719
+29
+time to extract feats: 0.5139777660369873s
+time to score: 0.0009777545928955078s
+Filtering image with score 0.512908
+29
+time to extract feats: 0.5163540840148926s
+time to score: 0.0009520053863525391s
+Keeping image with score {} 1.5356671
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+30
+time to extract feats: 0.5205366611480713s
+time to score: 0.0010068416595458984s
+Filtering image with score 1.4933186
+30
+time to extract feats: 0.5297818183898926s
+time to score: 0.0009605884552001953s
+Filtering image with score 0.67871094
+30
+time to extract feats: 0.5237970352172852s
+time to score: 0.0010111331939697266s
+Keeping image with score {} 1.931276
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+31
+time to extract feats: 0.5620718002319336s
+time to score: 0.0010175704956054688s
+Keeping image with score {} 1.8535068
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+32
+time to extract feats: 0.5435819625854492s
+time to score: 0.000972747802734375s
+Filtering image with score 1.1347914
+32
+time to extract feats: 0.52657151222229s
+time to score: 0.0010533332824707031s
+Keeping image with score {} 1.556142
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+33
+time to extract feats: 0.5250260829925537s
+time to score: 0.0011126995086669922s
+Filtering image with score 1.3443502
+33
+time to extract feats: 0.5304625034332275s
+time to score: 0.0010073184967041016s
+Filtering image with score 0.4615599
+33
+time to extract feats: 0.532371997833252s
+time to score: 0.0009734630584716797s
+Filtering image with score 0.7197098
+33
+time to extract feats: 0.5234110355377197s
+time to score: 0.0010082721710205078s
+Filtering image with score 1.4829481
+33
+time to extract feats: 0.533388614654541s
+time to score: 0.0009713172912597656s
+Keeping image with score {} 1.653409
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+34
+time to extract feats: 0.5262939929962158s
+time to score: 0.00128936767578125s
+Keeping image with score {} 1.6499745
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+35
+time to extract feats: 0.5656683444976807s
+time to score: 0.0011229515075683594s
+Keeping image with score {} 1.5033923
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+36
+time to extract feats: 0.5196096897125244s
+time to score: 0.0009942054748535156s
+Keeping image with score {} 1.5217735
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+37
+time to extract feats: 0.5525703430175781s
+time to score: 0.0009601116180419922s
+Filtering image with score 1.4999125
+37
+time to extract feats: 0.5197854042053223s
+time to score: 0.001112222671508789s
+Keeping image with score {} 2.0818884
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+38
+time to extract feats: 0.5377373695373535s
+time to score: 0.0009624958038330078s
+Keeping image with score {} 1.5456172
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+39
+time to extract feats: 0.5263912677764893s
+time to score: 0.0009565353393554688s
+Keeping image with score {} 1.6052957
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+40
+time to extract feats: 0.5279688835144043s
+time to score: 0.0023632049560546875s
+Filtering image with score 1.3907583
+40
+time to extract feats: 0.5401933193206787s
+time to score: 0.0010104179382324219s
+Keeping image with score {} 1.629573
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+41
+time to extract feats: 0.5252685546875s
+time to score: 0.0010561943054199219s
+Filtering image with score 1.4921255
+41
+time to extract feats: 0.5570969581604004s
+time to score: 0.0009999275207519531s
+Filtering image with score 0.92667466
+41
+time to extract feats: 0.5207598209381104s
+time to score: 0.0009324550628662109s
+Filtering image with score 1.4776913
+41
+time to extract feats: 0.5399088859558105s
+time to score: 0.0010216236114501953s
+Filtering image with score 1.3658764
+41
+time to extract feats: 0.5132081508636475s
+time to score: 0.0009713172912597656s
+Filtering image with score 0.18301189
+41
+time to extract feats: 0.5237255096435547s
+time to score: 0.0012967586517333984s
+Filtering image with score 0.37785178
+41
+time to extract feats: 0.5296308994293213s
+time to score: 0.001050710678100586s
+Filtering image with score 0.95408237
+41
+time to extract feats: 0.5264332294464111s
+time to score: 0.0009953975677490234s
+Keeping image with score {} 2.1503525
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+42
+time to extract feats: 0.5179049968719482s
+time to score: 0.001020669937133789s
+Keeping image with score {} 2.0465546
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+43
+time to extract feats: 0.5444810390472412s
+time to score: 0.0011026859283447266s
+Filtering image with score 0.6822888
+43
+time to extract feats: 0.5365593433380127s
+time to score: 0.0009629726409912109s
+Keeping image with score {} 1.6376479
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+44
+time to extract feats: 0.5409371852874756s
+time to score: 0.0010199546813964844s
+Filtering image with score 1.0982041
+44
+time to extract feats: 0.5306990146636963s
+time to score: 0.0009837150573730469s
+Filtering image with score 1.1781391
+44
+time to extract feats: 0.5427436828613281s
+time to score: 0.001031637191772461s
+Filtering image with score 1.1640136
+44
+time to extract feats: 0.5317821502685547s
+time to score: 0.0010669231414794922s
+Filtering image with score 0.43544525
+44
+time to extract feats: 0.5179898738861084s
+time to score: 0.0009725093841552734s
+Keeping image with score {} 1.9591285
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+45
+time to extract feats: 0.5395958423614502s
+time to score: 0.0009729862213134766s
+Keeping image with score {} 2.1597311
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+46
+time to extract feats: 0.5422229766845703s
+time to score: 0.0009431838989257812s
+Keeping image with score {} 1.5119141
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+47
+time to extract feats: 0.534487247467041s
+time to score: 0.0010385513305664062s
+Filtering image with score 0.82262635
+47
+time to extract feats: 0.5341734886169434s
+time to score: 0.0009596347808837891s
+Filtering image with score 0.9454764
+47
+time to extract feats: 0.528813362121582s
+time to score: 0.0009586811065673828s
+Filtering image with score 0.56601644
+47
+time to extract feats: 0.5338044166564941s
+time to score: 0.0009894371032714844s
+Filtering image with score 0.63666844
+47
+time to extract feats: 0.5355129241943359s
+time to score: 0.0010309219360351562s
+Filtering image with score 0.869748
+47
+time to extract feats: 0.5070047378540039s
+time to score: 0.0009622573852539062s
+Filtering image with score 0.20715183
+47
+time to extract feats: 0.5307059288024902s
+time to score: 0.0009911060333251953s
+Filtering image with score 1.0945044
+47
+time to extract feats: 0.5162854194641113s
+time to score: 0.0009558200836181641s
+Filtering image with score 1.4894109
+47
+time to extract feats: 0.5322351455688477s
+time to score: 0.0010077953338623047s
+Filtering image with score 1.0479782
+47
+time to extract feats: 0.5248103141784668s
+time to score: 0.0010073184967041016s
+Filtering image with score 1.0176059
+47
+time to extract feats: 0.5271642208099365s
+time to score: 0.0009737014770507812s
+Filtering image with score 1.3989863
+47
+time to extract feats: 0.5370023250579834s
+time to score: 0.001018524169921875s
+Filtering image with score 0.728947
+47
+time to extract feats: 0.5348167419433594s
+time to score: 0.0009846687316894531s
+Filtering image with score 0.7342255
+47
+time to extract feats: 0.5247106552124023s
+time to score: 0.0010609626770019531s
+Filtering image with score 1.4457994
+47
+time to extract feats: 0.5341002941131592s
+time to score: 0.00102996826171875s
+Filtering image with score 0.67478627
+47
+time to extract feats: 0.5163414478302002s
+time to score: 0.0009815692901611328s
+Filtering image with score 1.0765555
+47
+time to extract feats: 0.5373530387878418s
+time to score: 0.0009925365447998047s
+Filtering image with score 0.26074257
+47
+time to extract feats: 0.5185410976409912s
+time to score: 0.0051500797271728516s
+Keeping image with score {} 1.8735607
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+48
+time to extract feats: 0.5240416526794434s
+time to score: 0.0011990070343017578s
+Filtering image with score 1.335769
+48
+time to extract feats: 0.5244350433349609s
+time to score: 0.0010318756103515625s
+Filtering image with score 1.4381614
+48
+time to extract feats: 0.5284397602081299s
+time to score: 0.0010082721710205078s
+Filtering image with score 0.42175287
+48
+time to extract feats: 0.5264475345611572s
+time to score: 0.0009794235229492188s
+Filtering image with score 0.11311871
+48
+time to extract feats: 0.5264959335327148s
+time to score: 0.001018524169921875s
+Keeping image with score {} 2.025528
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+49
+time to extract feats: 0.5330753326416016s
+time to score: 0.0010058879852294922s
+Filtering image with score 0.26118523
+49
+time to extract feats: 0.5054924488067627s
+time to score: 0.0009922981262207031s
+Keeping image with score {} 1.5013522
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+50
+time to extract feats: 0.527766227722168s
+time to score: 0.0009648799896240234s
+Filtering image with score 0.8783399
+50
+time to extract feats: 0.5193326473236084s
+time to score: 0.00103759765625s
+Filtering image with score 0.47937098
+50
+time to extract feats: 0.5227608680725098s
+time to score: 0.000997304916381836s
+Filtering image with score 1.4396262
+50
+time to extract feats: 0.5202019214630127s
+time to score: 0.0009851455688476562s
+Keeping image with score {} 1.5925901
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+51
+time to extract feats: 0.5224511623382568s
+time to score: 0.0010595321655273438s
+Filtering image with score 0.00011047721
+51
+time to extract feats: 0.5350730419158936s
+time to score: 0.0009779930114746094s
+Keeping image with score {} 2.6425433
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+52
+time to extract feats: 0.542935848236084s
+time to score: 0.0009760856628417969s
+Filtering image with score 0.87863827
+52
+time to extract feats: 0.5204193592071533s
+time to score: 0.000980377197265625s
+Filtering image with score 1.1286917
+52
+time to extract feats: 0.5323874950408936s
+time to score: 0.0010347366333007812s
+Filtering image with score 1.3336246
+52
+time to extract feats: 0.5172429084777832s
+time to score: 0.0009844303131103516s
+Filtering image with score 1.4419969
+52
+time to extract feats: 0.5330612659454346s
+time to score: 0.0009279251098632812s
+Filtering image with score 1.4758625
+52
+time to extract feats: 0.5206029415130615s
+time to score: 0.0009906291961669922s
+Filtering image with score 1.1728325
+52
+time to extract feats: 0.5212852954864502s
+time to score: 0.0011515617370605469s
+Filtering image with score 1.2350035
+52
+time to extract feats: 0.5205285549163818s
+time to score: 0.0010209083557128906s
+Keeping image with score {} 2.144477
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+53
+time to extract feats: 0.520815372467041s
+time to score: 0.0009593963623046875s
+Filtering image with score 0.77672434
+53
+time to extract feats: 0.5342240333557129s
+time to score: 0.0011515617370605469s
+Filtering image with score 0.8380302
+53
+time to extract feats: 0.5213053226470947s
+time to score: 0.0010235309600830078s
+Keeping image with score {} 2.134941
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+54
+time to extract feats: 0.5222296714782715s
+time to score: 0.0010139942169189453s
+Filtering image with score 0.627136
+54
+time to extract feats: 0.5148184299468994s
+time to score: 0.0009579658508300781s
+Filtering image with score 0.64259267
+54
+time to extract feats: 0.5200777053833008s
+time to score: 0.0009829998016357422s
+Filtering image with score 0.8702864
+54
+time to extract feats: 0.518967866897583s
+time to score: 0.0009894371032714844s
+Filtering image with score 0.8922397
+54
+time to extract feats: 0.5331578254699707s
+time to score: 0.0012054443359375s
+Filtering image with score 0.5620845
+54
+time to extract feats: 0.5121650695800781s
+time to score: 0.0009758472442626953s
+Keeping image with score {} 1.6689056
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+55
+time to extract feats: 0.5282430648803711s
+time to score: 0.0009913444519042969s
+Filtering image with score 0.93993735
+55
+time to extract feats: 0.5346395969390869s
+time to score: 0.0010023117065429688s
+Filtering image with score 0.18541372
+55
+time to extract feats: 0.5414955615997314s
+time to score: 0.0010366439819335938s
+Filtering image with score 1.0458312
+55
+time to extract feats: 0.5237917900085449s
+time to score: 0.0010113716125488281s
+Keeping image with score {} 1.5029294
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+56
+time to extract feats: 0.5317261219024658s
+time to score: 0.001163482666015625s
+Keeping image with score {} 1.8079236
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+57
+time to extract feats: 0.5312414169311523s
+time to score: 0.0009717941284179688s
+Keeping image with score {} 2.1123478
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+58
+time to extract feats: 0.5328705310821533s
+time to score: 0.0010647773742675781s
+Filtering image with score 1.0537121
+58
+time to extract feats: 0.5257678031921387s
+time to score: 0.0009889602661132812s
+Keeping image with score {} 1.6970854
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+59
+time to extract feats: 0.538102388381958s
+time to score: 0.0010170936584472656s
+Filtering image with score -0.05934912
+59
+time to extract feats: 0.5255908966064453s
+time to score: 0.0009856224060058594s
+Filtering image with score 0.9045054
+59
+time to extract feats: 0.5366759300231934s
+time to score: 0.0009989738464355469s
+Keeping image with score {} 1.7086762
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+60
+time to extract feats: 0.5482003688812256s
+time to score: 0.0009970664978027344s
+Filtering image with score 1.0527833
+60
+time to extract feats: 0.524590015411377s
+time to score: 0.001010894775390625s
+Keeping image with score {} 1.9318417
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+61
+time to extract feats: 0.5395214557647705s
+time to score: 0.0010149478912353516s
+Filtering image with score 0.1569941
+61
+time to extract feats: 0.5272588729858398s
+time to score: 0.001024484634399414s
+Filtering image with score -0.3171522
+61
+time to extract feats: 0.5387697219848633s
+time to score: 0.001016855239868164s
+Filtering image with score 1.2972461
+61
+time to extract feats: 0.5187587738037109s
+time to score: 0.0009646415710449219s
+Filtering image with score 0.66715974
+61
+time to extract feats: 0.5292205810546875s
+time to score: 0.005059003829956055s
+Keeping image with score {} 1.5072589
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 17
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 17
+62
+time to extract feats: 0.5199499130249023s
+time to score: 0.0010149478912353516s
+Keeping image with score {} 1.6918287
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+63
+time to extract feats: 0.5380799770355225s
+time to score: 0.0011796951293945312s
+Filtering image with score 0.3998034
+63
+time to extract feats: 0.5480892658233643s
+time to score: 0.0010530948638916016s
+Filtering image with score 0.4389844
+63
+time to extract feats: 0.530876636505127s
+time to score: 0.001058816909790039s
+Filtering image with score 0.24150223
+63
+time to extract feats: 0.5235538482666016s
+time to score: 0.000946044921875s
+Keeping image with score {} 2.018974
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+64
+time to extract feats: 0.5356371402740479s
+time to score: 0.0009670257568359375s
+Filtering image with score 0.85161424
+64
+time to extract feats: 0.5246021747589111s
+time to score: 0.0009679794311523438s
+Keeping image with score {} 2.0088923
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+65
+time to extract feats: 0.5317103862762451s
+time to score: 0.0011293888092041016s
+Keeping image with score {} 1.5139452
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 76
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 76
+66
+time to extract feats: 0.5338287353515625s
+time to score: 0.0010380744934082031s
+Keeping image with score {} 2.8621023
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+67
+time to extract feats: 0.5342791080474854s
+time to score: 0.0011944770812988281s
+Filtering image with score 0.5222406
+67
+time to extract feats: 0.5318460464477539s
+time to score: 0.0009799003601074219s
+Filtering image with score 0.3479581
+67
+time to extract feats: 0.5409188270568848s
+time to score: 0.0009555816650390625s
+Keeping image with score {} 1.7639116
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+68
+time to extract feats: 0.5327966213226318s
+time to score: 0.0010607242584228516s
+Filtering image with score 0.5896186
+68
+time to extract feats: 0.5306293964385986s
+time to score: 0.0009462833404541016s
+Keeping image with score {} 1.7399237
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+69
+time to extract feats: 0.5474143028259277s
+time to score: 0.0010395050048828125s
+Filtering image with score 1.261543
+69
+time to extract feats: 0.5259695053100586s
+time to score: 0.0009937286376953125s
+Filtering image with score 1.2484593
+69
+time to extract feats: 0.5503997802734375s
+time to score: 0.000990152359008789s
+Filtering image with score 1.2001467
+69
+time to extract feats: 0.5218181610107422s
+time to score: 0.0009918212890625s
+Keeping image with score {} 1.9896272
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+70
+time to extract feats: 0.5285296440124512s
+time to score: 0.001115560531616211s
+Keeping image with score {} 1.5937967
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+71
+time to extract feats: 0.5120327472686768s
+time to score: 0.0009832382202148438s
+Filtering image with score 1.4766569
+71
+time to extract feats: 0.5439152717590332s
+time to score: 0.0021219253540039062s
+Filtering image with score 0.7767453
+71
+time to extract feats: 0.5349841117858887s
+time to score: 0.0011706352233886719s
+Filtering image with score 1.3540993
+71
+time to extract feats: 0.5241196155548096s
+time to score: 0.0010161399841308594s
+Filtering image with score 1.3616326
+71
+time to extract feats: 0.5104086399078369s
+time to score: 0.0011043548583984375s
+Filtering image with score 0.708957
+71
+time to extract feats: 0.5222897529602051s
+time to score: 0.0009312629699707031s
+Filtering image with score 1.473105
+71
+time to extract feats: 0.523991584777832s
+time to score: 0.0010199546813964844s
+Filtering image with score 0.71985245
+71
+time to extract feats: 0.5174200534820557s
+time to score: 0.0010819435119628906s
+Keeping image with score {} 1.6866798
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+72
+time to extract feats: 0.5216138362884521s
+time to score: 0.0009500980377197266s
+Keeping image with score {} 1.5098668
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+73
+time to extract feats: 0.5164084434509277s
+time to score: 0.001119852066040039s
+Keeping image with score {} 1.5200969
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+74
+time to extract feats: 0.5257117748260498s
+time to score: 0.0010647773742675781s
+Keeping image with score {} 1.7329133
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+75
+time to extract feats: 0.5374612808227539s
+time to score: 0.0010638236999511719s
+Keeping image with score {} 2.3964357
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+76
+time to extract feats: 0.5297994613647461s
+time to score: 0.0009517669677734375s
+Keeping image with score {} 1.504104
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 70
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 70
+77
+time to extract feats: 0.5111548900604248s
+time to score: 0.0010085105895996094s
+Filtering image with score 1.362647
+77
+time to extract feats: 0.5263354778289795s
+time to score: 0.001016378402709961s
+Filtering image with score 0.90609014
+77
+time to extract feats: 0.5175585746765137s
+time to score: 0.0011875629425048828s
+Filtering image with score 0.9896519
+77
+time to extract feats: 0.5207715034484863s
+time to score: 0.001207590103149414s
+Keeping image with score {} 1.502833
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 22
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 22
+78
+time to extract feats: 0.5166420936584473s
+time to score: 0.0011925697326660156s
+Filtering image with score 1.0266199
+78
+time to extract feats: 0.5282726287841797s
+time to score: 0.0009860992431640625s
+Filtering image with score 0.4618975
+78
+time to extract feats: 0.5195293426513672s
+time to score: 0.0009431838989257812s
+Filtering image with score 1.438835
+78
+time to extract feats: 0.5344247817993164s
+time to score: 0.0010156631469726562s
+Filtering image with score 0.44450158
+78
+time to extract feats: 0.5347888469696045s
+time to score: 0.0010056495666503906s
+Filtering image with score -0.27709925
+78
+time to extract feats: 0.5290403366088867s
+time to score: 0.0010483264923095703s
+Filtering image with score 1.3707331
+78
+time to extract feats: 0.5129437446594238s
+time to score: 0.0010843276977539062s
+Filtering image with score 0.22528744
+78
+time to extract feats: 0.5320286750793457s
+time to score: 0.0010998249053955078s
+Filtering image with score 1.4837637
+78
+time to extract feats: 0.5154478549957275s
+time to score: 0.0009806156158447266s
+Filtering image with score 0.65394765
+78
+time to extract feats: 0.5230765342712402s
+time to score: 0.001001596450805664s
+Filtering image with score 0.47827572
+78
+time to extract feats: 0.5194463729858398s
+time to score: 0.004056215286254883s
+Filtering image with score 1.4995656
+78
+time to extract feats: 0.5147955417633057s
+time to score: 0.001071929931640625s
+Filtering image with score 0.22659066
+78
+time to extract feats: 0.5286052227020264s
+time to score: 0.0009872913360595703s
+Filtering image with score 0.46763253
+78
+time to extract feats: 0.5253667831420898s
+time to score: 0.0012106895446777344s
+Filtering image with score 0.14352766
+78
+time to extract feats: 0.5514237880706787s
+time to score: 0.0010433197021484375s
+Filtering image with score 0.3494029
+78
+time to extract feats: 0.5203547477722168s
+time to score: 0.0010013580322265625s
+Keeping image with score {} 2.2488837
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+79
+time to extract feats: 0.5336928367614746s
+time to score: 0.0012378692626953125s
+Filtering image with score 0.7128237
+79
+time to extract feats: 0.5176293849945068s
+time to score: 0.0009739398956298828s
+Keeping image with score {} 3.0601892
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+80
+time to extract feats: 0.5284292697906494s
+time to score: 0.0011065006256103516s
+Keeping image with score {} 1.5263357
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+81
+time to extract feats: 0.5191447734832764s
+time to score: 0.0010862350463867188s
+Keeping image with score {} 1.6551082
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+82
+time to extract feats: 0.533700704574585s
+time to score: 0.000993490219116211s
+Filtering image with score 0.62646836
+82
+time to extract feats: 0.5253279209136963s
+time to score: 0.0010406970977783203s
+Filtering image with score 0.7010057
+82
+time to extract feats: 0.5326776504516602s
+time to score: 0.00096893310546875s
+Filtering image with score 1.1160554
+82
+time to extract feats: 0.5427021980285645s
+time to score: 0.001010894775390625s
+Keeping image with score {} 1.7962227
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+83
+time to extract feats: 0.5433039665222168s
+time to score: 0.0010645389556884766s
+Filtering image with score 0.90109473
+83
+time to extract feats: 0.5140383243560791s
+time to score: 0.0012660026550292969s
+Filtering image with score 1.3075554
+83
+time to extract feats: 0.534902811050415s
+time to score: 0.0010170936584472656s
+Keeping image with score {} 2.4675379
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+84
+time to extract feats: 0.5420758724212646s
+time to score: 0.0011341571807861328s
+Keeping image with score {} 2.2684069
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+85
+time to extract feats: 0.5354900360107422s
+time to score: 0.0010597705841064453s
+Filtering image with score 0.2910761
+85
+time to extract feats: 0.5512139797210693s
+time to score: 0.000997304916381836s
+Filtering image with score 1.4691918
+85
+time to extract feats: 0.5346932411193848s
+time to score: 0.000997304916381836s
+Keeping image with score {} 1.8872766
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+86
+time to extract feats: 0.5535910129547119s
+time to score: 0.0009791851043701172s
+Filtering image with score 1.4943515
+86
+time to extract feats: 0.5498776435852051s
+time to score: 0.0010471343994140625s
+Filtering image with score 0.46111864
+86
+time to extract feats: 0.5414090156555176s
+time to score: 0.0011248588562011719s
+Keeping image with score {} 2.7972035
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+87
+time to extract feats: 0.5263197422027588s
+time to score: 0.0011930465698242188s
+Keeping image with score {} 2.2822735
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+88
+time to extract feats: 0.5281774997711182s
+time to score: 0.0009512901306152344s
+Filtering image with score 1.3843797
+88
+time to extract feats: 0.5243895053863525s
+time to score: 0.001146554946899414s
+Filtering image with score 1.3627629
+88
+time to extract feats: 0.5250158309936523s
+time to score: 0.0010962486267089844s
+Filtering image with score 1.3197205
+88
+time to extract feats: 0.5283401012420654s
+time to score: 0.0010061264038085938s
+Keeping image with score {} 2.2165074
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+89
+time to extract feats: 0.5543990135192871s
+time to score: 0.0011360645294189453s
+Filtering image with score 1.3296362
+89
+time to extract feats: 0.5221436023712158s
+time to score: 0.0013065338134765625s
+Filtering image with score 0.71589655
+89
+time to extract feats: 0.5520651340484619s
+time to score: 0.001066446304321289s
+Filtering image with score 0.47786698
+89
+time to extract feats: 0.5207693576812744s
+time to score: 0.0010900497436523438s
+Filtering image with score 1.4892757
+89
+time to extract feats: 0.5298328399658203s
+time to score: 0.0011017322540283203s
+Keeping image with score {} 1.5008302
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+90
+time to extract feats: 0.5413801670074463s
+time to score: 0.0010330677032470703s
+Filtering image with score 0.79806423
+90
+time to extract feats: 0.5261538028717041s
+time to score: 0.0009546279907226562s
+Filtering image with score 1.0358396
+90
+time to extract feats: 0.538999080657959s
+time to score: 0.001020669937133789s
+Filtering image with score -0.0010042787
+90
+time to extract feats: 0.518043041229248s
+time to score: 0.0010037422180175781s
+Filtering image with score 1.4212066
+90
+time to extract feats: 0.5407586097717285s
+time to score: 0.0011174678802490234s
+Keeping image with score {} 1.6522253
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+91
+time to extract feats: 0.5276455879211426s
+time to score: 0.0012722015380859375s
+Filtering image with score 1.262619
+91
+time to extract feats: 0.5431475639343262s
+time to score: 0.0009930133819580078s
+Keeping image with score {} 1.6900551
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+92
+time to extract feats: 0.5744225978851318s
+time to score: 0.001047372817993164s
+Filtering image with score 1.0703688
+92
+time to extract feats: 0.556410551071167s
+time to score: 0.001110076904296875s
+Filtering image with score 0.7008051
+92
+time to extract feats: 0.5360207557678223s
+time to score: 0.001058340072631836s
+Filtering image with score 1.1841552
+92
+time to extract feats: 0.5599105358123779s
+time to score: 0.0012409687042236328s
+Keeping image with score {} 1.5815859
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+93
+time to extract feats: 0.5483155250549316s
+time to score: 0.0011515617370605469s
+Keeping image with score {} 2.0217628
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+94
+time to extract feats: 0.5534398555755615s
+time to score: 0.0010294914245605469s
+Filtering image with score 1.1768162
+94
+time to extract feats: 0.5650599002838135s
+time to score: 0.0010616779327392578s
+Filtering image with score 1.0086982
+94
+time to extract feats: 0.5457227230072021s
+time to score: 0.0010533332824707031s
+Filtering image with score 1.2709765
+94
+time to extract feats: 0.5376882553100586s
+time to score: 0.001028299331665039s
+Keeping image with score {} 1.9268618
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+95
+time to extract feats: 0.545630693435669s
+time to score: 0.001096963882446289s
+Keeping image with score {} 2.3051038
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+96
+time to extract feats: 0.5406527519226074s
+time to score: 0.0010704994201660156s
+Filtering image with score 0.84800977
+96
+time to extract feats: 0.5216002464294434s
+time to score: 0.0009770393371582031s
+Keeping image with score {} 2.2919884
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+97
+time to extract feats: 0.5578591823577881s
+time to score: 0.0009925365447998047s
+Filtering image with score 1.3710939
+97
+time to extract feats: 0.5175602436065674s
+time to score: 0.0012440681457519531s
+Filtering image with score 0.5885681
+97
+time to extract feats: 0.5326206684112549s
+time to score: 0.0011684894561767578s
+Filtering image with score 1.0714225
+97
+time to extract feats: 0.5275764465332031s
+time to score: 0.0011184215545654297s
+Keeping image with score {} 1.6343739
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 0
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+98
+time to extract feats: 0.5183758735656738s
+time to score: 0.000997304916381836s
+Filtering image with score 1.236933
+98
+time to extract feats: 0.5305030345916748s
+time to score: 0.0009379386901855469s
+Keeping image with score {} 2.5780962
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 254
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+99
+time to extract feats: 0.5384228229522705s
+time to score: 0.0009903907775878906s
+Keeping image with score {} 3.026379
+Saving with size 64x64
+(1000, 1000)
+min: 0, max: 255
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+Saved generated images scores at ./LOG_COMBINED/2019.07.03-16:58:11/gen_images_scores.csv
