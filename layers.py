@@ -137,14 +137,14 @@ def deconv_block_fullres(inp, training, out_channels, filter_size=1, strides=1, 
         out = leaky_relu_layer(tmp)
     return out
     
-def conv_block_fullres(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.3, dropout_rate=0.3):
+def conv_block_fullres(inp, training, out_channels, filter_size=1, strides=1, padding="same", pad_values=-1, use_bias=False, alpha=0.3, dropout_rate=0.5):
     with tf.name_scope("conv_block"):
         tmp = conv_layer(inp, out_channels, filter_size, strides, padding, pad_values, use_bias)
         tmp = leaky_relu_layer(tmp, alpha)
         out = dropout_layer(tmp, training, dropout_rate)
     return out
 
-def dense_block_fullres(inp, training, units, use_bias=False, alpha=0.3, dropout_rate=0.3):
+def dense_block_fullres(inp, training, units, use_bias=False, alpha=0.3, dropout_rate=0.5):
     with tf.name_scope("dense_block"):
         tmp = dense_layer(inp, units, use_bias)
         tmp = leaky_relu_layer(tmp, alpha)

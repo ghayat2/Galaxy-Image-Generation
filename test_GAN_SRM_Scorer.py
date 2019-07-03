@@ -5,6 +5,7 @@ import pandas as pd
 from data import create_dataloader_train_labeled, read_labels2paths
 from DCGAN import DCGAN
 from MCGAN import MCGAN
+from FullresGAN import FullresGAN
 from StackedSRM import StackedSRM
 from DCGAN_Scorer import Scorer_head
 from tqdm import trange
@@ -24,7 +25,7 @@ parser = ArgumentParser()
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 parser.add_argument('-to_gen', '--to_generate', type = int, default = 100, help = 'the number of samples to generate')
 parser.add_argument('-ns', '--nb_stacks', type = int, default = 4, help = 'number of stacks')
-parser.add_argument('-gen', '--generator', type = str, default = "DCGAN", choices=["DCGAN", "MCGAN"], help = 'the generator used to generate galaxy images')
+parser.add_argument('-gen', '--generator', type = str, default = "DCGAN", choices=["DCGAN", "MCGAN", "FullresGAN"], help = 'the generator used to generate galaxy images')
 parser.add_argument('-sc', '--scorer', type = str, default = None, choices=["DCGAN_Scorer", "Random_Forest", "Ridge", "Boost"], help = 'the regressor used to score the generated images')
 parser.add_argument('-m', '--margin', type = float, default = 0.25, help = 'margin to add to the mean score of training galaxies')
 parser.add_argument('-t', '--threshold', type = float, default = 3.0, help = 'threshold score for generated galaxies')
@@ -72,7 +73,16 @@ if GENERATOR == "MCGAN":
     CHECKPOINTS_PATH_MCGAN = os.path.join(LOG_DIR_MCGAN, "checkpoints")
 else:
     LOG_DIR_MCGAN=None
-    
+ 
+# Fullres paths
+if GENERATOR == "FullresGAN":
+    list_of_files = glob.glob('./LOG_FullresGAN/*')
+    latest_dir = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment
+    LOG_DIR_FullresGAN=latest_dir
+    CHECKPOINTS_PATH_FullresGAN = os.path.join(LOG_DIR_FullresGAN, "checkpoints")
+else:
+    LOG_DIR_FullresGAN=None
+
 # StackedSRM paths
 list_of_files = glob.glob('./LOG_SRM/*')
 latest_dir = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment
@@ -123,6 +133,7 @@ print("    BATCH_SIZE: {}".format(BATCH_SIZE))
 print("    NOISE_DIM: {}".format(NOISE_DIM))
 print("    LOG_DIR_DCGAN: {}".format(LOG_DIR_DCGAN))
 print("    LOG_DIR_MCCGAN: {}".format(LOG_DIR_MCGAN))
+print("    LOG_DIR_FullresGAN: {}".format(LOG_DIR_FullresGAN))
 print("    LOG_DIR_SRM: {}".format(LOG_DIR_SRM))
 print("    LOG_DIR_DCGAN_SCORER: {}".format(LOG_DIR_DCGAN_SCORER))
 print("    GENERATED_SAMPLES_DIR: {}".format(GENERATED_SAMPLES_DIR))
@@ -178,6 +189,22 @@ with gen_graph.as_default():
         print("Restoring latest model from {}".format(CHECKPOINTS_PATH_MCGAN))
         saver = tf.train.Saver()
         latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINTS_PATH_MCGAN)
+        print("Latest checkpoint: {}\n".format(latest_checkpoint))
+        saver.restore(gen_sess, latest_checkpoint)
+
+    elif GENERATOR == "FullresGAN":
+        # DCGAN Generator model
+        # define noise and test data
+        noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
+
+        print("Building FullresGAN Generator model ...")
+        sys.stdout.flush()
+        model= FullresGAN()
+        fake_im, _ = model.generator_model(noise=noise, training=False) # get fake images from generator
+
+        print("Restoring latest model from {}".format(CHECKPOINTS_PATH_FullresGAN))
+        saver = tf.train.Saver()
+        latest_checkpoint = tf.train.latest_checkpoint(CHECKPOINTS_PATH_FullresGAN)
         print("Latest checkpoint: {}\n".format(latest_checkpoint))
         saver.restore(gen_sess, latest_checkpoint)
 
@@ -312,9 +339,11 @@ while counter < TO_GENERATE:
 #    print(fake_im_val.shape)
     fake_im_val = ((fake_im_val)+1)/2.0 # renormalize to [0, 1] to feed it to StackedSRM model
     
-    srm_feed_dict = {fake_im_pl: fake_im_val}
-    last_output = srm_sess.run(outputs_pred[-1], srm_feed_dict)[:, :, 12:-12, 12:-12] # get the last output of the StackedSRM model and remove padding (i,e convert to 1000x1000)
-    
+    if(GENERATOR != "FullresGAN"):
+        srm_feed_dict = {fake_im_pl: fake_im_val}
+        last_output = srm_sess.run(outputs_pred[-1], srm_feed_dict)[:, :, 12:-12, 12:-12] # get the last output of the StackedSRM model and remove padding (i,e convert to 1000x1000)
+    else:
+        last_output = fake_im_val
 #    print(last_output.shape)
 
     if USE_SCORER:
