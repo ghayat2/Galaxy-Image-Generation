@@ -322,11 +322,11 @@ elif USE_SCORER: # using a baseline regressor to score images
 
 #sys.exit(0)
 
-GENERATED_SAMPLES_64_DIR = os.path.join(GENERATED_SAMPLES_DIR, "64x64")
+GENERATED_SAMPLES_64_DIR = os.path.join(GENERATED_SAMPLES_DIR, "64")
 if not os.path.exists(GENERATED_SAMPLES_64_DIR):
     os.makedirs(GENERATED_SAMPLES_64_DIR)
 
-GENERATED_SAMPLES_1000_DIR = os.path.join(GENERATED_SAMPLES_DIR, "1000x1000")
+GENERATED_SAMPLES_1000_DIR = os.path.join(GENERATED_SAMPLES_DIR, "1000")
 if not os.path.exists(GENERATED_SAMPLES_1000_DIR):
     os.makedirs(GENERATED_SAMPLES_1000_DIR)
 

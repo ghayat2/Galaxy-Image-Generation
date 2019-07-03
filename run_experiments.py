@@ -1,9 +1,10 @@
 import utils
-import pathlib, os, json, sys
+import pathlib, os, json, sys, glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from tqdm import tqdm
 from argparse import ArgumentParser
 from skimage.measure import shannon_entropy
 
@@ -49,8 +50,11 @@ print("    BOX: {}".format(BOX))
 print("    FEATS: {}".format(FEATS))
 print("    BOX_FEATS: {}".format(BOX_FEATS))
 print("    LEGEND: {}".format(LEGEND))
+print("    IMAGES_DIR: {}".format(IMAGES_DIR))
+print("    FEATS_DIR: {}".format(FEATS_DIR))
+print("    OUT_DIR: {}".format(OUT_DIR))
 
-sys.exit(0)
+#sys.exit(0)
 
 # the generated images structure should be:
 # generated_images/
@@ -99,10 +103,13 @@ if not os.path.isdir(IMAGES_DIR):
 if not os.path.isdir(OUT_DIR):
     os.makedirs(OUT_DIR)
 
-all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, "1000")).glob("*")]
+all_models = [model for model in glob.glob(os.path.join(IMAGES_DIR, "*")) if os.path.isdir(model)]
 all_models_name = [str(name).split('/')[-1] for name in all_models]
-dir_1000 = os.path.join(IMAGES_DIR, "1000")
-dir_64 = os.path.join(IMAGES_DIR, "64")
+
+#print(all_models)
+#print(all_models_name)
+
+#sys.exit(0)
 
 # load the json legend file if it exist
 legend = {}
@@ -114,39 +121,35 @@ if LEGEND is not None:
 sns.set()
 
 if HEATMAPS:
+    print("\n")
     for size in [64, 1000]:
-        if not os.path.isdir(os.path.join(OUT_DIR, str(size))):
-            os.mkdir(os.path.join(OUT_DIR, str(size)))
-        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                      if os.path.isdir(model)]
-        all_models_name = [str(name).split('/')[-1] for name in all_models]
         for model_name in all_models_name:
-            if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
-                os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
-            image_set = [image for image in pathlib.Path(os.path.join(IMAGES_DIR, str(size), model_name)).glob("*")]
+            model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size))
+            model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
+            if not os.path.isdir(model_out_dir):
+                os.makedirs(model_out_dir)
+            image_set = [image for image in glob.glob(os.path.join(model_in_dir, "*"))]
             s = utils.heatmap(image_set, decode=True, shape=(size, size))
             print("Entropy for heatmap {} for size {} is {}".format(model_name, size, shannon_entropy(s)))
             h = sns.heatmap(s, cmap="gray")
             plt.annotate('entropy = {}'.format(shannon_entropy(s)), (0, 0), (0, -30), xycoords='axes fraction',
                                                textcoords='offset points', va='top')
-            plt.savefig(os.path.join(OUT_DIR, str(size), model_name, "heatmap_{}_{}.png".format(model_name, size)))
+            plt.savefig(os.path.join(model_out_dir, "heatmap_{}_{}.png".format(model_name, size)))
             plt.close()
         print("Heatmaps generated for size {}".format(size))
 
 if KNN:
+    print("\n")
     with open(os.path.join(OUT_DIR, "knn_results.txt"), "w+") as out:
         for size in [64]:
             for k in [1, 3, 5]:
                 out.write("Images of size {}x{}\n".format(size, size))
-                if not os.path.isdir(os.path.join(OUT_DIR, str(size))):
-                    os.mkdir(os.path.join(OUT_DIR, str(size)))
-                all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                              if os.path.isdir(model)]
-                all_models_name = [str(name).split('/')[-1] for name in all_models]
                 for model_name in all_models_name:
-                    if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
-                        os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
-                    image_set = [image for image in pathlib.Path(os.path.join(IMAGES_DIR, str(size), model_name)).glob("*")]
+                    model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size))
+                    model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
+                    if not os.path.isdir(model_out_dir):
+                        os.makedirs(model_out_dir)
+                    image_set = [image for image in glob.glob(os.path.join(model_in_dir, "*"))]
                     stats = utils.leave_one_out_knn_diversity(image_set, size, k)
                     print("KNN stats for model {} with k = {} : (mean, std, vmin, vmax) = ({}, {}, {}, {})"
                           .format(model_name, k, *stats))
@@ -158,36 +161,45 @@ if KNN:
 # Plot and save the box_plots and distplots
 if BOX:
     for size in [64, 1000]:
-        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                      if os.path.isdir(model)]
-        all_models_name = [str(name).split('/')[-1] for name in all_models]
-
         for model_name in all_models_name:
-            if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
-                os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
-            features = np.loadtxt(os.path.join(FEATS_DIR, str(size), model_name, "features_{}.gz".format(model_name)))
-            for f in BOX_FEATS:
+            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size))
+            model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
+            if not os.path.isdir(model_out_dir):
+                os.makedirs(model_out_dir)
+            features = np.loadtxt(os.path.join(model_in_dir, "{}_feats.gz".format(model_name)))
+            
+            nb_feats = features.shape[1]
+            if BOX_FEATS is None:
+                features_indices = range(nb_feats)
+                nb_used = nb_feats
+            else:
+                features_indices = set(BOX_FEATS) # remove redundance
+                nb_used = len(BOX_FEATS)
+                
+            print("\nPlotting boxplot on {} features for images of size {}".format(nb_used, size))
+            for f in tqdm(features_indices):
                 f = int(f)
+                if f >= nb_feats: # check that the index is correct
+                    print("Feature {} unavailable".format(f))
+                    continue
                 feat = features[:, f:f+1]
-                label = legend[str(f)] if str(f) in legend.keys() else f
+                label = f
                 plt.boxplot(feat, labels=[label])
-                plt.savefig(os.path.join(OUT_DIR, str(size), model_name,
-                                         "boxplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                plt.savefig(os.path.join(model_out_dir, "boxplot_{}_{}_feat{}.png".format(model_name, size, f)))
                 plt.close()
                 try:
                     sns.distplot(feat)
                     plt.title("Distribution for feature {}".format(label))
-                    plt.savefig(os.path.join(OUT_DIR, str(size), model_name,
-                                             "distplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                    plt.savefig(os.path.join(model_out_dir, "distplot_{}_{}_feat{}.png".format(model_name, size, f)))
                     plt.close()
-                except np.linalg.LinAlgError:
+                except:
                     print("Dist plot for {} could not be computed: the feature vector is singular".format(model_name))
-
 
     print("Boxplots and Distplots generated")
 
 # Summarize manual features statistics in a table
 if FEATS:
+    print("\n")
     n_feats = 38
     columns = [legend[str(f)] if str(f) in legend.keys() else str(f) for f in range(n_feats)]
     index = []
