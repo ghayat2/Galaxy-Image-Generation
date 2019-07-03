@@ -122,6 +122,7 @@ if HEATMAPS:
         for model_name in all_models_name:
             model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
             if not os.path.exists(model_in_dir):
+                print("Images of size {} not found".format(size))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
@@ -145,6 +146,7 @@ if KNN:
                 for model_name in all_models_name:
                     model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
                     if not os.path.exists(model_in_dir):
+                        print("Images of size {} not found".format(size))
                         continue
                     model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
                     if not os.path.isdir(model_out_dir):
@@ -164,6 +166,7 @@ if BOX:
         for model_name in all_models_name:
             model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input directory
             if not os.path.exists(model_in_dir):
+                print("Features for images of size {} not found".format(size))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
@@ -216,6 +219,7 @@ if FEATS:
         for model_name in all_models_name:
             model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input dir
             if not os.path.exists(model_in_dir):
+                print("Features for images of size {} not found".format(size))
                 continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
