@@ -183,14 +183,14 @@ if BOX:
                     print("Feature {} unavailable".format(f))
                     continue
                 feat = features[:, f:f+1]
-                label = f
+                label = legend[str(f)] if str(f) in legend.keys() else f
                 plt.boxplot(feat, labels=[label])
-                plt.savefig(os.path.join(model_out_dir, "boxplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                plt.savefig(os.path.join(model_out_dir, "boxplot_{}_{}_feat_{}.png".format(model_name, size, f)))
                 plt.close()
                 try:
                     sns.distplot(feat)
                     plt.title("Distribution for feature {}".format(label))
-                    plt.savefig(os.path.join(model_out_dir, "distplot_{}_{}_feat{}.png".format(model_name, size, f)))
+                    plt.savefig(os.path.join(model_out_dir, "distplot_{}_{}_feat_{}.png".format(model_name, size, f)))
                     plt.close()
                 except:
                     print("Dist plot for {} could not be computed: the feature vector is singular".format(model_name))
@@ -204,9 +204,6 @@ if FEATS:
     columns = [legend[str(f)] if str(f) in legend.keys() else str(f) for f in range(n_feats)]
     index = []
     for size in [64, 1000]:
-        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                      if os.path.isdir(model)]
-        all_models_name = [str(name).split('/')[-1] for name in all_models]
         for model_name in all_models_name:
             index.append("{}_{}".format(model_name, size))
 
@@ -214,13 +211,12 @@ if FEATS:
     stats_summary_var = pd.DataFrame(index=index, columns=columns)
 
     for size in [64, 1000]:
-        all_models = [model for model in pathlib.Path(os.path.join(IMAGES_DIR, str(size))).glob("*")
-                      if os.path.isdir(model)]
-        all_models_name = [str(name).split('/')[-1] for name in all_models]
         for model_name in all_models_name:
-            if not os.path.isdir(os.path.join(OUT_DIR, str(size), model_name)):
-                os.mkdir(os.path.join(OUT_DIR, str(size), model_name))
-            features = np.loadtxt(os.path.join(FEATS_DIR, str(size), model_name, "{}_feats.gz".format(model_name)))
+            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size))
+            model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
+            if not os.path.isdir(model_out_dir):
+                os.makedirs(model_out_dir)
+            features = np.loadtxt(os.path.join(model_in_dir, "{}_feats.gz".format(model_name)))
             for f in range(features.shape[1]):
                 f = int(f)
                 feat = features[:, f:f+1]
