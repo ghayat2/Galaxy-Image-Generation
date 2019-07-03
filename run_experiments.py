@@ -59,40 +59,36 @@ print("    OUT_DIR: {}".format(OUT_DIR))
 # the generated images structure should be:
 # generated_images/
 #           |
-#           ---> 64/                # images 64x64
+#           ---> model_1/                
 #           |     |
-#           |     ---> model_1/
+#           |     ---> 64/          # images 64x64
 #           |     |
-#           |     ---> model_2/
+#           |     ---> 1000/        # images 1000x1000
+#           |     
+#           ---> model_2/                
 #           |     |
-#           |     ---> .../
+#           |     ---> 64/          # images 64x64
+#           |     |
+#           |     ---> 1000/        # images 1000x1000
 #           |
-#           ---> 1000/              # images 1000x1000
-#                 |
-#                 ---> model_1/
-#                 |
-#                 ---> model_2/
-#                 |
-#                ---> .../
+#           .....
 #
 # the features directory structure should be:
 # manual_features/
 #           |
-#           ---> 64/                # images 64x64
+#           ---> model_1/                
 #           |     |
-#           |     ---> model_1/
+#           |     ---> 64/          # images 64x64
 #           |     |
-#           |     ---> model_2/
+#           |     ---> 1000/        # images 1000x1000
+#           |     
+#           ---> model_2/                
 #           |     |
-#           |     ---> .../
+#           |     ---> 64/          # images 64x64
+#           |     |
+#           |     ---> 1000/        # images 1000x1000
 #           |
-#           ---> 1000/              # images 1000x1000
-#                 |
-#                 ---> model_1/
-#                 |
-#                 ---> model_2/
-#                 |
-#                ---> .../
+#           .....
 
 # load the given models and image paths
 
