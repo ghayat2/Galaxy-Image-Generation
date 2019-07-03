@@ -50,7 +50,6 @@ This will generate a new folder called `features` under `data` in which you can 
 | File | Description
 | :--- | :----------
 | data | Data folder.
-| data | Data folder
 | &boxvr;&nbsp; labeled | Labeled Image Directory
 | &boxvr;&nbsp; scored | Scored Image Directory
 | &boxvr;&nbsp; query | Query Image Directory
@@ -64,7 +63,7 @@ This will generate a new folder called `features` under `data` in which you can 
 | &ensp;&ensp; &boxvr;&nbsp; scored\_feats.gz | Scored Features
 | &ensp;&ensp; &boxur;&nbsp; scored\_feats\_ids.gz | Scored Features ID Correspondences
 
-##Files
+## Files
 
 Note: For each and every file, there is a `--help` flag one can set in order to visualise all the flags one may set in a file. For more information about each of the following, please run:
 
