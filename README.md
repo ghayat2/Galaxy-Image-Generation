@@ -65,25 +65,9 @@ This will generate a new folder called `features` under `data` in which you can 
 
 ## Running the models
 
-### A) Image Generation
+### A) Generation models
 
-#### 1) Generation using Patches from the labeled Dataset
-
-To run this model, simply run:
-
-```
-python3 baseline_patches.py 
-```
-This generates a `LOG_PATCHES` folder with the following structure:
-
-| File | Description
-| :--- | :----------
-| LOG\_PATCHES | Patches baseline logs folder.
-| &boxur;&nbsp; [date-time] | Date and time of the run
-| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
-| &ensp;&ensp; &boxur;&nbsp; generated_samples | Directory containing the generated samples
-
-#### 2) DCGAN
+#### 1) DCGAN
 
 The model definition can be found in `DCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -102,7 +86,7 @@ This generates a `LOG_DCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 3) MCGAN
+#### 2) MCGAN
 
 The model definition can be found in `MCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -121,7 +105,7 @@ This generates a `LOG_MCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 4) Stacked Super Resolution Model (SRM)
+#### 3) Stacked Super Resolution Model (SRM)
 
 The model definition can be found in `StackedSRM.py`. To train the model with the default parameters, simply run:
 
@@ -152,9 +136,9 @@ When running the model training, this generates a `LOG_SRM` folder with the foll
 In order to train the Regressors based on manually extracted features, you can simply run: 
 
 ```
-python3 baseline_score_regressor.py --regressor_type=[reg_name]
+python3 baseline_score_regressor.py --regressor_type <reg_name>
 ```
-Replace reg_name with one of the following arguments for different regressors:
+Replace <reg_name\> with one of the following arguments for different regressors:
 
 | Argument | Description
 | :--- | :----------
@@ -191,6 +175,59 @@ This generates a `LOG_DCGAN_SCORER` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; code.zip | Zip file containing the code used for the run
 | &ensp;&ensp; &boxur;&nbsp; output | Messages printed to standard output
 
+Once the training done, you can generate score predictions on the `query` dataset by running:
+```
+python3 test_DCGAN_scorer.py
+```
+This would load the latest trained DCGAN Scorer model and generate a `predictions` folder containing the `predictions.csv` file. The directory structure is as follows:
+
+| File | Description
+| :--- | :----------
+| LOG\_DCGAN\_SCORER | Main folder.
+| &boxur;&nbsp; [date-time] | Date and time of the run of the loaded model
+| &ensp;&ensp; &boxur;&nbsp; predictions | Directory containing the predictions
+| &ensp;&ensp;&ensp;&ensp; &boxur;&nbsp; [date-time] | Date and time of the score predictions generation
+| &ensp;&ensp;&ensp;&ensp;&ensp;&ensp; &boxur;&nbsp; predictions.csv | Score predictions file
+
+
+### C) Image Generation
+#### 1) Generation using Patches from the labeled Dataset
+
+To run this model, simply run:
+
+```
+python3 baseline_patches.py 
+```
+This generates a `LOG_PATCHES` folder with the following structure:
+
+| File | Description
+| :--- | :----------
+| LOG\_PATCHES | Patches baseline logs folder.
+| &boxur;&nbsp; [date-time] | Date and time of the run
+| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
+| &ensp;&ensp; &boxur;&nbsp; generated_samples | Directory containing the generated samples
+| &ensp;&ensp;&ensp;&ensp;  &boxur;&nbsp; 1000 | Directory containing generated images of size 1000x1000
+
+#### 1) Generation using GAN models (with optional Filtering using scorer model):
+You can use the code in `test_GAN_SRM_Scorer.py` to execute the generation pipeline: this consits in generating an image using a GAN model, then upsampling the image using the SRM model (in case the generated image is 64x64), then optionally scoring the image with a chosen scoring model in order to filter/keep the images. By default 100 images are generated. <br>
+
+There are 2 strategies for deciding whether or not to keep an image when using a scorer:
+
+- Keeping only images with a score above a certain threshold `t` (by default 3.0).
+ - Scoring the images of the `labeled` dataset that represent galaxies (i,e labeled `1`), then taking the mean of these scores and adding a margin `m` (by default 0.25) to this mean in order to get a threshold `t`. If an image has a score below `t`, it is filtered, otherwise it is kept. 
+
+To run the generation pipeline, simply run:
+```
+python3 test_GAN_SRM_Scorer.py --generator <GENERATOR> --scorer <SCORER> --use_threshold --threshold <THRESHOLD>
+```
+The option `--scorer` is optional and can be ommited. <br>
+To use a margin on the mean score of the `labeled` galaxy images, replace `--use_threshold` by `--use_margin` and `--threshold <THRESHOLD>` by `--margin <MARGIN>`.
+
+To view the list of allowed values for <GENERATOR\> and <SCORER\>, please run:
+```
+python3 test_GAN_SRM_Scorer.py --help
+```
+
 ## Run Experiments
 ### Setup
 To run experiments, images must have been generated and placed in the 
@@ -199,9 +236,9 @@ To run experiments, images must have been generated and placed in the
 | File | Description
 | :--- | :----------
 | generated_images | Generated Images folder.
-| &boxvr;&nbsp; legend.json | Specifies correspondences between feature numbers and feature names
-| &boxvr;&nbsp; 64 | 64x64 images
-| &ensp;&ensp; &boxvr;&nbsp; model_1 | Folder containing the first model's images to run experiments on
+| &boxvr;&nbsp; legend.json | Specifies correspondences between feature numbers and feature names (optional file)
+| &boxvr;&nbsp; model_1 | Directory with the name of the model
+| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the 64x64 images generated
 | &ensp;&ensp; &boxvr;&nbsp; model_2 | Folder containing the second model's images to run experiments on
 | &ensp;&ensp; &boxvr;&nbsp; ... | 
 | &boxur;&nbsp; 1000 | 1000x1000 images
