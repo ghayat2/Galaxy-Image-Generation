@@ -14,7 +14,7 @@ import sklearn as sk
 from tqdm import tqdm
 
 #from keras.optimizers import Adam
-from keras.models import Sequential
+#from keras.models import Sequential
 #from keras.layers.core import Dense
 #from keras.preprocessing import image as krs_image
 

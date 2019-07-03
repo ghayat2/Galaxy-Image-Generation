@@ -6,22 +6,63 @@
 - Philipe Andreu
 - Emilien Pilloud 
 
-## Prerequisites
-- argparse (https://docs.python.org/3/library/argparse.html)
-- Matplotlib (https://matplotlib.org/)
-- NumPy (https://www.numpy.org/)
-- Pandas (https://pandas.pydata.org/)
-- pathlib (https://docs.python.org/3/library/pathlib.html)
-- patool (https://wummel.github.io/patool/)
-- Pillow (https://pillow.readthedocs.io/en/stable/)
-- Python version 3.6 (https://www.python.org/downloads/release/python-360/)
-- PyWavelets / pywt (https://pywavelets.readthedocs.io/en/latest/)
-- scikit-image / skimage (https://scikit-image.org/)
-- scikit-learn / sklearn (https://scikit-learn.org/stable/)
-- seaborn (https://seaborn.pydata.org/)
-- Tensorflow 1.13 (https://www.tensorflow.org/versions/r1.13/api_docs/python/tf)
-- tqdm (https://github.com/tqdm/tqdm)
-- xgboost (https://xgboost.readthedocs.io/en/latest/python/python_intro.html)
+## Getting Started
+
+### Virtual environment
+Install virtualenvwrapper if not already done:
+```
+pip install virtualenvwrapper
+```
+
+Create a new virtual environment:
+
+```
+mkvirtualenv -p python3.6 "env-name"
+```
+
+The virtual environment is by default activated. You can disable it and enable it using:
+
+```
+deactivate
+workon "env-name"
+```
+
+Install pip requirements:
+
+```
+pip install -r requirements.txt
+```
+To remove the virtual environment, simply disable it as shown above then run:
+```
+rmvirtualenv "env-name"
+```
+## Preparing datasets for training
+
+Please put the image folders `labeled`, `query` and `scored` and the csv files `labeled.csv` and `scored.csv` under the same directory called `data` that should be in the same directory as the `*.py` scripts. 
+Then, to generate the 38 manual features for all the images in the `labeled`, `query` and `scored` datasets, please run:
+
+```
+python3 generate_feats.py 
+```
+
+This will generate a new folder called `features` under `data` in which you can find the features files and the corresponding ids files (used to map each feature vector to the id of the corresponding image). The final directory structure should be:
+
+| File | Description
+| :--- | :----------
+| data | Data folder.
+| data | Data folder
+| &boxvr;&nbsp; labeled | Labeled Image Directory
+| &boxvr;&nbsp; scored | Scored Image Directory
+| &boxvr;&nbsp; query | Query Image Directory
+| &boxvr;&nbsp; labeled.csv | Labeled Images' Labels
+| &boxvr;&nbsp; scored.csv | Scored Images' Scores
+| &boxur;&nbsp; features | Features folder.
+| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats.gz | Labeled Features
+| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats\_ids.gz | Labeled Features ID Correspondences
+| &ensp;&ensp; &boxvr;&nbsp; query\_feats.gz | Query Features
+| &ensp;&ensp; &boxvr;&nbsp; query\_feats\_ids.gz | Query Features ID Correspondences
+| &ensp;&ensp; &boxvr;&nbsp; scored\_feats.gz | Scored Features
+| &ensp;&ensp; &boxur;&nbsp; scored\_feats\_ids.gz | Scored Features ID Correspondences
 
 ##Files
 
@@ -54,33 +95,6 @@ python3 [filename] --help
 | train\_MCGAN.py | Training File for the MCGAN | 02:08:12
 | train\_stackedSRM.py | Training File for the Stacked SRM
 | utils.py | Utility functions
-| data | Data folder
-| &boxvr;&nbsp; labeled | Labeled Image Directory
-| &boxvr;&nbsp; scored | Scored Image Directory
-| &boxvr;&nbsp; query | Query Image Directory
-| &boxvr;&nbsp; labeled.csv | Labeled Images' Labels
-| &boxur;&nbsp; scored.csv | Scored Images' Scores
-
-## Preparing datasets for training
-
-The entire cosmology\_aux\_data\_170429 dataset should be be put into a directory called 'data/' as detailed above. Then, one should proceed and generate the 38 manual features for all the images in the dataset as follows:
-
-```
-> python3 generate_feats.py 
-```
-
-This will generate a new folder called "features" in which one will find The feature files, and id files in order to map them to the image they are from:
-
-| File | Description
-| :--- | :----------
-| data | Data folder.
-| &boxur;&nbsp; features | Features folder.
-| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats.gz | Labeled Features
-| &ensp;&ensp; &boxvr;&nbsp; labeled\_feats\_ids.gz | Labeled Features ID Correspondences
-| &ensp;&ensp; &boxvr;&nbsp; scored\_feats.gz | Scored Features
-| &ensp;&ensp; &boxvr;&nbsp; scored\_feats\_ids.gz | Scored Features ID Correspondences
-| &ensp;&ensp; &boxvr;&nbsp; query\_feats.gz | Query Features
-| &ensp;&ensp; &boxur;&nbsp; query\_feats\_ids.gz | Query Features ID Correspondences
 
 ## Models
 
@@ -91,7 +105,7 @@ This will generate a new folder called "features" in which one will find The fea
 The model can be found in `baseline_patches.py`.
 
 ```
-> python3 baseline_patches.py 
+python3 baseline_patches.py 
 ```
 This generates a `LOG_PATCHES` folder with the following structure:
 
@@ -105,7 +119,7 @@ This generates a `LOG_PATCHES` folder with the following structure:
 The model can be found in `DCGAN.py`. 
 
 ```
-> python3 train_DCGAN.py 
+python3 train_DCGAN.py 
 ```
 
 This generates a `LOG_DCGAN` folder with the following structure:
@@ -124,7 +138,7 @@ This generates a `LOG_DCGAN` folder with the following structure:
 The model can be found in `MCGAN.py`.
 
 ```
-> python3 train_MCGAN.py 
+python3 train_MCGAN.py 
 ```
 
 This generates a `LOG_MCGAN` folder with the following structure:
@@ -145,7 +159,7 @@ This generates a `LOG_MCGAN` folder with the following structure:
 In order to train the Regressors based on manually extracted features, one should run the following command: 
 
 ```
-> python3 baseline_score_regressor.py --regressor_type=[reg_name]
+python3 baseline_score_regressor.py --regressor_type=[reg_name]
 ```
 Replace reg_name with one of the following arguments for different regressors:
 
@@ -169,7 +183,7 @@ This generates a `Regressor` folder with the following structure:
 The model can be found in `DCGAN.py` and `DCGAN_Scorer.py`. 
 
 ```
-> python3 train_DCGAN_for_score.py 
+python3 train_DCGAN_for_score.py 
 ```
 This generates a `LOG_DCGAN_SCORER` folder with the following structure:
 
