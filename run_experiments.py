@@ -120,7 +120,9 @@ if HEATMAPS:
     print("\n")
     for size in [64, 1000]:
         for model_name in all_models_name:
-            model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size))
+            model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
+            if not os.path.exists(model_in_dir):
+                continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
                 os.makedirs(model_out_dir)
@@ -141,7 +143,9 @@ if KNN:
             for k in [1, 3, 5]:
                 out.write("Images of size {}x{}\n".format(size, size))
                 for model_name in all_models_name:
-                    model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size))
+                    model_in_dir = os.path.join(IMAGES_DIR, model_name, str(size)) # input directory
+                    if not os.path.exists(model_in_dir):
+                        continue
                     model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
                     if not os.path.isdir(model_out_dir):
                         os.makedirs(model_out_dir)
@@ -158,7 +162,9 @@ if KNN:
 if BOX:
     for size in [64, 1000]:
         for model_name in all_models_name:
-            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size))
+            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input directory
+            if not os.path.exists(model_in_dir):
+                continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
                 os.makedirs(model_out_dir)
@@ -208,7 +214,9 @@ if FEATS:
 
     for size in [64, 1000]:
         for model_name in all_models_name:
-            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size))
+            model_in_dir = os.path.join(FEATS_DIR, model_name, str(size)) # input dir
+            if not os.path.exists(model_in_dir):
+                continue
             model_out_dir = os.path.join(OUT_DIR, model_name, str(size))
             if not os.path.isdir(model_out_dir):
                 os.makedirs(model_out_dir)
