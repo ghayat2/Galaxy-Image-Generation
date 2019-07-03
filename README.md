@@ -149,7 +149,7 @@ When running the model training, this generates a `LOG_SRM` folder with the foll
 
 #### 1) Manual Feature Regressors
 
-In order to train the Regressors based on manually extracted features, you cab simply run: 
+In order to train the Regressors based on manually extracted features, you can simply run: 
 
 ```
 python3 baseline_score_regressor.py --regressor_type=[reg_name]
