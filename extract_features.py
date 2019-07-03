@@ -38,8 +38,8 @@ for size in [64, 1000]:
         print("\nExtracting features for {} of size {}".format(name, size))
         model_in_dir = os.path.join(IMAGES_DIR, name, str(size))
         if not os.path.exists(model_in_dir):
-                print("Images of size {} not found".format(size))
-                continue
+            print("Images of size {} not found".format(size))
+            continue
         model_out_dir = os.path.join(OUT_DIR, name, str(size))
         if not os.path.isdir(model_out_dir):
             os.makedirs(model_out_dir)
