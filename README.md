@@ -121,7 +121,7 @@ This generates a `LOG_MCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 3) Stacked Super Resolution Model (SRM)
+#### 4) Stacked Super Resolution Model (SRM)
 
 The model definition can be found in `StackedSRM.py`. To train the model with the default parameters, simply run:
 
