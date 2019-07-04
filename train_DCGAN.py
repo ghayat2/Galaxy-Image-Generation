@@ -29,6 +29,7 @@ parser.add_argument('-g_b2', '--gen_beta_2', type = float, default = 0.999, help
 parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 'the dimension of the noise input to the generator')
 parser.add_argument('-mb', '--minibatch_discrimination', help = 'whether we want minibatch discrimination', action="store_true")
 parser.add_argument('-ls', '--label_smoothing', help = 'whether we want label smoothing', action="store_true")
+parser.add_argument('-rot', '--rotate', help = 'whether to augment data using rotations of 90 degrees', action="store_true")
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -62,6 +63,7 @@ LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of step
 SAVE_ITER_FREQ = args.save_iter_freq
 SAMPLE_ITER_FREQ = args.sample_iter_freq
 CONTINUE_TRAINING = args.continue_training
+ROTATE = args.rotate
 
 C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
@@ -142,7 +144,7 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    real_im, _, nb_reals, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=False)
+    real_im, _, nb_reals, _ = create_dataloader_train_labeled(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, all_data=False, rotate=ROTATE)
     
     # define noise and test data
     noise = tf.random.normal([BATCH_SIZE, NOISE_DIM], seed=global_seed, name="random_noise") # noise fed to generator
