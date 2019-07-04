@@ -284,7 +284,7 @@ python3 run_experiments.py -all
  
 An optional path to a legend json file can be specified using the option `--legend <FILE_PATH>` to specify a dict from feature index to feature name. Otherwise, the feature index will be used as feature name.
 
-The experiment results can be found uder the directory `./experiment_results` by default.
+The experiment results can be found uder the directory `./experiments_results` by default.
 
 ## Other options
 
