@@ -93,6 +93,7 @@ The model definition can be found in `DCGAN.py`. To train the model with the def
 ```
 python3 train_DCGAN.py 
 ```
+You can optionnally add the options `-ls`, `-mb`, `-rot` to use label smoothing, minibatch discrimination and data augmentation with rotation respectively <br>
 
 This generates a `LOG_DCGAN` folder with the following structure:
 
@@ -112,7 +113,8 @@ The model definition can be found in `MCGAN.py`. To train the model with the def
 ```
 python3 train_MCGAN.py 
 ```
-
+You can optionnally add the options `-ls`, `-mb`, `-rot` to use label smoothing, minibatch discrimination and data augmentation with rotation respectively <br>
+ 
 This generates a `LOG_MCGAN` folder with the following structure:
 
 | File | Description
@@ -294,6 +296,23 @@ The results are stored in `./manual_features` folder with a structure similar to
 | &ensp;&ensp; &boxur;&nbsp; 1000 | Folder with the features extracted on 1000x1000 images
 | &boxvr;&nbsp; ... | 
 
+### Scoring generated images with a baseline score regressor
+You can generate scores for 1000x1000 images of models under the folder `./generated_images` by running: 
+
+```
+python3 baseline_score_generated.py --regressor_type <reg_name>
+```
+With <reg_name\> is one of the manual feature regressors.
+The results are stored in `./generated_images/model_name` for each available `model_name`.
+
+### Scoring labeled galaxy images with a baseline score regressor
+You can generate scores for the images of the `labeled` dataset that represent galaxies (i,e labeled 1.0) by running:
+```
+python3 baseline_score_labeled.py --regressor_type <reg_name>
+```
+With <reg_name\> is one of the manual feature regressors.
+The results are stored in the current working directory.
+
 ### Experiment Execution
 Now that the directories are setup and features extracted, all that remains is to run all experiments using:
 
@@ -306,12 +325,15 @@ An optional path to a legend json file can be specified using the option `--lege
 The experiment results can be found uder the directory `./experiments_results` by default.
 
 ## Other options
-
-Note: For many `*.py` files, you can get a some help information about the possible settable options and their descriptions by simply running:
+The above instructions should be sufficient to reproduce our models and experiments. <br\>
+ We note that for many `*.py` files, you can get a some help information about the possible settable options and their descriptions by simply running:
 
 ```
 python3 [filename] --help
 ```
+## Run times:
+TODO: add run times for training procedures, remove runtimes from files descriptions below as some files don't have a run time
+
 ## Files
 | File | Description |  Runtime (hh:mm:ss)
 | :--- | :---------- | :----------
