@@ -48,7 +48,10 @@ def read_labels2paths(data_root):
         
     return label2paths
 
-def create_dataloader_train_labeled(data_root, batch_size, batches_to_prefetch=20, shuffle=True, all_data=True):
+def create_dataloader_train_labeled(data_root, batch_size, batches_to_prefetch=20, shuffle=True, all_data=True, rotate=False):
+    global ROTATIONS
+    ROTATIONS = rotate
+    print(ROTATIONS)
     print("Reading images paths ...")
     labels2paths = read_labels2paths(data_root)
     fake_images = labels2paths[0.0] # paths to non-galaxies
@@ -165,7 +168,9 @@ def create_dataloader_query(data_root, batches_to_prefetch=20):
     
     return full_ds, all_files, len(all_files)
 
-def create_dataloader_train_mcgan(data_root, batch_size, batches_to_prefetch=20, shuffle=True, resize=False):
+def create_dataloader_train_mcgan(data_root, batch_size, batches_to_prefetch=20, shuffle=True, rotate=False, resize=False):
+    global ROTATIONS
+    ROTATIONS = rotate
     print("Reading images paths ...")
     labels2paths = read_labels2paths(data_root)
     fake_images = labels2paths[0.0] # paths to non-galaxies
