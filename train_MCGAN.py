@@ -32,6 +32,7 @@ parser.add_argument('-n_dim', '--noise_dim', type = int, default = 1000, help = 
 parser.add_argument('-mb', '--minibatch_discrimination', help = 'whether we want minibatch discrimination', action="store_true")
 parser.add_argument('-ls', '--label_smoothing', help = 'whether we want label smoothing', action="store_true")
 parser.add_argument('-rs', '--resize', help = 'if we want to work with the 64x64 features ', action="store_true")
+parser.add_argument('-rot', '--rotate', help = 'whether to augment data using rotations of 90 degrees', action="store_true")
 
 parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 'number of iterations between training logs')
 parser.add_argument('-spf', '--sample_iter_freq', type = int, default = 100, help = 'number of iterations between sampling steps')
@@ -39,6 +40,7 @@ parser.add_argument('-svf', '--save_iter_freq', type = int, default = 1000, help
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
+
 
 #parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
@@ -64,6 +66,7 @@ D_BETA2 = args.disc_beta_2
 USE_MINIBATCH = args.minibatch_discrimination
 USE_LABEL_SMOOTHING = args.label_smoothing
 RESIZING = args.resize
+ROTATE = args.rotate
 
 LOG_ITER_FREQ = args.log_iter_freq # train loss logging frequency (in nb of steps)
 SAVE_ITER_FREQ = args.save_iter_freq
@@ -153,7 +156,7 @@ config.gpu_options.visible_device_list = "0"
 with tf.Session(config=config) as sess:
 
     # data
-    train_ds, nb_images = create_dataloader_train_mcgan(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, shuffle=True, resize=RESIZING)
+    train_ds, nb_images = create_dataloader_train_mcgan(data_root=DATA_ROOT, batch_size=BATCH_SIZE, batches_to_prefetch=BATCHES_TO_PREFETCH, shuffle=True, resize=RESIZING, rotate=ROTATE)
     im, feats = train_ds
 
     NUM_SAMPLES = nb_images

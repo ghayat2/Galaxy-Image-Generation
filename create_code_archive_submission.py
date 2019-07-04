@@ -34,6 +34,8 @@ submission_files = ["data.py",
                     # Experiments
                     "extract_features.py",
                     "run_experiments.py",
+                    "baseline_score_generated.py",
+                    "baseline_score_labeled.py",
                     # Others
                     "README.md",
                     "requirements.txt"
