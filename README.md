@@ -209,7 +209,7 @@ This generates a `LOG_PATCHES` folder with the following structure:
 | &ensp;&ensp;&ensp;&ensp;  &boxur;&nbsp; 1000 | Directory containing generated images of size 1000x1000
 
 #### 1) Generation using GAN models (with optional Filtering using scorer model):
-You can use the code in `test_GAN_SRM_Scorer.py` to execute the generation pipeline: this consits in generating an image using a GAN model, then upsampling the image using the SRM model (in case the generated image is 64x64), then optionally scoring the image with a chosen scoring model in order to filter/keep the images. By default 100 images are generated. <br>
+You can use the code in `test_GAN_SRM_Scorer.py` to execute the generation pipeline: this consits in generating an image using a GAN model, then upsampling the image using the SRM model (in case the generated image is 64x64), then optionally scoring the image with a chosen scoring model in order to filter or keep it. By default 100 images are generated. <br>
 
 There are 2 strategies for deciding whether or not to keep an image when using a scorer:
 
@@ -227,6 +227,16 @@ To view the list of allowed values for <GENERATOR\> and <SCORER\>, please run:
 ```
 python3 test_GAN_SRM_Scorer.py --help
 ```
+The generated images are stored in the folder `LOG_COMBINED` with the following structure:
+
+| File | Description
+| :--- | :----------
+| LOG\_COMBINED | Logs folder.
+| &boxur;&nbsp; [date-time] | Date and time of the run
+| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
+| &ensp;&ensp; &boxur;&nbsp; generated_samples | Directory containing the generated samples
+| &ensp;&ensp;&ensp;&ensp;  &boxvr;&nbsp; 64 | Directory containing generated images of size 64x64 (if model generates 64x64 images)
+| &ensp;&ensp;&ensp;&ensp;  &boxur;&nbsp; 1000 | Directory containing generated images of size 1000x1000
 
 ## Run Experiments
 ### Setup
@@ -236,68 +246,57 @@ To run experiments, images must have been generated and placed in the
 | File | Description
 | :--- | :----------
 | generated_images | Generated Images folder.
-| &boxvr;&nbsp; legend.json | Specifies correspondences between feature numbers and feature names (optional file)
+| &boxvr;&nbsp; legend.json | (Optional) Specifies correspondences between feature indices and feature names
 | &boxvr;&nbsp; model_1 | Directory with the name of the model
-| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the 64x64 images generated
-| &ensp;&ensp; &boxvr;&nbsp; model_2 | Folder containing the second model's images to run experiments on
-| &ensp;&ensp; &boxvr;&nbsp; ... | 
-| &boxur;&nbsp; 1000 | 1000x1000 images
-| &ensp;&ensp; &boxvr;&nbsp; model_1 | Folder containing the first model's images to run experiments on
-| &ensp;&ensp; &boxvr;&nbsp; model_2 | Folder containing the second model's images to run experiments on
-| &ensp;&ensp; &boxvr;&nbsp; ... | 
-
-
-To ensure all the needed Python packages are installed, run the following which
-relies on pip to install the required modules:
-
-```
-install_python_dependencies.sh
-```
+| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the 64x64 images generated (optional if not generated)
+| &ensp;&ensp; &boxur;&nbsp; 1000 | Folder with the 1000x1000 images generated
+| &boxvr;&nbsp; model_2 | Directory with the name of the model
+| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the 64x64 images generated (optional if not generated)
+| &ensp;&ensp; &boxur;&nbsp; 1000 | Folder with the 1000x1000 images generated
+| &boxvr;&nbsp; ... | 
 
 ### Manual Feature Extraction
-If the manual features are not computed yet, i.e. there is no manual_features folder or
-it is empty, run: 
+Compute the manual features on the generated images of all models under the folder `./generated_images` by running: 
 
 ```
-python3 extract_features.py -I True -m [max #images to extract]
+python3 extract_features.py
 ```
 
 The advised maximum number of images is 100 otherwise it can take some time for 
 1000x1000 images.
 
-The manual_features folder should now look as follows:
+The results are stored in `./manual_features` folder with a structure similar to the `./generated_images` folder:
 
 | File | Description
 | :--- | :----------
 | manual_features | Generated Images folder.
-| &boxvr;&nbsp; legend.json | Specifies correspondences between feature numbers and feature names
-| &boxvr;&nbsp; 64 | 64x64 images
-| &ensp;&ensp; &boxvr;&nbsp; model_1 | Folder containing the first model's manual features
-| &ensp;&ensp; &boxvr;&nbsp; model_2 | Folder containing the second model's manual features
-| &ensp;&ensp; &boxvr;&nbsp; ... | 
-| &boxur;&nbsp; 1000 | 1000x1000 images
-| &ensp;&ensp; &boxvr;&nbsp; model_1 | Folder containing the first model's manual features
-| &ensp;&ensp; &boxvr;&nbsp; model_2 | Folder containing the second model's manual features
-| &ensp;&ensp; &boxvr;&nbsp; ... | 
+| &boxvr;&nbsp; model_1 | Directory with the name of the model
+| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the features extracted on 64x64 images
+| &ensp;&ensp; &boxur;&nbsp; 1000 | Folder with the features extracted on 1000x1000 images
+| &boxvr;&nbsp; model_2 | Directory with the name of the model
+| &ensp;&ensp; &boxvr;&nbsp; 64 | Folder with the features extracted on 64x64 images
+| &ensp;&ensp; &boxur;&nbsp; 1000 | Folder with the features extracted on 1000x1000 images
+| &boxvr;&nbsp; ... | 
 
 ### Experiment Execution
-Now that the directories are setup, all that remains is to run:
+Now that the directories are setup and features extracted, all that remains is to run all experiments using:
 
 ```
-python3 run_experiments.py
+python3 run_experiments.py -all
 ```
  
- A legend json file can be put in `manual_features` to specify a dict from feature number to feature name. 
-The experiment results will be output to the specified out directory or in `experiment_results` by default.
+An optional path to a legend json file can be specified using the option `--legend <FILE_PATH>` to specify a dict from feature index to feature name. Otherwise, the feature index will be used as feature name.
 
-## Files
+The experiment results can be found uder the directory `./experiment_results` by default.
 
-Note: For each and every file, there is a `--help` flag one can set in order to visualise all the flags one may set in a file. For more information about each of the following, please run:
+## Other options
+
+Note: For many `*.py` files, you can get a some help information about the possible settable options and their descriptions by simply running:
 
 ```
 python3 [filename] --help
 ```
-
+## Files
 | File | Description |  Runtime (hh:mm:ss)
 | :--- | :---------- | :----------
 | baseline\_patches.py | Generative Model based on patches | 00:04:54
