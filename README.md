@@ -133,7 +133,7 @@ python3 train_stackedSRM.py
 ```
 Please make sure that you have enough GPU memory to run the model to avoid memory exceptions towards the end of training. Alternatively you can download the log directory containing model checkpoint (trained on Google Colab's Tesla T4 GPU with 16GB of memory for around 3h) from the following link:
 ```
-Add link here
+https://polybox.ethz.ch/index.php/s/c7DHpbXWf76EDp1
 ```
 Please extract the archive file and put the `LOG_SRM` folder in the same directory as the `*.py` scripts.<br />
 
