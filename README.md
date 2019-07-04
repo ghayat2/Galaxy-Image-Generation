@@ -208,7 +208,7 @@ This generates a `LOG_PATCHES` folder with the following structure:
 | &ensp;&ensp; &boxur;&nbsp; generated_samples | Directory containing the generated samples
 | &ensp;&ensp;&ensp;&ensp;  &boxur;&nbsp; 1000 | Directory containing generated images of size 1000x1000
 
-#### 1) Generation using GAN models (with optional Filtering using scorer model):
+#### 2) Generation using GAN models (with optional Filtering using scorer model):
 You can use the code in `test_GAN_SRM_Scorer.py` to execute the generation pipeline: this consits in generating an image using a GAN model, then upsampling the image using the SRM model (in case the generated image is 64x64), then optionally scoring the image with a chosen scoring model in order to filter or keep it. By default 100 images are generated. <br>
 
 There are 2 strategies for deciding whether or not to keep an image when using a scorer:
