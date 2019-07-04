@@ -67,7 +67,26 @@ This will generate a new folder called `features` under `data` in which you can 
 
 ### A) Generation models
 
-#### 1) DCGAN
+#### 1) FullresGAN
+
+The model definition can be found in `FullresGAN.py`. To train the model with the default parameters, simply run:
+
+```
+python3 train_FullresGAN.py 
+```
+
+This generates a `LOG_FullresGAN` folder with the following structure:
+
+| File | Description
+| :--- | :----------
+| LOG\_FullresGAN | FullresGAN logs folder.
+| &boxur;&nbsp; [date-time] | Date and time of the run
+| &ensp;&ensp; &boxvr;&nbsp; checkpoints | Directory containing the last 5 checkpoints saved
+| &ensp;&ensp; &boxvr;&nbsp; code.zip | Zip file containing the code used for the run
+| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
+| &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
+
+#### 2) DCGAN
 
 The model definition can be found in `DCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -86,7 +105,7 @@ This generates a `LOG_DCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 2) MCGAN
+#### 3) MCGAN
 
 The model definition can be found in `MCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -297,26 +316,25 @@ python3 [filename] --help
 | File | Description |  Runtime (hh:mm:ss)
 | :--- | :---------- | :----------
 | baseline\_patches.py | Generative Model based on patches | 00:04:54
-| baseline\_score\_regressor\_test.py | Tests the different Regressor architectures on the query set
+| baseline\_score\_regressor\_test.py | Tests the different Regressor architectures on the query set | 00:05:00
 | baseline\_score\_regressor.py | Applies different Regressor architectures to the Regression task | 00:10:00
-| data.py | Image/Manual Feature loading and preprocessing
-| DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model
-| DCGAN.py | Deep Convolutional Generative Adversarial Network
-| downsample.py | Given input images at 1000x1000 resolution, this resizes them using max pooling with appropriate padding for range \[-1, 1\].
-| extract\_features.py | Extracts manually crafted features from the provided files
-| generate\_feats.py | Generates manually crafted features from the provided images
-| install\_python\_dependencies.sh | Executable to install all dependencies
-| layers.py | Layers used to build the Models
-| MCGAN.py | Manual Feature Conditionned Generative Adversarial Network
+| data.py | Image/Manual Feature loading and preprocessing | ------------
+| DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model | ------------
+| DCGAN.py | Deep Convolutional Generative Adversarial Network | ------------
+| downsample.py | Given input images at 1000x1000 resolution, this resizes them using max pooling with appropriate padding for range \[-1, 1\] | Depends on number of files given
+| extract\_features.py | Extracts manually crafted features from the provided files | Depends on number of files given
+| generate\_feats.py | Generates manually crafted features from the provided images | 
+| layers.py | Layers used to build the Models | ------------
+| MCGAN.py | Manual Feature Conditionned Generative Adversarial Network | ------------
 | run\_experiments.py | Run statistics on the provided images
-| StackedSRM.py | Stacked SuperResolution Model
+| StackedSRM.py | Stacked SuperResolution Model | ------------
 | test\_DCGAN\_scorer.py | Tests the DCGAN based scoring model on the query set
-| test\_DCGAN\_SRM\_Scorer.py | Generation file for the DCGAN with scorer filtering
+| test\_GAN\_SRM\_Scorer.py | Generation file for the DCGAN with scorer filtering | Depends on score value to filter according to 
 | train\_DCGAN\_for\_score.py | Training file for the DCGAN based scoring model
-| train\_DCGAN.py | Training File for the DCGAN | 02:13:35 without minibatch, 
+| train\_DCGAN.py | Training File for the DCGAN | 02:13:35 
 | train\_MCGAN.py | Training File for the MCGAN | 02:08:12
 | train\_stackedSRM.py | Training File for the Stacked SRM
-| utils.py | Utility functions
+| utils.py | Utility functions | ------------
 
 <!--### 1) XGBoost Regressor on manually generated features
 
