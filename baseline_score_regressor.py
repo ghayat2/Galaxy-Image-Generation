@@ -8,6 +8,7 @@ from sklearn.externals import joblib
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import linear_model
 from argparse import ArgumentParser
+from tools import *
 
 parser = ArgumentParser()
 parser.add_argument('-rt', '--regressor_type', type = str, default = "Boost", choices=["Random_Forest", "Ridge", "Boost"], 
@@ -33,9 +34,6 @@ SCORED_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'scored_feats_ids.gz')
 
 QUERY_FEATS_PATH = os.path.join(FEATURES_DIR, 'query_feats.gz')
 QUERY_FEATS_IDS_PATH = os.path.join(FEATURES_DIR, 'query_feats_ids.gz')
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
     
 def get_regressor(regr_type="Boost", random_state=10):
     if regr_type == "Random_Forest": 

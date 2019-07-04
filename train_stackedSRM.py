@@ -13,6 +13,7 @@ from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
 import patoolib
+from tools import *
 
 global_seed=5
 
@@ -31,15 +32,8 @@ parser.add_argument('-svf', '--save_iter_freq', type = int, default = 1000, help
 
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
-#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
 
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
-def create_zip_code_files(output_file, submission_files):
-    patoolib.create_archive(output_file, submission_files)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -57,7 +51,6 @@ SAMPLE_ITER_FREQ = args.sample_iter_freq
 CONTINUE_TRAINING = args.continue_training
 
 FIG_SIZE = 20 # in inches
-#RUNNING_ON_COLAB = args.colab
 
 # paths
 DATA_ROOT="./data"
@@ -71,25 +64,7 @@ if CONTINUE_TRAINING: # continue training from last training experiment
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "samples")
 
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        self.terminal_write = sys.stdout.write
-        self.terminal_flush = sys.stdout.flush
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal_write(message)
-        self.log.write(message)  
-
-    def flush(self):
-        self.terminal_flush()
-        self.log.flush()
-
-logger = Logger(LOG_DIR)
-sys.stdout = logger
+sys.stdout = Logger(LOG_DIR)
 
 l = device_lib.list_local_devices()
 gpus_list = [(device.physical_device_desc, device.memory_limit) for device in l if device.device_type == "GPU"]
@@ -159,8 +134,7 @@ with tf.Session(config=config) as sess:
     model= StackedSRM(NB_STACKS)
     outputs_pred = model(max_pool4, training_pl)
 
-#    for output in outputs_pred:
-#        print(output.shape)
+
 #    sys.exit(0)
     # losses
     print("Losses ...")

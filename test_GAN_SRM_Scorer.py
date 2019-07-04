@@ -15,6 +15,7 @@ import utils
 from sklearn.externals import joblib
 from argparse import ArgumentParser
 import layers
+from tools import *
 
 global_seed=5
 
@@ -33,9 +34,6 @@ parser.add_argument('-ut', '--use_threshold', help = 'whether to use the scorer 
 parser.add_argument('-um', '--use_margin', help = 'whether to use the scorer with a margin on the mean score of training galaxies to filter the generated images by score', action="store_true")
 
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
 
 CURR_TIMESTAMP=timestamp()
 
@@ -105,23 +103,6 @@ if os.path.exists(CLUSTER_DATA_ROOT):
 
 LOG_DIR = os.path.join("./LOG_COMBINED", CURR_TIMESTAMP)
 GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples")
-
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        self.terminal = sys.stdout
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)  
-
-    def flush(self):
-        self.log.flush()
-        self.terminal.flush()
-        pass    
 
 sys.stdout = Logger(LOG_DIR)
 
@@ -336,7 +317,6 @@ generated_images_names = []
 while counter < TO_GENERATE:
     print(counter)
     fake_im_val = gen_sess.run(fake_im)
-#    print(fake_im_val.shape)
     fake_im_val = ((fake_im_val)+1)/2.0 # renormalize to [0, 1] to feed it to StackedSRM model
     
     if(GENERATOR != "FullresGAN"):
@@ -344,7 +324,6 @@ while counter < TO_GENERATE:
         last_output = srm_sess.run(outputs_pred[-1], srm_feed_dict)[:, :, 12:-12, 12:-12] # get the last output of the StackedSRM model and remove padding (i,e convert to 1000x1000)
     else:
         last_output = fake_im_val
-#    print(last_output.shape)
 
     img_64 = (fake_im_val[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
     img_1000 = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
@@ -357,12 +336,11 @@ while counter < TO_GENERATE:
             score = scorer_sess.run(scores_pred, {im_pl: scorer_input})[0, 0]
         else:
             img = img_1000/255.0 # convert to channels last format and keep normalized to [0, 1]
-#            img = img / img.max()
-#            print("min: {}, max: {}".format(img.min(), img.max()))
+
             a = time.time()
             features = utils.get_hand_crafted(img).reshape([1, -1])
             print("time to extract feats: {}s".format(time.time()-a))
-#            print(features.shape)
+
             a = time.time()
             score = np.array(regr.predict(features))[0]
             print("time to score: {}s".format(time.time()-a))
@@ -373,11 +351,6 @@ while counter < TO_GENERATE:
         
         print("Keeping image with score {}", score)
 
-    
-    #--------------------------------------------------------
-#    max_val = img.max()
-#    img = ((img/max_val)*255.0).astype("uint8")
-    #-------------------------------------------------------- 
     
     if(GENERATOR != "FullresGAN"):
         print("Saving with size 64x64")

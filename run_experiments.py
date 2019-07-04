@@ -104,10 +104,6 @@ if not os.path.isdir(OUT_DIR):
 all_models = [model for model in glob.glob(os.path.join(IMAGES_DIR, "*")) if os.path.isdir(model)]
 all_models_name = [str(name).split('/')[-1] for name in all_models]
 
-#print(all_models)
-#print(all_models_name)
-
-#sys.exit(0)
 
 # load the json legend file if it exist
 legend = {}

@@ -11,6 +11,7 @@ from PIL import Image
 import datetime, time
 from argparse import ArgumentParser
 import patoolib
+from tools import *
 
 global_seed=5
 
@@ -39,12 +40,6 @@ parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, hel
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
 
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
-def create_zip_code_files(output_file, submission_files):
-    patoolib.create_archive(output_file, submission_files)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -80,23 +75,6 @@ if CONTINUE_TRAINING: # continue training from last training experiment
     LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
-
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        self.terminal = sys.stdout
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)  
-
-    def flush(self):
-        self.log.flush()
-        self.terminal.flush()
-        pass    
 
 sys.stdout = Logger(LOG_DIR)
 
@@ -165,7 +143,6 @@ with tf.Session(config=config) as sess:
     fake_out_D, _ = model.discriminator_model(inp=fake_im, training=training_pl, minibatch=MINIBATCH_DISCRIMINATION) # get discriminator output on fake images
     real_out_D, _ = model.discriminator_model(inp=im_pl, training=training_pl, reuse=True, resize=True, minibatch=MINIBATCH_DISCRIMINATION) # get discriminator output on real images
     
-#    print(fake_out_D.shape)
 #    sys.exit(0)
     # losses
     print("Losses ...")
@@ -190,7 +167,6 @@ with tf.Session(config=config) as sess:
     sys.stdout.flush()
     gen_loss_summary = tf.summary.scalar("gen_loss", gen_loss)
     discr_loss_summary = tf.summary.scalar("discr_loss", discr_loss)
-#    train_summary = tf.summary.merge([gen_loss_summary, discr_loss_summary])
 	
     fake_im_channels_last = (tf.transpose(fake_im, perm=[0, 2, 3, 1])+1)*128.0 # put in channels last and unnormalize
     test_summary = tf.summary.image("Test Image", fake_im_channels_last, max_outputs=BATCH_SIZE)

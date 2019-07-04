@@ -8,6 +8,7 @@ from DCGAN_Scorer import Scorer_head
 from tqdm import trange
 import datetime, time
 from argparse import ArgumentParser
+from tools import *
 
 global_seed=5
 
@@ -19,12 +20,6 @@ parser.add_argument('-bs', '--batch_size', type = int, default = 16, help = 'siz
 parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
 
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
-def create_zip_code_files(output_file, submission_files):
-    patoolib.create_archive(output_file, submission_files)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -97,7 +92,7 @@ with tf.Session(config=config) as sess:
             scores[i] = score[0,0]
     
     predictions = pd.DataFrame(data={'Id': images_ids, 'Predicted': scores})
-#    print(predictions)
+
     pred_file = os.path.join(PREDICTIONS_DIR, "predictions.csv")
     predictions.to_csv(pred_file, index=False)
     print("Saved predictions at {}".format(pred_file))

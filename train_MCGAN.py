@@ -12,6 +12,7 @@ import datetime, time
 import pathlib, patoolib
 import pandas as pd
 from argparse import ArgumentParser
+from tools import *
 
 
 global_seed=5
@@ -42,15 +43,7 @@ parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, hel
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
 
 
-#parser.add_argument('-c', '--colab', help = 'whether we are running on colab or not', action="store_true") # add this option to specify that the code is run on colab
-
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
-def create_zip_code_files(output_file, submission_files):
-    patoolib.create_archive(output_file, submission_files)
 
 CURR_TIMESTAMP=timestamp()
 
@@ -77,7 +70,6 @@ C, H, W = 1, 1000, 1000 # images dimensions
 NOISE_DIM=args.noise_dim
 FEATS_DIM=1
 FIG_SIZE = 20 # in inches
-#RUNNING_ON_COLAB = args.colab
 
 # paths
 DATA_ROOT="./data"
@@ -91,24 +83,6 @@ if CONTINUE_TRAINING: # continue training from last training experiment
     LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
 SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
-
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-
-        self.terminal = sys.stdout
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-
-    def flush(self):
-        self.log.flush()
-        self.terminal.flush()
-        pass
-
 
 sys.stdout = Logger(LOG_DIR)
 
@@ -207,7 +181,6 @@ with tf.Session(config=config) as sess:
     sys.stdout.flush()
     gen_loss_summary = tf.summary.scalar("gen_loss", gen_loss)
     discr_loss_summary = tf.summary.scalar("discr_loss", discr_loss)
-    #    train_summary = tf.summary.merge([gen_loss_summary, discr_loss_summary])
 
     fake_im_channels_last = (tf.transpose(fake_im,
                                           perm=[0, 2, 3, 1]) + 1) * 128.0  # put in channels last and unnormalize
@@ -291,15 +264,12 @@ with tf.Session(config=config) as sess:
                 if not os.path.exists(SAMPLES_DIR):
                     os.makedirs(SAMPLES_DIR)
 
-                fig = plt.figure(figsize=(
-                FIG_SIZE, FIG_SIZE))  # Create a new "fig_size" inches by "fig_size" inches figure as default figure
+                fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE))  # Create a new "fig_size" inches by "fig_size" inches figure as default figure
                 lines = cols = int(np.ceil(np.sqrt(BATCH_SIZE)))
 
                 for j, image in enumerate(images):
-                    image = ((image + 1) * 128.0).transpose(1, 2, 0).astype("uint8")[:, :,
-                            0]  # unnormalize image and put channels_last and remove the channels dimension
-                    plt.subplot(lines, cols,
-                                j + 1)  # consider the default figure as lines x cols grid and select the (i+1)th cell
+                    image = ((image + 1) * 128.0).transpose(1, 2, 0).astype("uint8")[:, :, 0]  # unnormalize image and put channels_last and remove the channels dimension
+                    plt.subplot(lines, cols, j + 1)  # consider the default figure as lines x cols grid and select the (i+1)th cell
                     min_val = image.min()
                     max_val = image.max()
                     plt.imshow(image, cmap='gray', vmin=0, vmax=255)  # plot the image on the selected cell
@@ -312,8 +282,7 @@ with tf.Session(config=config) as sess:
 
     print("Training Done at {}. Saving model ...".format(timestamp()))
     global_step_val = sess.run(gen_global_step)  # get the global step value
-    saver.save(sess, os.path.join(CHECKPOINTS_PATH, "model"),
-               global_step=global_step_val)  # save model 1 last time at the end of training
+    saver.save(sess, os.path.join(CHECKPOINTS_PATH, "model"), global_step=global_step_val)  # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
 
     

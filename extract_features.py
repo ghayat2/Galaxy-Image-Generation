@@ -7,21 +7,14 @@ parser = ArgumentParser()
 parser.add_argument('-d', '--images_dir', type=str, default="./generated_images/")
 parser.add_argument('-o', '--out_dir', type=str, default="./manual_features/")
 
-parser.add_argument('-m', '--max', type=int, help="set a maximum number of images from which to extract feats")
-parser.add_argument('-f', '--force', help="Force to recompute all manual features even if already computed")
 args = parser.parse_args()
 
 
 IMAGES_DIR = args.images_dir
 OUT_DIR = args.out_dir
 
-MAX_IMGS = args.max
-FORCE = args.force
-
 print("\n")
 print("Run infos:")
-print("    MAX_IMGS: {}".format(MAX_IMGS))
-print("    FORCE: {}".format(FORCE))
 print("    IMAGES_DIR: {}".format(IMAGES_DIR))
 print("    OUT_DIR: {}".format(OUT_DIR))
 

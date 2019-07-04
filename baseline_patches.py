@@ -2,10 +2,9 @@ import numpy as np
 import sys, os, glob, gc
 from tqdm import trange
 from PIL import Image
-import datetime, time
 from argparse import ArgumentParser
 import data
-import patoolib
+from tools import *
 
 global_seed=5
 np.random.seed(global_seed)
@@ -36,9 +35,6 @@ def get_patch(image, center, filter_size):
                 
     return patch 
 
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
 CURR_TIMESTAMP=timestamp()
 
 IMG_SIZE = 1000
@@ -54,23 +50,6 @@ if os.path.exists(CLUSTER_DATA_ROOT):
     
 LOG_DIR = os.path.join("./LOG_PATCHES", CURR_TIMESTAMP)
 GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples", "1000")
-
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        self.terminal = sys.stdout
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)  
-
-    def flush(self):
-        self.log.flush()
-        self.terminal.flush()
-        pass    
 
 sys.stdout = Logger(LOG_DIR)
 
@@ -94,13 +73,11 @@ if not os.path.exists(GENERATED_SAMPLES_DIR):
 
 with trange(TO_GENERATE) as t:
     for i in t:
-#        a = time.time()
-#        print("generating image {}".format(i))
         gen_image = np.empty([IMG_SIZE, IMG_SIZE])
         for j in range(0, IMG_SIZE, PATCH_SIZE):
             for k in range(0, IMG_SIZE, PATCH_SIZE):
                 index = np.random.randint(NB_IMAGES)
-#                print(index)
+
                 im_val = np.array(Image.open(galaxies_paths[index]))
                 gen_image[j:j+PATCH_SIZE, k:k+PATCH_SIZE] = im_val[j:j+PATCH_SIZE, k:k+PATCH_SIZE]
         
@@ -141,7 +118,6 @@ with trange(TO_GENERATE) as t:
         image = Image.fromarray(gen_image)
         filename = "img_{}".format(i)
         image.save(os.path.join(GENERATED_SAMPLES_DIR, filename+".png"))
-#        print("Done in {} s".format(time.time() - a))
 
 print("Done.")
 

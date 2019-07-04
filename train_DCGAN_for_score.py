@@ -13,6 +13,7 @@ import datetime, time
 from argparse import ArgumentParser
 import layers
 import patoolib
+from tools import *
 
 global_seed=5
 
@@ -35,12 +36,6 @@ parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, hel
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
 
 args = parser.parse_args()
-
-def timestamp():
-    return datetime.datetime.fromtimestamp(time.time()).strftime("%Y.%m.%d-%H:%M:%S")
-
-def create_zip_code_files(output_file, submission_files):
-    patoolib.create_archive(output_file, submission_files)
     
 def get_uninitialized_vars(sess):
     uninitialized_vars = []
@@ -83,23 +78,6 @@ if CONTINUE_TRAINING: # continue training from last training experiment
     list_of_files = glob.glob(os.path.join(".", "LOG_DCGAN_SCORER", "*"))
     LOG_DIR = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment will be our log path
 CHECKPOINTS_PATH = os.path.join(LOG_DIR, "checkpoints")
-
-class Logger(object):  # logger to log output to both terminal and file
-    def __init__(self, log_dir):
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        
-        self.terminal = sys.stdout
-        self.log = open(os.path.join(log_dir, "output"), "a")
-
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)  
-
-    def flush(self):
-        self.log.flush()
-        self.terminal.flush()
-        pass    
 
 sys.stdout = Logger(LOG_DIR)
 
@@ -159,13 +137,10 @@ with tf.Session(config=config) as sess:
     model1 = DCGAN()
     _, ops = model1.discriminator_model(inp=im_pl, training=False, resize=True) # get discriminator output
 
-#    discr_vars = model1.discriminator_vars()
-#    print(sess.run(discr_vars[0])[0])
 #    sys.exit(0)
     print("Restoring latest model from {}\n".format(CHECKPOINTS_PATH_DCGAN))
     saver = tf.train.Saver()
     saver.restore(sess, tf.train.latest_checkpoint(CHECKPOINTS_PATH_DCGAN))
-#    print(sess.run(discr_vars[0])[0])
     
     flat = ops["flat"]
     model2 = Scorer_head()
@@ -219,14 +194,11 @@ with tf.Session(config=config) as sess:
         init_new_vars_op = tf.initialize_variables(get_uninitialized_vars(sess))
         sess.run(init_new_vars_op)
     
-#    print(sess.run(discr_vars[0])[0])
 
     print("Train start at {} ...".format(timestamp()))
     sys.stdout.flush()
     NUM_SAMPLES = nb_train
     NUM_VALID_SAMPLES = nb_valid
-#    best_valid_mae = None
-#    best_global_step = 0
 #    sys.exit(0)
     with trange(int(NUM_EPOCHS * (NUM_SAMPLES // BATCH_SIZE))) as t:
         for i in t: # for each step
@@ -271,12 +243,6 @@ with tf.Session(config=config) as sess:
                 summary, global_step_val = sess.run([valid_loss_summary, global_step], {valid_loss_pl: loss_avg})
                 
                 writer.add_summary(summary, global_step_val)
-                
-#                if best_valid_mae is None or loss_avg < best_valid_mae:
-#                    best_valid_mae = loss_avg
-#                    best_global_step = global_step_val
-#                    saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val)
-#                    print("new best validation mae: {}, at step: {}".format(best_valid_mae, best_global_step))
     
     global_step_val = sess.run(global_step) # get the global step value
     
@@ -284,7 +250,6 @@ with tf.Session(config=config) as sess:
     saver.save(sess, os.path.join(CHECKPOINTS_PATH,"model"), global_step=global_step_val) # save model 1 last time at the end of training
     print("Done with global_step_val: {}".format(global_step_val))
     
-#    print("Training done with global_step_val: {}".format(global_step_val))
 
     
     

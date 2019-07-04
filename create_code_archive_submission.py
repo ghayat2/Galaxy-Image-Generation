@@ -9,6 +9,7 @@ if os.path.exists(out_file):
 submission_files = ["data.py",
                     "layers.py",
                     "utils.py",
+                    "tools.py",
                     # baselines
                     "generate_feats.py",
                     "baseline_patches.py",
