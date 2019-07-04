@@ -67,26 +67,7 @@ This will generate a new folder called `features` under `data` in which you can 
 
 ### A) Generation models
 
-#### 1) FullresGAN
-
-The model definition can be found in `FullresGAN.py`. To train the model with the default parameters, simply run:
-
-```
-python3 train_FullresGAN.py 
-```
-
-This generates a `LOG_FullresGAN` folder with the following structure:
-
-| File | Description
-| :--- | :----------
-| LOG\_FullresGAN | FullresGAN logs folder.
-| &boxur;&nbsp; [date-time] | Date and time of the run
-| &ensp;&ensp; &boxvr;&nbsp; checkpoints | Directory containing the last 5 checkpoints saved
-| &ensp;&ensp; &boxvr;&nbsp; code.zip | Zip file containing the code used for the run
-| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
-| &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
-
-#### 2) DCGAN
+#### 1) DCGAN
 
 The model definition can be found in `DCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -106,7 +87,7 @@ This generates a `LOG_DCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 3) MCGAN
+#### 2) MCGAN
 
 The model definition can be found in `MCGAN.py`. To train the model with the default parameters, simply run:
 
@@ -126,7 +107,7 @@ This generates a `LOG_MCGAN` folder with the following structure:
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
-#### 4) Stacked Super Resolution Model (SRM)
+#### 3) Stacked Super Resolution Model (SRM)
 
 The model definition can be found in `StackedSRM.py`. To train the model with the default parameters, simply run:
 
@@ -149,6 +130,25 @@ When running the model training, this generates a `LOG_SRM` folder with the foll
 | &ensp;&ensp; &boxvr;&nbsp; code.zip | Zip file containing the code used for the run
 | &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
 | &ensp;&ensp; &boxur;&nbsp; samples | Directory containing samples of the output of the SRM model on the training data.
+
+#### 4) FullresGAN
+
+The model definition can be found in `FullresGAN.py`. To train the model with the default parameters, simply run:
+
+```
+python3 train_FullresGAN.py 
+```
+
+This generates a `LOG_FullresGAN` folder with the following structure:
+
+| File | Description
+| :--- | :----------
+| LOG\_FullresGAN | FullresGAN logs folder.
+| &boxur;&nbsp; [date-time] | Date and time of the run
+| &ensp;&ensp; &boxvr;&nbsp; checkpoints | Directory containing the last 5 checkpoints saved
+| &ensp;&ensp; &boxvr;&nbsp; code.zip | Zip file containing the code used for the run
+| &ensp;&ensp; &boxvr;&nbsp; output | Messages printed to standard output
+| &ensp;&ensp; &boxur;&nbsp; test_samples | Directory containing the test sample images generated during training
 
 ### B) Image Scoring
 
