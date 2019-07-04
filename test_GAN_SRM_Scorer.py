@@ -346,13 +346,17 @@ while counter < TO_GENERATE:
         last_output = fake_im_val
 #    print(last_output.shape)
 
+    img_64 = (fake_im_val[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    img_1000 = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    
     if USE_SCORER:
         if SCORER == "DCGAN_Scorer":
-            scorer_input = (last_output*2.0)-1 # renormalize to [-1, 1] to feed to scorer model
+            scorer_input = (np.array([img_1000]).reshape([1, 1000, 1000, 1]).transpose(0, 3, 1, 2))/128.0 - 1 # add batch_dim and channels_dim, put to channels last and renormalize to [-1, 1] 
+                                                                                                              # to feed to scorer model
             
             score = scorer_sess.run(scores_pred, {im_pl: scorer_input})[0, 0]
         else:
-            img = last_output[0].transpose(1,2,0)[:, :, 0] # convert to channels last format and keep normalized to [0, 1]
+            img = img_1000/255.0 # convert to channels last format and keep normalized to [0, 1]
 #            img = img / img.max()
 #            print("min: {}, max: {}".format(img.min(), img.max()))
             a = time.time()
@@ -369,8 +373,7 @@ while counter < TO_GENERATE:
         
         print("Keeping image with score {}", score)
 
-    img_64 = (fake_im_val[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
-    img_1000 = (last_output[0]*255.0).transpose(1,2,0).astype("uint8")[:, :, 0] # denormalize output and convert to channels last format
+    
     #--------------------------------------------------------
 #    max_val = img.max()
 #    img = ((img/max_val)*255.0).astype("uint8")
