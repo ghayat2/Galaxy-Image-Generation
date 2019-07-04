@@ -1,0 +1,836 @@
+
+
+Run infos:
+    GENERATOR: FullresGAN
+    BATCH_SIZE: 1
+    NOISE_DIM: 1000
+    LOG_DIR_DCGAN: None
+    LOG_DIR_MCCGAN: None
+    LOG_DIR_FullresGAN: ./LOG_FullresGAN/2019.07.03-11:13:47
+    LOG_DIR_SRM: ./LOG_SRM/2019.06.24-09:54:42
+    LOG_DIR_DCGAN_SCORER: None
+    GENERATED_SAMPLES_DIR: ./LOG_COMBINED/2019.07.04-12:22:33/generated_samples
+    TO_GENERATE: 100
+    MARGIN: 0.25
+    THRESHOLD: -1.0
+    SCORER: Boost
+    USE_SCORER: True
+    USE_SCORER_THRES: True
+    USE_SCORER_MARGIN: False
+
+
+Building FullresGAN Generator model ...
+Built Generator model in 1.953531265258789 s
+Restoring latest model from ./LOG_FullresGAN/2019.07.03-11:13:47/checkpoints
+Latest checkpoint: ./LOG_FullresGAN/2019.07.03-11:13:47/checkpoints/model-31000
+
+Building StackedSRM model ...
+SRM Model built in 2.62126088142395 s
+Restoring latest model from ./LOG_SRM/2019.06.24-09:54:42/checkpoints
+Latest checkpoint: ./LOG_SRM/2019.06.24-09:54:42/checkpoints/model-25000
+
+Boost checkpoint file: ./Regressor/Boost/checkpoints/Boost.ckpt
+Loading Boost model ...
+[12:22:39] WARNING: /workspace/src/objective/regression_obj.cu:152: reg:linear is now deprecated in favor of reg:squarederror.
+Filtering images having score less than -1.0
+0
+min: 0.0, max: 1.0
+time to extract feats: 0.7042243480682373s
+time to score: 0.05802202224731445s
+Keeping image with score {} 0.87079644
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+1
+min: 0.0, max: 1.0
+time to extract feats: 0.680736780166626s
+time to score: 0.0009272098541259766s
+Keeping image with score {} 0.5869792
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+2
+min: 0.0, max: 1.0
+time to extract feats: 0.6379787921905518s
+time to score: 0.0009989738464355469s
+Keeping image with score {} 0.982957
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+3
+min: 0.0, max: 0.0
+time to extract feats: 0.48651719093322754s
+time to score: 0.0009160041809082031s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+4
+min: 0.0, max: 1.0
+time to extract feats: 0.6599040031433105s
+time to score: 0.0009441375732421875s
+Keeping image with score {} 0.84297526
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+5
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.6382265090942383s
+time to score: 0.0009210109710693359s
+Keeping image with score {} 1.2508738
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+6
+min: 0.0, max: 1.0
+time to extract feats: 0.6657211780548096s
+time to score: 0.0009701251983642578s
+Keeping image with score {} 0.60798156
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+7
+min: 0.0, max: 1.0
+time to extract feats: 0.6757540702819824s
+time to score: 0.0009925365447998047s
+Keeping image with score {} 0.9031327
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+8
+min: 0.0, max: 1.0
+time to extract feats: 0.6652114391326904s
+time to score: 0.0009908676147460938s
+Keeping image with score {} 0.6648737
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+9
+min: 0.0, max: 1.0
+time to extract feats: 0.6652238368988037s
+time to score: 0.0010058879852294922s
+Keeping image with score {} 1.2163885
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+10
+min: 0.0, max: 1.0
+time to extract feats: 0.6727888584136963s
+time to score: 0.0009930133819580078s
+Keeping image with score {} 1.2019684
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+11
+min: 0.0, max: 1.0
+time to extract feats: 0.6558234691619873s
+time to score: 0.000982522964477539s
+Keeping image with score {} 0.7719712
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+12
+min: 0.0, max: 1.0
+time to extract feats: 0.6787338256835938s
+time to score: 0.0009984970092773438s
+Keeping image with score {} 0.7284439
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+13
+min: 0.0, max: 1.0
+time to extract feats: 0.6726751327514648s
+time to score: 0.0009772777557373047s
+Keeping image with score {} 0.17165771
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+14
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.662848949432373s
+time to score: 0.0013155937194824219s
+Keeping image with score {} 1.2519882
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+15
+min: 0.0, max: 1.0
+time to extract feats: 0.6458210945129395s
+time to score: 0.0010178089141845703s
+Keeping image with score {} 0.87072515
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+16
+min: 0.0, max: 1.0
+time to extract feats: 0.6466631889343262s
+time to score: 0.00098419189453125s
+Keeping image with score {} 1.3302987
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+17
+min: 0.0, max: 1.0
+time to extract feats: 0.6430716514587402s
+time to score: 0.0009806156158447266s
+Keeping image with score {} 1.3646038
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+18
+min: 0.0, max: 1.0
+time to extract feats: 0.6399378776550293s
+time to score: 0.0009706020355224609s
+Keeping image with score {} 1.5478282
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+19
+min: 0.0, max: 1.0
+time to extract feats: 0.6388950347900391s
+time to score: 0.0009601116180419922s
+Keeping image with score {} 2.3303242
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+20
+min: 0.0, max: 1.0
+time to extract feats: 0.6301629543304443s
+time to score: 0.0009584426879882812s
+Keeping image with score {} 0.35654283
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+21
+min: 0.0, max: 1.0
+time to extract feats: 0.6497554779052734s
+time to score: 0.0009562969207763672s
+Keeping image with score {} 0.6113205
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+22
+min: 0.0, max: 1.0
+time to extract feats: 0.638606071472168s
+time to score: 0.0009663105010986328s
+Keeping image with score {} 0.6981492
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+23
+min: 0.0, max: 1.0
+time to extract feats: 0.6330828666687012s
+time to score: 0.0009415149688720703s
+Keeping image with score {} 0.6305157
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+24
+min: 0.0, max: 1.0
+time to extract feats: 0.6422007083892822s
+time to score: 0.0011589527130126953s
+Keeping image with score {} 1.162966
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+25
+min: 0.0, max: 1.0
+time to extract feats: 0.6277132034301758s
+time to score: 0.0058062076568603516s
+Keeping image with score {} 1.0513988
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+26
+min: 0.0, max: 1.0
+time to extract feats: 0.6357829570770264s
+time to score: 0.0010573863983154297s
+Keeping image with score {} 0.8018248
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+27
+min: 0.0, max: 1.0
+time to extract feats: 0.643129825592041s
+time to score: 0.0009775161743164062s
+Keeping image with score {} 0.83542657
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+28
+min: 0.0, max: 1.0
+time to extract feats: 0.6521399021148682s
+time to score: 0.0009443759918212891s
+Keeping image with score {} 0.51111156
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+29
+min: 0.0, max: 1.0
+time to extract feats: 0.6252894401550293s
+time to score: 0.0010383129119873047s
+Keeping image with score {} 0.42722625
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+30
+min: 0.0, max: 0.0
+time to extract feats: 0.47722911834716797s
+time to score: 0.0009467601776123047s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+31
+min: 0.0, max: 1.0
+time to extract feats: 0.6356544494628906s
+time to score: 0.0008957386016845703s
+Keeping image with score {} 0.658422
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+32
+min: 0.0, max: 0.5490196078431373
+time to extract feats: 0.6381669044494629s
+time to score: 0.0009329319000244141s
+Keeping image with score {} 1.1556458
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 140
+33
+min: 0.0, max: 0.0
+time to extract feats: 0.46643853187561035s
+time to score: 0.0008895397186279297s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+34
+min: 0.0, max: 1.0
+time to extract feats: 0.641420841217041s
+time to score: 0.0009520053863525391s
+Keeping image with score {} 0.81701046
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+35
+min: 0.0, max: 1.0
+time to extract feats: 0.6389341354370117s
+time to score: 0.0010716915130615234s
+Keeping image with score {} 0.83273745
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+36
+min: 0.0, max: 1.0
+time to extract feats: 0.6423046588897705s
+time to score: 0.0009317398071289062s
+Keeping image with score {} 0.48754227
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+37
+min: 0.0, max: 1.0
+time to extract feats: 0.6525685787200928s
+time to score: 0.001024484634399414s
+Keeping image with score {} 0.51641697
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+38
+min: 0.0, max: 1.0
+time to extract feats: 0.647059440612793s
+time to score: 0.000989675521850586s
+Keeping image with score {} 1.1102284
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+39
+min: 0.0, max: 0.9882352941176471
+time to extract feats: 0.6280660629272461s
+time to score: 0.0010840892791748047s
+Keeping image with score {} 1.167211
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 252
+40
+min: 0.0, max: 1.0
+time to extract feats: 0.6564443111419678s
+time to score: 0.0010459423065185547s
+Keeping image with score {} 0.6577164
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+41
+min: 0.0, max: 0.788235294117647
+time to extract feats: 0.6409075260162354s
+time to score: 0.0009579658508300781s
+Keeping image with score {} 1.2199166
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 201
+42
+min: 0.0, max: 0.0
+time to extract feats: 0.4631068706512451s
+time to score: 0.0009353160858154297s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+43
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.649336576461792s
+time to score: 0.0009448528289794922s
+Keeping image with score {} 1.8731817
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+44
+min: 0.0, max: 1.0
+time to extract feats: 0.6550145149230957s
+time to score: 0.0009572505950927734s
+Keeping image with score {} 0.6899032
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+45
+min: 0.0, max: 0.0
+time to extract feats: 0.48254847526550293s
+time to score: 0.0008978843688964844s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+46
+min: 0.0, max: 1.0
+time to extract feats: 0.6432890892028809s
+time to score: 0.0009472370147705078s
+Keeping image with score {} 0.72520936
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+47
+min: 0.0, max: 1.0
+time to extract feats: 0.6302363872528076s
+time to score: 0.0009694099426269531s
+Keeping image with score {} 1.611272
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+48
+min: 0.0, max: 1.0
+time to extract feats: 0.6374669075012207s
+time to score: 0.0009567737579345703s
+Keeping image with score {} 2.2656856
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+49
+min: 0.0, max: 1.0
+time to extract feats: 0.6301729679107666s
+time to score: 0.0009481906890869141s
+Keeping image with score {} 1.8253057
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+50
+min: 0.0, max: 1.0
+time to extract feats: 0.6478283405303955s
+time to score: 0.0009622573852539062s
+Keeping image with score {} 0.88728034
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+51
+min: 0.0, max: 1.0
+time to extract feats: 0.6559007167816162s
+time to score: 0.0010077953338623047s
+Keeping image with score {} 0.6028991
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+52
+min: 0.0, max: 1.0
+time to extract feats: 0.637631893157959s
+time to score: 0.0009717941284179688s
+Keeping image with score {} 0.63664967
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+53
+min: 0.0, max: 1.0
+time to extract feats: 0.6521520614624023s
+time to score: 0.0010116100311279297s
+Keeping image with score {} 0.6802921
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+54
+min: 0.0, max: 1.0
+time to extract feats: 0.656843900680542s
+time to score: 0.0010645389556884766s
+Keeping image with score {} 1.1183398
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+55
+min: 0.0, max: 1.0
+time to extract feats: 0.6430501937866211s
+time to score: 0.0011489391326904297s
+Keeping image with score {} 0.5375987
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+56
+min: 0.0, max: 0.09411764705882353
+time to extract feats: 0.6674761772155762s
+time to score: 0.0009531974792480469s
+Keeping image with score {} 1.1541167
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 24
+57
+min: 0.0, max: 1.0
+time to extract feats: 0.6479113101959229s
+time to score: 0.0009362697601318359s
+Keeping image with score {} 1.0676371
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+58
+min: 0.0, max: 0.4196078431372549
+time to extract feats: 0.6470963954925537s
+time to score: 0.0011341571807861328s
+Keeping image with score {} 1.1697452
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 107
+59
+min: 0.0, max: 1.0
+time to extract feats: 0.6613845825195312s
+time to score: 0.0010612010955810547s
+Keeping image with score {} 1.0795337
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+60
+min: 0.0, max: 1.0
+time to extract feats: 0.6663875579833984s
+time to score: 0.0009911060333251953s
+Keeping image with score {} 0.9041092
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+61
+min: 0.0, max: 1.0
+time to extract feats: 0.657212495803833s
+time to score: 0.0009489059448242188s
+Keeping image with score {} 0.9599296
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+62
+min: 0.0, max: 1.0
+time to extract feats: 0.6446959972381592s
+time to score: 0.0009601116180419922s
+Keeping image with score {} 0.9865033
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+63
+min: 0.0, max: 1.0
+time to extract feats: 0.6416230201721191s
+time to score: 0.0009446144104003906s
+Keeping image with score {} 1.3400688
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+64
+min: 0.0, max: 1.0
+time to extract feats: 0.6391544342041016s
+time to score: 0.0009338855743408203s
+Keeping image with score {} 0.42654008
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+65
+min: 0.0, max: 1.0
+time to extract feats: 0.6516470909118652s
+time to score: 0.0009543895721435547s
+Keeping image with score {} 1.7436608
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+66
+min: 0.0, max: 1.0
+time to extract feats: 0.6587657928466797s
+time to score: 0.0009758472442626953s
+Keeping image with score {} 0.6112348
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+67
+min: 0.0, max: 0.0
+time to extract feats: 0.4927561283111572s
+time to score: 0.0009267330169677734s
+Keeping image with score {} -0.00065004826
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 0
+68
+min: 0.0, max: 1.0
+time to extract feats: 0.6631920337677002s
+time to score: 0.0009911060333251953s
+Keeping image with score {} 0.6451781
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+69
+min: 0.0, max: 1.0
+time to extract feats: 0.6489279270172119s
+time to score: 0.0009431838989257812s
+Keeping image with score {} 1.8259867
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+70
+min: 0.0, max: 1.0
+time to extract feats: 0.638296365737915s
+time to score: 0.0010166168212890625s
+Keeping image with score {} 2.035251
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+71
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.6572468280792236s
+time to score: 0.0010654926300048828s
+Keeping image with score {} 1.2154112
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+72
+min: 0.0, max: 1.0
+time to extract feats: 0.63985276222229s
+time to score: 0.0009748935699462891s
+Keeping image with score {} 1.0225921
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+73
+min: 0.0, max: 1.0
+time to extract feats: 0.636272668838501s
+time to score: 0.0009167194366455078s
+Keeping image with score {} 0.8021856
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+74
+min: 0.0, max: 1.0
+time to extract feats: 0.636305570602417s
+time to score: 0.0009350776672363281s
+Keeping image with score {} 1.3047512
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+75
+min: 0.0, max: 1.0
+time to extract feats: 0.6294512748718262s
+time to score: 0.0009560585021972656s
+Keeping image with score {} 0.78865683
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+76
+min: 0.0, max: 1.0
+time to extract feats: 0.6545467376708984s
+time to score: 0.0010001659393310547s
+Keeping image with score {} 1.1592978
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+77
+min: 0.0, max: 1.0
+time to extract feats: 0.6521625518798828s
+time to score: 0.001064300537109375s
+Keeping image with score {} 1.2938836
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+78
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.644927978515625s
+time to score: 0.0009343624114990234s
+Keeping image with score {} 1.2347039
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+79
+min: 0.0, max: 0.8823529411764706
+time to extract feats: 0.6559834480285645s
+time to score: 0.0009207725524902344s
+Keeping image with score {} 1.1834631
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 225
+80
+min: 0.0, max: 1.0
+time to extract feats: 0.6481504440307617s
+time to score: 0.0009958744049072266s
+Keeping image with score {} 0.4665731
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+81
+min: 0.0, max: 1.0
+time to extract feats: 0.6414351463317871s
+time to score: 0.000988006591796875s
+Keeping image with score {} 0.68192023
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+82
+min: 0.0, max: 1.0
+time to extract feats: 0.6587228775024414s
+time to score: 0.0009243488311767578s
+Keeping image with score {} 1.8355107
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+83
+min: 0.0, max: 1.0
+time to extract feats: 0.6416265964508057s
+time to score: 0.0009562969207763672s
+Keeping image with score {} 1.0454448
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+84
+min: 0.0, max: 1.0
+time to extract feats: 0.6547584533691406s
+time to score: 0.0009968280792236328s
+Keeping image with score {} 0.81210065
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+85
+min: 0.0, max: 1.0
+time to extract feats: 0.6483898162841797s
+time to score: 0.0009217262268066406s
+Keeping image with score {} 2.4231074
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+86
+min: 0.0, max: 1.0
+time to extract feats: 0.6403803825378418s
+time to score: 0.000988006591796875s
+Keeping image with score {} 0.68196744
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+87
+min: 0.0, max: 1.0
+time to extract feats: 0.6347403526306152s
+time to score: 0.00095367431640625s
+Keeping image with score {} 0.7715411
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+88
+min: 0.0, max: 1.0
+time to extract feats: 0.6541087627410889s
+time to score: 0.0009720325469970703s
+Keeping image with score {} 1.1294682
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+89
+min: 0.0, max: 1.0
+time to extract feats: 0.6543993949890137s
+time to score: 0.0009481906890869141s
+Keeping image with score {} 1.7144334
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+90
+min: 0.0, max: 1.0
+time to extract feats: 0.6361427307128906s
+time to score: 0.0009586811065673828s
+Keeping image with score {} 0.5872793
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+91
+min: 0.0, max: 1.0
+time to extract feats: 0.6877398490905762s
+time to score: 0.0009646415710449219s
+Keeping image with score {} 1.0078733
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+92
+min: 0.0, max: 0.5803921568627451
+time to extract feats: 0.6576879024505615s
+time to score: 0.0009510517120361328s
+Keeping image with score {} 1.1521451
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 148
+93
+min: 0.0, max: 1.0
+time to extract feats: 0.6581885814666748s
+time to score: 0.00099945068359375s
+Keeping image with score {} 0.6409118
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+94
+min: 0.0, max: 1.0
+time to extract feats: 0.6594088077545166s
+time to score: 0.0010149478912353516s
+Keeping image with score {} 1.7153044
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+95
+min: 0.0, max: 1.0
+time to extract feats: 0.667097806930542s
+time to score: 0.0010004043579101562s
+Keeping image with score {} 0.80922365
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+96
+min: 0.0, max: 1.0
+time to extract feats: 0.6547908782958984s
+time to score: 0.0012667179107666016s
+Keeping image with score {} 0.7975637
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+97
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.663367509841919s
+time to score: 0.0009677410125732422s
+Keeping image with score {} 1.4517484
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+98
+min: 0.0, max: 0.996078431372549
+time to extract feats: 0.6581428050994873s
+time to score: 0.0009856224060058594s
+Keeping image with score {} 1.2180512
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 254
+99
+min: 0.0, max: 1.0
+time to extract feats: 0.6401350498199463s
+time to score: 0.00101470947265625s
+Keeping image with score {} 0.81359303
+Saving with size 1000x1000
+(1000, 1000)
+min: 0, max: 255
+Saved generated images scores at ./LOG_COMBINED/2019.07.04-12:22:33/gen_images_scores.csv
