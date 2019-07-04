@@ -262,9 +262,6 @@ Compute the manual features on the generated images of all models under the fold
 python3 extract_features.py
 ```
 
-The advised maximum number of images is 100 otherwise it can take some time for 
-1000x1000 images.
-
 The results are stored in `./manual_features` folder with a structure similar to the `./generated_images` folder:
 
 | File | Description
