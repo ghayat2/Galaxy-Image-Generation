@@ -52,6 +52,8 @@ print("\n--Creating prediction.csv file--")
 predictions = np.array(regr.predict(features))
 predictions = np.clip(predictions, a_min=0, a_max=8).reshape([-1])
 print("Predictions shape:", predictions.shape)
+print("mean score: {}".format(np.mean(predictions)))
+print("median score: {}".format(np.median(predictions)))
 
 ids = ids.reshape([-1])
 print("Ids shape:", ids.shape)
