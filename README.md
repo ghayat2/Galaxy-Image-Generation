@@ -1,4 +1,4 @@
-# EGMP - Galaxy Image Generation
+# Team EGMP - Galaxy Image Generation
 
 ## Authors
 - Gabriel Hayat
