@@ -365,7 +365,7 @@ TODO: add run times for training procedures, remove runtimes from files descript
 | utils.py | Utility functions | ------------
 | tools.py | logger to log output to both terminal and file | ------------
 | requirements.txt | List of packages that have to be installed to reproduce the results | ------------
-| README.md | Instructions on how to run the code |
+| README.md | Instructions on how to run the code | ------------
 
 <!--### 1) XGBoost Regressor on manually generated features
 
