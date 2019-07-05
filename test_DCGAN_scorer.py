@@ -30,9 +30,6 @@ C, H, W = 1, 1000, 1000 # images dimensions
 
 # paths
 DATA_ROOT="./data"
-CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
-if os.path.exists(CLUSTER_DATA_ROOT):
-    DATA_ROOT=CLUSTER_DATA_ROOT
 
 list_of_files = glob.glob('./LOG_DCGAN_SCORER/*')
 latest_dir = max(list_of_files, key=os.path.getctime) # latest created dir for latest experiment

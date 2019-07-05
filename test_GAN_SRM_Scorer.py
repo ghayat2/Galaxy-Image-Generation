@@ -97,9 +97,6 @@ else:
     LOG_DIR_DCGAN_SCORER=None
 
 DATA_ROOT="./data"
-CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
-if os.path.exists(CLUSTER_DATA_ROOT):
-    DATA_ROOT=CLUSTER_DATA_ROOT
 
 LOG_DIR = os.path.join("./LOG_COMBINED", CURR_TIMESTAMP)
 GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples")

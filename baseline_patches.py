@@ -44,9 +44,6 @@ PATCH_SIZE = args.patch_size
 TO_GENERATE = args.to_generate
 
 DATA_ROOT="./data"
-CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
-if os.path.exists(CLUSTER_DATA_ROOT):
-    DATA_ROOT=CLUSTER_DATA_ROOT
     
 LOG_DIR = os.path.join("./LOG_PATCHES", CURR_TIMESTAMP)
 GENERATED_SAMPLES_DIR= os.path.join(LOG_DIR, "generated_samples", "1000")
