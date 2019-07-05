@@ -325,7 +325,7 @@ An optional path to a legend json file can be specified using the option `--lege
 The experiment results can be found uder the directory `./experiments_results` by default.
 
 ## Other options
-The above instructions should be sufficient to reproduce our models and experiments. <br\>
+The above instructions should be sufficient to reproduce our models and experiments. <br/>
  We note that for many `*.py` files, you can get a some help information about the possible settable options and their descriptions by simply running:
 
 ```
