@@ -138,6 +138,7 @@ The model definition can be found in `FullresGAN.py`. To train the model with th
 ```
 python3 train_FullresGAN.py 
 ```
+You can optionnally add the options `-ls`, `-mb` to use label smoothing and minibatch discrimination respectively <br>
 
 This generates a `LOG_FullresGAN` folder with the following structure:
 
