@@ -181,7 +181,7 @@ This generates a `Regressor` folder with the following structure:
 
 #### 2) DCGAN Scoring head:
 
-The model definition can be found in `DCGAN_Scorer.py`. This model adds and trains a simple Feed-Forward Neural Network to the discriminator of the DCGAN model. So, since this model depends on a trained DCGAN model, please make sure to train the DCGAN model first then train the scoring head. <br />
+The model definition can be found in `DCGAN_Scorer.py`. This model adds and trains a simple Feed-Forward Neural Network to the discriminator of the DCGAN model. So, since this model depends on a trained DCGAN model, please make sure to train the DCGAN model first then train the scoring head. This model also assumes no mini-batch discrimination was in the trained DCGAN. We trained this model on the DCGAN without the options `-ls`, `-mb`, `-rot`. <br />
 To train this model using the latest trained DCGAN model and the default parameters, simply run: 
 
 ```
@@ -340,10 +340,10 @@ python3 [filename] --help
 - Generation with patches baseline: ~5min
 - Training:
 	- DCGAN: ~1h20min on Leonhard's GTX 1080 Ti GPU.
-	- MCGAN: ~1h30min
+	- MCGAN: ~1h20min on Leonhard's GTX 1080 Ti GPU.
 	- Stacked SRM: ~3h on Google Colab’s Tesla T4 GPU.
 	- FullresGan: ~1h30min on Leonhard's GTX 1080 Ti GPU.
-	- DCGAN scrorer: ~1h30min
+	- DCGAN scrorer: ~2h45min on Leonhard's GTX 1080 Ti GPU ( around 1h45min on a local GTX 970 GPU + SSD)
 	- XGBoost regressor: ~6min
 	- Random Forest regressor: ~16min
 	- Ridge regressor: ~1sec

@@ -37,7 +37,7 @@ parser.add_argument('-lf', '--log_iter_freq', type = int, default = 100, help = 
 parser.add_argument('-vdf', '--valid_iter_freq', type = int, default = 250, help = 'number of iterations between validation steps')
 parser.add_argument('-svf', '--save_iter_freq', type = int, default = 2000, help = 'number of iterations between saving model checkpoints')
 
-parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 2, help = 'number of batches to prefetch')
+parser.add_argument('-bp', '--batches_to_prefetch', type = int, default = 80, help = 'number of batches to prefetch')
 parser.add_argument('-ct', '--continue_training', help = 'whether to continue training from the last checkpoint of the last experiment or not', action="store_true")
 
 args = parser.parse_args()
