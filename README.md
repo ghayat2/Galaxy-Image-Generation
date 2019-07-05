@@ -248,6 +248,8 @@ To view the list of allowed values for <GENERATOR\> and <SCORER\>, please run:
 ```
 python3 test_GAN_SRM_Scorer.py --help
 ```
+The models that are loaded are the latest trained ones. <br/>
+
 The generated images are stored in the folder `LOG_COMBINED` with the following structure:
 
 | File | Description
