@@ -73,8 +73,7 @@ FIG_SIZE = 20 # in inches
 
 # paths
 DATA_ROOT="./data"
-
-CLUSTER_DATA_ROOT="./cosmology_aux_data_170429"
+CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
 if os.path.exists(CLUSTER_DATA_ROOT):
     DATA_ROOT=CLUSTER_DATA_ROOT
 LOG_DIR=os.path.join(".", "LOG_MCGAN", CURR_TIMESTAMP)
