@@ -78,6 +78,13 @@ SAMPLES_DIR = os.path.join(LOG_DIR, "test_samples")
 
 sys.stdout = Logger(LOG_DIR)
 
+l = device_lib.list_local_devices()
+gpus_list = [(device.physical_device_desc, device.memory_limit) for device in l if device.device_type == "GPU"]
+print("\nGPUs List:")
+for info in gpus_list:
+    print(info[0])
+    print("memory limit:", info[1])
+
 # printing parameters
 print("\n")
 print("Run infos:")
