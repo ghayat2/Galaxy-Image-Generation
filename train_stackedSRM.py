@@ -20,6 +20,10 @@ global_seed=5
 tf.random.set_random_seed(global_seed)
 np.random.seed(global_seed)
 
+# remove warning messages
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 parser = ArgumentParser()
 parser.add_argument('-ne', '--num_epochs', type = int, default = 100, help = 'number of training epochs')
 parser.add_argument('-bs', '--batch_size', type = int, default = 4, help = 'size of training batch')
@@ -103,9 +107,6 @@ if not CONTINUE_TRAINING: # save code used for this experiment
     create_zip_code_files(os.path.join(LOG_DIR, "code.zip"), files)
 
 #sys.exit(0)
-# remove warning messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
-tf.logging.set_verbosity(tf.logging.ERROR)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True

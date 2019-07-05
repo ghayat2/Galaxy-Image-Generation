@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.client import device_lib
 import numpy as np
 import sys, os, glob, gc
 import matplotlib as mpl
@@ -17,6 +18,10 @@ global_seed=5
 
 tf.random.set_random_seed(global_seed)
 np.random.seed(global_seed)
+
+# remove warning messages
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 parser = ArgumentParser()
 parser.add_argument('-ne', '--num_epochs', type = int, default = 500, help = 'number of training epochs')
@@ -119,9 +124,6 @@ if not CONTINUE_TRAINING:
     create_zip_code_files(os.path.join(LOG_DIR, "code.zip"), files)
 
 #sys.exit(0)
-# remove warning messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
-tf.logging.set_verbosity(tf.logging.ERROR)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
