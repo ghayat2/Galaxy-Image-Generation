@@ -304,7 +304,7 @@ You can generate scores for 1000x1000 images of models under the folder `./gener
 ```
 python3 baseline_score_generated.py --regressor_type <reg_name>
 ```
-With <reg_name\> is one of the manual feature regressors.
+where <reg_name\> is one of the manual feature regressors.
 The results are stored in `./generated_images/model_name` for each available `model_name`.
 
 ### Scoring labeled galaxy images with a baseline score regressor
@@ -312,7 +312,7 @@ You can generate scores for the images of the `labeled` dataset that represent g
 ```
 python3 baseline_score_labeled.py --regressor_type <reg_name>
 ```
-With <reg_name\> is one of the manual feature regressors.
+where <reg_name\> is one of the manual feature regressors.
 The results are stored in the current working directory.
 
 ### Experiment Execution
