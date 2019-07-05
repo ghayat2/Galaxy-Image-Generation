@@ -342,8 +342,8 @@ TODO: add run times for training procedures, remove runtimes from files descript
 | baseline\_patches.py | Generative Model based on patches | 00:04:54
 | baseline\_score\_regressor\_test.py | Tests the different Regressor architectures on the query set | 00:05:00
 | baseline\_score\_regressor.py | Applies different Regressor architectures to the Regression task | 00:10:00
-| baseline\_score\_generated.py | Creates the prediction.csv file on a given directory file based on a previously trained regressor 
-| baseline\_score\_labeled.py | Creates the prediction.csv file on the labbeled galaxy directory file based on a previously trained regressor 
+| baseline\_score\_generated.py | Creates the prediction.csv file on a given directory based on a previously trained regressor 
+| baseline\_score\_labeled.py | Creates the prediction.csv file on the labbeled galaxy directory based on a previously trained regressor 
 | data.py | Image/Manual Feature loading and preprocessing | ------------
 | DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model | ------------
 | DCGAN.py | Deep Convolutional Generative Adversarial Network | ------------
