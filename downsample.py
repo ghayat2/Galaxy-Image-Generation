@@ -32,6 +32,7 @@ if not os.path.isdir(OUT_DIR):
     os.makedirs(OUT_DIR)
 
 all_images = [str(item) for item in pathlib.Path(IMAGES_DIR).glob('*')]
+all_images_name = [str(path).split('/')[-1].split('.')[0] for path in all_images]
 
 id = 0
 for image in tqdm(all_images):
@@ -39,7 +40,7 @@ for image in tqdm(all_images):
     resized_image = resizer.predict(np.expand_dims(np.expand_dims(decoded_image, axis=0), axis=-1))
     resized_image = np.squeeze(resized_image).astype("uint8")
     resized_image = Image.fromarray(resized_image)
-    resized_image.save(os.path.join(OUT_DIR, "image_" + str(id) + ".png"))
+    resized_image.save(os.path.join(OUT_DIR, all_images_name[id] + ".png"))
     id += 1
 
-print("{} images have been resized and saved in {}".format(id, args.out_dir))
+print("{} images have been resized and saved in {}".format(id, OUT_DIR))
