@@ -343,6 +343,8 @@ TODO: add run times for training procedures, remove runtimes from files descript
 | baseline\_patches.py | Generative Model based on patches | 00:04:54
 | baseline\_score\_regressor\_test.py | Tests the different Regressor architectures on the query set | 00:05:00
 | baseline\_score\_regressor.py | Applies different Regressor architectures to the Regression task | 00:10:00
+| baseline\_score\_generated.py | Creates the prediction.csv file on a given directory based on a previously trained regressor 
+| baseline\_score\_labeled.py | Creates the prediction.csv file on the labbeled galaxy directory based on a previously trained regressor 
 | data.py | Image/Manual Feature loading and preprocessing | ------------
 | DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model | ------------
 | DCGAN.py | Deep Convolutional Generative Adversarial Network | ------------
@@ -351,6 +353,7 @@ TODO: add run times for training procedures, remove runtimes from files descript
 | generate\_feats.py | Generates manually crafted features from the provided images | 
 | layers.py | Layers used to build the Models | ------------
 | MCGAN.py | Manual Feature Conditionned Generative Adversarial Network | ------------
+| FullresGAN.py | Full 1000x1000 resolutation Generative Adversial Network | ------------
 | run\_experiments.py | Run statistics on the provided images
 | StackedSRM.py | Stacked SuperResolution Model | ------------
 | test\_DCGAN\_scorer.py | Tests the DCGAN based scoring model on the query set
@@ -359,7 +362,11 @@ TODO: add run times for training procedures, remove runtimes from files descript
 | train\_DCGAN.py | Training File for the DCGAN | 02:13:35 
 | train\_MCGAN.py | Training File for the MCGAN | 02:08:12
 | train\_stackedSRM.py | Training File for the Stacked SRM
+| train_FullresGAN.py | Training file for the FullresGAN model
 | utils.py | Utility functions | ------------
+| tools.py | logger to log output to both terminal and file | ------------
+| requirements.txt | List of packages that have to be installed to reproduce the results | ------------
+| README.md | Instructions on how to run the code | ------------
 
 <!--### 1) XGBoost Regressor on manually generated features
 
