@@ -8,6 +8,7 @@ import sklearn as sk
 
 from tqdm import tqdm
 
+from sklearn import model_selection, neighbors
 from skimage.feature import blob_doh, blob_log
 from skimage.exposure import histogram
 from skimage.feature import shape_index
@@ -126,7 +127,7 @@ def knn_diversity_stats(training_set, generated_imgs, k=3):
     :param array training_set: the training set of images according to which we will find the nearest neighbours
     :param array generated_imgs: the images whose nearest neighbours we wish to find
     """
-    knn = sk.neighbors.NearestNeighbors(n_neighbors=k)
+    knn = neighbors.NearestNeighbors(n_neighbors=k)
     knn.fit(training_set, y=np.zeros(shape=(len(training_set),)))
 
     dists, idxs = knn.kneighbors(generated_imgs)
@@ -157,7 +158,7 @@ def leave_one_out_knn_diversity(images_paths, size, k=3):
     :param size: size of the imgs
     :returns a tuple (mean, std, min, max) of the distances
     """
-    loo = sk.model_selection.LeaveOneOut()
+    loo = model_selection.LeaveOneOut()
     images = decode_images(images_paths, size)
     images = np.reshape(images, [len(images), -1]) # Flatten for sklearn [#samples, #features] framework
     dists = []
