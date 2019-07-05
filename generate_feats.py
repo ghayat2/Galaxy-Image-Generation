@@ -17,6 +17,9 @@ GEN_QUERY = not args.no_query
 RESIZING = args.resize
 
 DATA_ROOT="./data"
+CLUSTER_DATA_ROOT="/cluster/scratch/mamrani/data"
+if os.path.exists(CLUSTER_DATA_ROOT):
+    DATA_ROOT=CLUSTER_DATA_ROOT
 FEATURES_DIR = os.path.join(DATA_ROOT, "features")
 
 # printing parameters

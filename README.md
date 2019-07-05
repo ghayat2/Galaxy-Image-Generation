@@ -335,50 +335,50 @@ The above instructions should be sufficient to reproduce our models and experime
 python3 [filename] --help
 ```
 ## Run times:
-TODO: add run times for training procedures, remove runtimes from files descriptions below as some files don't have a run time
+
+- Manual Features Generation on `labeled`, `scored` and `query` datasets: ~1h35min
+- Generation with patches baseline: ~5min
+- Training:
+	- DCGAN: ~1h20min on Leonhard's GTX 1080 Ti GPU.
+	- MCGAN: ~1h30min
+	- Stacked SRM: ~3h on Google Colab’s Tesla T4 GPU.
+	- FullresGan: ~1h30min on Leonhard's GTX 1080 Ti GPU.
+	- DCGAN scrorer: ~1h30min
+	- XGBoost regressor: ~6min
+	- Random Forest regressor: ~16min
+	- Ridge regressor: ~1sec
+
 
 ## Files
-| File | Description |  Runtime (hh:mm:ss)
-| :--- | :---------- | :----------
-| baseline\_patches.py | Generative Model based on patches | 00:04:54
-| baseline\_score\_regressor\_test.py | Tests the different Regressor architectures on the query set | 00:05:00
-| baseline\_score\_regressor.py | Applies different Regressor architectures to the Regression task | 00:10:00
-| baseline\_score\_generated.py | Creates the prediction.csv file on a given directory based on a previously trained regressor 
-| baseline\_score\_labeled.py | Creates the prediction.csv file on the labbeled galaxy directory based on a previously trained regressor 
-| data.py | Image/Manual Feature loading and preprocessing | ------------
-| DCGAN\_Scorer.py | Scoring Model based on the Discriminator obtained in the DCGAN model | ------------
-| DCGAN.py | Deep Convolutional Generative Adversarial Network | ------------
-| downsample.py | Given input images at 1000x1000 resolution, this resizes them using max pooling with appropriate padding for range \[-1, 1\] | Depends on number of files given
-| extract\_features.py | Extracts manually crafted features from the provided files | Depends on number of files given
-| generate\_feats.py | Generates manually crafted features from the provided images | 
-| layers.py | Layers used to build the Models | ------------
-| MCGAN.py | Manual Feature Conditionned Generative Adversarial Network | ------------
-| FullresGAN.py | Full 1000x1000 resolutation Generative Adversial Network | ------------
-| run\_experiments.py | Run statistics on the provided images
-| StackedSRM.py | Stacked SuperResolution Model | ------------
-| test\_DCGAN\_scorer.py | Tests the DCGAN based scoring model on the query set
-| test\_GAN\_SRM\_Scorer.py | Generation file for the DCGAN with scorer filtering | Depends on score value to filter according to 
-| train\_DCGAN\_for\_score.py | Training file for the DCGAN based scoring model
-| train\_DCGAN.py | Training File for the DCGAN | 02:13:35 
-| train\_MCGAN.py | Training File for the MCGAN | 02:08:12
+| File | Description
+| :--- | :----------
+| baseline\_patches.py | Generative Model based on patches
+| baseline\_score\_regressor.py | Train on the scored set and predict on the query set using a manual features regressor 
+| baseline\_score\_regressor\_test.py | Predict scores on images in a provided directory using a trained manual features regressor 
+| baseline\_score\_generated.py | Creates the *.csv file on images in `./generated_images/model_name/1000` for each `model_name`  using a trained manual features regressor 
+| baseline\_score\_labeled.py | Creates the *.csv file on galaxy images of the `labeled` dataset using trained manual features regressor 
+| downsample.py | Downsamples images in a given directory of 1000x1000 images down to 64x64 
+| extract\_features.py | Extracts manually crafted features from the images in `./generated_images/model_name` for each `model_name`
+| generate\_feats.py | Generates manually crafted features on  `labeled`, `scored` and `query` datasets
+| data.py | Image/Manual Feature loading and preprocessing
+| layers.py | Layers and Blocks used to build the Models
+| utils.py | Functions used for manual features extraction and for experiments
+| tools.py | Logger to log output to both terminal and file and some utility functions
+| run\_experiments.py | Run experiments on images in `./generated_images/model_name` for each `model_name`
+| DCGAN.py | Deep Convolutional Generative Adversarial Network Model
+| DCGAN\_Scorer.py | Scoring Model based on the Discriminator of DCGAN model
+| MCGAN.py | Manual Feature Conditionned Generative Adversarial Network
+| FullresGAN.py | Full 1000x1000 resolution Generative Adversial Network
+| StackedSRM.py | Stacked SuperResolution Model
+| train\_DCGAN.py | Training File for the DCGAN
+| train\_DCGAN\_for\_score.py | Training file for the DCGAN based scoring model 
+| train\_MCGAN.py | Training File for the MCGAN
 | train\_stackedSRM.py | Training File for the Stacked SRM
 | train_FullresGAN.py | Training file for the FullresGAN model
-| utils.py | Utility functions | ------------
-| tools.py | logger to log output to both terminal and file | ------------
-| requirements.txt | List of packages that have to be installed to reproduce the results | ------------
-| README.md | Instructions on how to run the code | ------------
-
-<!--### 1) XGBoost Regressor on manually generated features
+| test\_DCGAN\_scorer.py | Predict scores using the DCGAN based scoring model on the query set
+| test\_GAN\_SRM\_Scorer.py | Image Generation using a GAN model with possible scorer filtering
+| requirements.txt | List of dependencies
+| README.md | README file
 
 
-To train the XGBoost regressor on the manually generated features of the scored images dataset and create a file prediction.csv of the predicted scores of the query images, run the following command: 
 
-`python3 main.py -regressor_type="Boost" -only_features=True`
-
-This command will reproduce the result mentioned in the report. Note that this command can be ran with multiple flags, the main ones are described here:
-
-- regressor type: The type of the regressor, options are Random Forest, Ridge, MLP, Boost (default: None,  use our main  model to output predictions)
-- vae_encoded_images: True if the images of scored and query dataset were previously encoded by the vae model (default: False)
-- only_features: Train the regressor only on manually crafted features (default: False)
-- feature_dim: Number of manually crafted features (Default: 34)
-- latent_dim: The dimension of the latent space of the vae (default: 100)-->
