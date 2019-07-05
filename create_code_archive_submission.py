@@ -33,6 +33,7 @@ submission_files = ["data.py",
                     # Generation Pipeline
                     "test_GAN_SRM_Scorer.py",
                     # Experiments
+                    "downsample.py",
                     "extract_features.py",
                     "run_experiments.py",
                     "baseline_score_generated.py",
